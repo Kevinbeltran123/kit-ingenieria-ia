@@ -26,21 +26,30 @@ los primeros arreglos están en `.explicaciones/commits/` (fuera de git). Hecho:
 - Nuevo: plugin `explicador` (vista B, línea por línea, exigido antes de `gh pr create`; `--commit` para un
   commit puntual). Es para el código de la empresa; en el kit no se generan explicaciones.
 
-Verificación: 493 pruebas pasan (14 se saltan sin OR-Tools; con OR-Tools 9.15 también pasan), cada commit pasa
-todas las suites por sí solo, los hooks y scripts corren con Python 3.9, y `claude plugin validate .` pasa.
+Verificación: 496 pruebas pasan, en Python 3.9 y 3.12 (con OR-Tools 9.15 también las 14 de optimización), cada
+commit pasa todas las suites por sí solo, la prueba de humo de las plantillas pasa (8/8 pasos) y
+`claude plugin validate .` pasa (con un aviso por plugin, que sugiere `version`: ver B6).
+
+Con el kit en GitHub (2026-11-08) también quedaron hechos:
+- E1: CI del kit en `.github/workflows/ci.yml` (pruebas en 3.9 y 3.12, validación, prueba de humo
+  `bin/humo_plantillas.py` y zizmor). Cada job se probó en local con sus mismos comandos; **en GitHub todavía no
+  corre**: los jobs no arrancan por facturación de la cuenta (ver Pendiente 1).
+- A10: la revisión en CI instala `pr-review-toolkit` desde el commit auditado, con un marketplace propio que
+  arma el workflow (una copia local del oficial no sirve: Claude Code reserva su nombre).
+- B6: los plugins propios no llevan `version`; las entregas son tags (`v0.2.0` es la primera).
+- Pins con menos de 7 días corregidos: uv 0.13.6 y zizmor 1.31.1.
 
 ## Siguiente
-1. Con el kit ya en GitHub: E1 (CI del kit: pruebas por plugin, `claude plugin validate`, prueba de humo de las
-   plantillas y hooks con Python 3.9) y A10 (revisión en CI con el plugin fijado).
-2. Hallazgos nuevos de esta tanda:
+1. Hallazgos nuevos de la revisión:
    - Hecho (Kevin dijo «dale»): `evaluador_bloqueado` protege su propia configuración `.claude/ml-vision.json`
      (antes el agente podía vaciar `rutas_protegidas` y después escribir en `eval/`). Límite documentado: no ve
      comandos sobre la carpeta entera (`mv .claude otra`); eso lo frena el CODEOWNERS en el PR.
    - **EXTRA, para decidir:** `licencias.py` no revisa Dockerfiles (`RUN pip install ultralytics`).
 
 ## Pendiente que decide Kevin
-1. B6, versiones: con el kit en GitHub, quien ya instaló un plugin no recibe cambios mientras `version` no cambie.
-   Opciones: subir `version` en cada cambio, o quitarla para que Claude Code use el SHA del commit.
+1. **Facturación de GitHub Actions:** los jobs del CI no arrancan ("recent account payments have failed or your
+   spending limit needs to be increased"). Se arregla en GitHub → Settings → Billing and plans. Después,
+   `gh run rerun <id>` o cualquier push a `main` corre el CI.
 2. Limpieza de lo instalado en global (`~/.claude`): quitar/reemplazar software-architecture, write-concisely,
    code-simplifier, review-local-changes, commit, create-pr, playwright-skill, ui-ux-pro-max, antislop;
    security-guidance de global a proyecto; context7 en modo CLI y versión parcheada (CVE-2026-75130).
