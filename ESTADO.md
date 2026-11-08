@@ -2,7 +2,8 @@
 
 ## Dónde quedamos (2026-11-08)
 Revisión completa del kit en `investigacion/09-revision-2026-11-08.md` (~60 hallazgos agrupados en 48, con
-evidencia y arreglo). Hechos ese día, cada uno con pruebas que fallaban antes del arreglo (sin commit todavía):
+evidencia y arreglo). Hechos ese día en la rama `revision-2026-11-08`, un commit por arreglo, cada uno con pruebas
+que fallaban antes del arreglo; sus explicaciones están en `.explicaciones/commits/` (fuera de git):
 1. **Hook de Stop** (calidad-python 0.2.1): vuelve a revisar después de que Claude corrige; 2 oportunidades y aviso.
 2. **Python 3.9** en todos los hooks y scripts (`from __future__ import annotations`) y `"onFailure": "block"` en
    barreras y evaluador_bloqueado. Lo vigila `bin/tests/test_compatibilidad.py`.
@@ -27,7 +28,7 @@ Verificación: 338 pruebas pasan (14 se saltan sin OR-Tools), 199 también con e
 7. Resto de B (bugs de scripts y hooks), C (contenido desactualizado) y E (proceso).
 
 ## Pendiente que decide Kevin
-1. Commits: un commit por arreglo (sin co-autoría) para que cada uno tenga su explicación.
+1. Pasar la rama `revision-2026-11-08` a `main` (cada commit pasa sus pruebas por sí solo).
 2. Subir el kit a un repo privado de GitHub. Al hacerlo: CI propio (E1) y decidir versiones (B6: subir `version`
    en cada cambio o quitarla para que Claude Code use el SHA).
 3. Terceros a quitar: hf-cloud-sagemaker, react-best-practices, plugin-dev (D2, D3); `/clean_gone` "no usar" (D1).
