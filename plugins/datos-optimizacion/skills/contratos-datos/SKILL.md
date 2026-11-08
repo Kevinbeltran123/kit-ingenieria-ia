@@ -25,7 +25,8 @@ No valides lo mismo tres veces con tres herramientas. Elige el borde y deja la b
 4. Reglas entre columnas como `@dataframe_check` (p. ej., `fecha_cosecha >= fecha_siembra`).
 5. Modo estricto (`strict=True`) en la entrada de fuentes externas: una columna nueva inesperada debe avisar, no pasar en silencio.
 6. `coerce=True` solo donde la fuente manda texto que debe ser número o fecha, y documentado.
-7. Validación perezosa (`lazy=True`) para obtener **todos** los errores de un lote de una vez, no solo el primero, y mandar las filas malas a cuarentena (ver skill `ingesta-idempotente`).
+7. `lazy=True` en `validate` para obtener **todos** los errores de un lote de una vez, no solo el primero, y mandar las filas malas a cuarentena (ver skill `ingesta-idempotente`). Es el `lazy` de Pandera: no tiene que ver con el `LazyFrame` de Polars.
+8. **Con Polars perezoso (`scan_*`), valida el `DataFrame`, no el `LazyFrame`.** Sobre un `LazyFrame` Pandera solo revisa nombres y tipos: una fila con `peso_kg = -5` pasa sin error aunque el campo diga `ge=0` (verificado con pandera 0.35 y polars 2.1). Valida después de `collect()` (`Contrato.validate(lf.collect(), lazy=True)`) o define `PANDERA_VALIDATION_DEPTH=SCHEMA_AND_DATA`, que hace el `collect()` por dentro.
 
 Consulta la documentación vigente de Pandera (Context7) para la sintaxis exacta con Polars: la API de backends cambia entre versiones.
 
@@ -43,8 +44,8 @@ Sube la versión del contrato (`_version_esquema`) en cada cambio incompatible y
 
 ## Pruebas de datos
 
-- **Casos válidos e inválidos fijos**: un DataFrame pequeño que pasa y uno por cada regla que debe fallar, comprobando el mensaje.
-- **Property-based con hypothesis**: Pandera puede generar datos que cumplen el esquema (`Schema.strategy()`); úsalos para probar que las transformaciones conservan el contrato de salida.
+- **Casos válidos e inválidos fijos**: un DataFrame pequeño que pasa y uno por cada regla que debe fallar, comprobando el mensaje. Pásalos por el mismo camino que en producción: si el pipeline valida un `LazyFrame` y la prueba un `DataFrame`, la prueba pasa y producción no revisa filas.
+- **Property-based con hypothesis**: con pandas, Pandera genera datos que cumplen el esquema (`Schema.strategy()`); úsalos para probar que las transformaciones conservan el contrato de salida. Con Polars, `strategy()` lanza `NotImplementedError`: genera los datos con `polars.testing.parametric` (`dataframes`, `column`) y valida el resultado contra el contrato.
 - **Contrato de salida**: cada transformación valida su resultado contra el contrato de la capa siguiente en las pruebas.
 - En CI, una muestra de datos reales anonimizados contra el contrato detecta derivas de la fuente antes de producción.
 
@@ -58,4 +59,5 @@ Sube la versión del contrato (`_version_esquema`) en cada cambio incompatible y
 - Cada fuente externa tiene un contrato estricto validado al entrar.
 - La clave natural tiene regla de unicidad.
 - Hay pruebas con un caso inválido por regla y pasan.
+- Con Polars, la validación corre sobre un `DataFrame` (o con `PANDERA_VALIDATION_DEPTH=SCHEMA_AND_DATA`), nunca sobre un `LazyFrame` solo.
 - Los cambios incompatibles suben la versión del esquema.

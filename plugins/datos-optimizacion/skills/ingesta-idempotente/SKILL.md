@@ -13,7 +13,7 @@ description: Diseña e implementa pipelines de ingesta de datos que se pueden re
 |---|---|
 | Extracción y carga | **dlt** (esquema inferido y versionado, incrementales, `merge` con clave primaria) |
 | Transformación | **Polars** en modo perezoso (`scan_*`, `collect` al final) y **DuckDB** para SQL sobre Parquet |
-| Contratos | Ver skill `contratos-datos` |
+| Contratos | Ver skill `contratos-datos`; con Polars perezoso, se valida después de `collect()` |
 | Almacenamiento analítico | **S3 + Iceberg (S3 Tables) + Glue Data Catalog + Athena** |
 | Orquestación | La que use la empresa; si no hay ninguna, Dagster |
 
