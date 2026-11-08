@@ -51,7 +51,12 @@ Bash, agrega `*.amazonaws.com` a `sandbox.network.allowedDomains` del repo.
 
 ## 3. Política del rol
 Base: `ReadOnlyAccess` (o `ViewOnlyAccess`, más estricta: no lee datos de S3 ni DynamoDB) más los Deny de `references/politica-agente-solo-lectura.json`:
-- Deny de `secretsmanager:GetSecretValue`, `ssm:GetParameter*` y `kms:Decrypt`.
+- Deny de `secretsmanager:GetSecretValue`, `ssm:GetParameter*` (incluido `GetParameterHistory`) y `kms:Decrypt`.
+- Deny de `s3:GetObject` sobre el bucket del estado de Terraform (`<bucket-del-tfstate>`): el tfstate guarda
+  secretos en texto plano y `ReadOnlyAccess` incluye `s3:Get*`.
+- `ReadOnlyAccess` también deja ver las variables de entorno de Lambda y de las task definitions de ECS, que el
+  agente necesita para diagnosticar. Si ve un secreto ahí, lo reporta como hallazgo (debería estar en Secrets
+  Manager) y no lo usa.
 - Deny de acciones que cambian cosas cuando la llamada llega por el AWS MCP Server (`aws:ViaAWSMCPService`). Así una persona con el mismo rol puede escribir desde su terminal, pero el agente no.
 - Con AWS Organizations, la misma idea va mejor como SCP (`references/scp-sin-escritura-via-mcp.json`).
 

@@ -9,9 +9,16 @@
         "ssm:GetParameter",
         "ssm:GetParameters",
         "ssm:GetParametersByPath",
+        "ssm:GetParameterHistory",
         "kms:Decrypt"
       ],
       "Resource": "*"
+    },
+    {
+      "Sid": "SinEstadoDeTerraform",
+      "Effect": "Deny",
+      "Action": ["s3:GetObject"],
+      "Resource": "arn:aws:s3:::<bucket-del-tfstate>/*"
     },
     {
       "Sid": "SinEscriturasDesdeElAgente",

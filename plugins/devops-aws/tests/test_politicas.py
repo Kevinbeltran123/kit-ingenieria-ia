@@ -22,6 +22,26 @@ def condiciones_mcp(politica: dict) -> list[tuple[str, str, str]]:
             for clave, valor in claves.items() if "MCP" in clave]
 
 
+def acciones_denegadas(politica: dict) -> dict[str, list[str]]:
+    """Acción denegada -> recursos a los que aplica."""
+    salida: dict[str, list[str]] = {}
+    for st in politica["Statement"]:
+        if st["Effect"] == "Deny":
+            recursos = st["Resource"] if isinstance(st["Resource"], list) else [st["Resource"]]
+            for accion in st["Action"]:
+                salida.setdefault(accion, []).extend(recursos)
+    return salida
+
+
+def test_la_politica_de_lectura_no_deja_ver_secretos():
+    denegadas = acciones_denegadas(json.loads((REFS / "politica-agente-solo-lectura.json").read_text()))
+    for accion in ("secretsmanager:GetSecretValue", "ssm:GetParameter", "ssm:GetParameters",
+                   "ssm:GetParametersByPath", "ssm:GetParameterHistory", "kms:Decrypt"):
+        assert accion in denegadas, accion
+    # El tfstate guarda secretos en texto plano y ReadOnlyAccess incluye s3:Get*.
+    assert any("tfstate" in r for r in denegadas.get("s3:GetObject", []))
+
+
 def test_los_permisos_de_referencia_cubren_env_en_cualquier_carpeta():
     reglas = json.loads((REFS / "settings-permisos-aws.json").read_text())["permissions"]["deny"]
     assert "Read(**/.env)" in reglas and "Read(**/.env.*)" in reglas
