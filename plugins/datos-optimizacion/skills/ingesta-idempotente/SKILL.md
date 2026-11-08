@@ -26,7 +26,7 @@ Antes de escribir código de dlt, Polars o Iceberg, consulta la documentación v
    - Hechos que llegan corregidos: `merge` por clave (`write_disposition="merge"` + `primary_key` en dlt; `MERGE INTO` en Iceberg).
    - Lotes diarios completos: reemplazar la partición del día (`overwrite` de la partición), no agregar.
    - `append` solo para logs inmutables con un id de evento único y deduplicación posterior.
-3. **Incremental por watermark** (marca de agua): guarda el máximo `updated_at` (o id) procesado y pide desde ahí con un margen de solape (p. ej., 1 h) para no perder registros que llegan tarde. El solape es seguro porque la escritura es `merge`. En dlt: `dlt.sources.incremental("updated_at", lag=...)`.
+3. **Incremental por watermark** (marca de agua): guarda el máximo `updated_at` (o id) procesado y pide desde ahí con un margen de solape (p. ej., 1 h) para no perder registros que llegan tarde. En dlt el solape es `lag`: `dlt.sources.incremental("updated_at", lag=3600)` (segundos con cursor de fecha y hora, días con cursor de fecha) junto con `write_disposition="merge"` y `primary_key`, para que lo que se vuelve a traer actualice y no duplique. El solape es seguro porque la escritura es `merge`. En dlt: `dlt.sources.incremental("updated_at", lag=...)`.
 4. **El estado se guarda solo tras escribir con éxito.** Si el job cae entre leer y escribir, el watermark no avanza y la siguiente corrida repite el tramo (sin duplicar, por la regla 2).
 5. **Particionado por fecha del dato** (no por fecha de carga) en la capa analítica; fecha de carga como columna de linaje.
 6. **Reintentos con backoff exponencial** solo para errores transitorios (timeouts, 429, 5xx). Errores de datos no se reintentan: van a cuarentena.
