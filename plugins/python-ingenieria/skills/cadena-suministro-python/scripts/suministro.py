@@ -7,6 +7,8 @@ Sale con 1 si algún paso falla o falta una protección básica.
 Uso: python3 suministro.py [raiz]
 """
 
+from __future__ import annotations
+
 import shutil
 import subprocess
 import sys

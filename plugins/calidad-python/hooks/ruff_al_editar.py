@@ -5,6 +5,8 @@ Claude los vea. Además anota el archivo para que el hook de Stop sepa que
 hubo cambios de Python en esta sesión.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re

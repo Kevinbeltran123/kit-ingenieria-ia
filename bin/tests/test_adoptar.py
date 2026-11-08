@@ -4,7 +4,6 @@ import json
 import shutil
 import subprocess
 import sys
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -104,6 +103,7 @@ def test_errores_de_uso(tmp_path):
 
 def test_plantillas_json_y_toml_validas():
     json.loads((PLANTILLAS / "claude/settings.json").read_text())
+    tomllib = pytest.importorskip("tomllib")  # Python 3.11+
     tomllib.loads((PLANTILLAS / "python/pyproject.toml.fragmento").read_text())
 
 

@@ -4,6 +4,8 @@ Uso: python3 revisar_pins.py [carpeta .github o archivo .yml ...]
 Sale con 1 si encuentra problemas, 0 si todo está bien.
 """
 
+from __future__ import annotations
+
 import re
 import sys
 from pathlib import Path

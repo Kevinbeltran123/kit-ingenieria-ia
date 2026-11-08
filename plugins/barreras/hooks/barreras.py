@@ -10,6 +10,8 @@ Falla cerrado: ante un error interno bloquea (exit 2).
 No es una barrera completa: la seguridad real son reglas deny, sandbox y permisos de solo lectura.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re

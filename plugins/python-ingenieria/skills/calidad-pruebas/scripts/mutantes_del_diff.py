@@ -7,6 +7,8 @@ Incluye cambios commiteados (base...HEAD), sin commitear y archivos nuevos.
 Excluye pruebas, conftest y __init__.py vacíos de lógica.
 """
 
+from __future__ import annotations
+
 import argparse
 import subprocess
 import sys

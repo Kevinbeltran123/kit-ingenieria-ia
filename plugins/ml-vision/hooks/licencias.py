@@ -10,6 +10,8 @@ Revisa Edit/Write/MultiEdit en archivos de dependencias y comandos de instalaci√
 en Bash (pip, uv, poetry, conda, pixi).
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re

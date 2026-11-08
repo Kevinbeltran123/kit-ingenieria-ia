@@ -1,7 +1,8 @@
 # barreras
 
 Hook `PreToolUse` que frena acciones peligrosas antes de que Claude las ejecute. Python 3 de biblioteca estándar.
-Si el hook falla por un error interno, **bloquea** (falla cerrado).
+Si el hook falla por un error interno, **bloquea** (falla cerrado). Si ni siquiera arranca (por ejemplo, no hay
+`python3`), Claude Code también bloquea gracias a `"onFailure": "block"`. Funciona con Python 3.9 o más nuevo.
 
 | Regla | Bloquea | Permite |
 |---|---|---|

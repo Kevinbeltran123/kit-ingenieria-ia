@@ -7,6 +7,8 @@ con 0: es un informe, no un bloqueo.
 Uso: python3 deuda.py [raiz] [--salida informe.md]
 """
 
+from __future__ import annotations
+
 import argparse
 import shutil
 import subprocess

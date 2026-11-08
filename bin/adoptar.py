@@ -9,6 +9,8 @@ Uso:
 - Con --dry-run solo muestra lo que haría.
 """
 
+from __future__ import annotations
+
 import argparse
 import copy
 import json

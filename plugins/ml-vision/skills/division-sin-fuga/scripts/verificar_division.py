@@ -12,6 +12,8 @@ Ejemplo:
         --grupos palma_id,lote,finca --col-fecha fecha --temporal --imagenes data/raw
 """
 
+from __future__ import annotations
+
 import argparse
 import csv
 import hashlib

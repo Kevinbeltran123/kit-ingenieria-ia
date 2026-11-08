@@ -9,6 +9,8 @@ está permitido. Ante un comando que no se puede analizar y menciona una ruta
 protegida, bloquea (falla cerrado).
 """
 
+from __future__ import annotations
+
 import json
 import os
 import shlex

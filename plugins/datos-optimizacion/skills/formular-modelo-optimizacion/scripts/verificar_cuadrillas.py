@@ -6,6 +6,8 @@ negocio y recalcula el objetivo desde cero. Solo biblioteca estándar.
     python3 verificar_cuadrillas.py instancia.json solucion.json
 """
 
+from __future__ import annotations
+
 import json
 import sys
 

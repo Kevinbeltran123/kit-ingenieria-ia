@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "python-ingenieria",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Skills de ingeniería Python: arquitectura hexagonal pragmática, deuda técnica, documentación, rendimiento, calidad de pruebas y cadena de suministro",
   "author": { "name": "Kevin Beltran" },
   "license": "MIT",

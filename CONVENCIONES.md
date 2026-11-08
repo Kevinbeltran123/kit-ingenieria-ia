@@ -24,8 +24,14 @@ Ejemplo de referencia: `plugins/calidad-python/`.
 
 ## Hooks
 - Python 3 de biblioteca estándar, invocado como `python3 -I "${CLAUDE_PLUGIN_ROOT}/hooks/<script>.py"`.
-- Exit 2 + stderr para bloquear o devolver el error a Claude; exit 0 si no aplica.
-- Fallar abierto (exit 0) ante entradas raras, salvo en barreras de seguridad, que fallan cerrado.
+- Compatibles con Python 3.9, el `python3` de macOS y de Amazon Linux 2023: `from __future__ import annotations`
+  después del docstring y nada de 3.10+ en tiempo de ejecución (`match`, `tomllib`...). Vale también para
+  `scripts/` de las skills y `bin/`. Lo vigila `bin/tests/test_compatibilidad.py`.
+- Exit 2 + stderr para bloquear o devolver el error a Claude; exit 0 si no aplica. Cualquier otro código
+  (por ejemplo, un error al cargar el archivo) Claude Code lo trata como no bloqueante: la acción sigue.
+- Fallar abierto (exit 0) ante entradas raras, salvo en barreras de seguridad, que fallan cerrado: además de
+  salir con 2 ante un error interno, declaran `"onFailure": "block"` en hooks.json para que Claude Code
+  bloquee si el hook ni siquiera arranca.
 - Pruebas con pytest que alimentan JSON por stdin (ver `plugins/calidad-python/tests/test_hooks.py`).
 
 ## Verificación antes de dar algo por terminado

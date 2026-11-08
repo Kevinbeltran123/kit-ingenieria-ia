@@ -13,6 +13,8 @@ Sin argumento usa la instancia mínima de abajo. La solución se revisa con
 verificar_cuadrillas.py, que no comparte código con este modelo.
 """
 
+from __future__ import annotations
+
 import json
 import sys
 

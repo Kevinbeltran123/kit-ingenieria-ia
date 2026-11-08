@@ -8,6 +8,8 @@ MAX_BLOQUEOS veces por mensaje de la persona; si sigue fallando, deja
 terminar y le avisa a la persona.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re

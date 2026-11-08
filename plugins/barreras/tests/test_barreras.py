@@ -1,5 +1,7 @@
 """Pruebas del hook de barreras: lo que se bloquea, lo que se pregunta y lo que pasa."""
 
+from __future__ import annotations
+
 import json
 import os
 import subprocess

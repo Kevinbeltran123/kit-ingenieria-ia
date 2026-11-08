@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "ml-vision",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Visión por computador y MLOps sin fugas: división de datos verificada, receta de entrenamiento, carga segura de modelos, licencias, fichas de modelo y despliegue en AWS; hooks que protegen el evaluador y las licencias",
   "author": { "name": "Kevin Beltran" },
   "license": "MIT",

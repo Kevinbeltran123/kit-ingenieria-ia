@@ -4,6 +4,8 @@ Orden: ruff check, ruff format --check, tipos (ty/mypy/pyright), import-linter,
 pytest, deptry. Sale con 1 si algo falla. Uso: python3 verify.py [raiz]
 """
 
+from __future__ import annotations
+
 import shutil
 import subprocess
 import sys

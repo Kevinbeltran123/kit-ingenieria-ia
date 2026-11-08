@@ -1,5 +1,7 @@
 """Notification: aviso de macOS cuando Claude necesita permiso o espera respuesta."""
 
+from __future__ import annotations
+
 import json
 import subprocess
 import sys
