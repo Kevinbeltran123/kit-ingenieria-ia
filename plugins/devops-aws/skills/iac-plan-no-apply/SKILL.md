@@ -12,8 +12,13 @@ Un `apply` mal revisado puede borrar una base de datos. Por eso el agente nunca 
 2. `terraform init -backend=false` (si solo se valida) y `terraform validate`
 3. `tflint --recursive`
 4. `checkov -d .` (o trivy config, no ambos)
-5. `terraform plan -out=plan.tfplan` y `terraform show -no-color plan.tfplan` contra el entorno de dev, con el perfil de solo lectura del agente (ver skill `aws-acceso-agente`)
-6. Abrir PR con el resumen del plan. CI vuelve a correr el plan, alguien lo revisa y CI hace `apply` del plan aprobado.
+5. El plan contra el backend real lo corre **CI** en el PR, no el agente. El rol de lectura del agente no puede leer
+   el estado (Deny del tfstate en `aws-acceso-agente`: el estado guarda secretos en texto plano) ni tomar el lock,
+   que `plan` toma por defecto (con `use_lockfile` eso es escribir y borrar `<key>.tflock`). En CI, un rol de plan
+   asumido por OIDC lee el estado, toma el lock y solo lee los recursos; el job publica en el PR la salida de
+   `terraform show -no-color plan.tfplan`.
+6. Abrir PR con el cambio. El agente lee el resumen del plan en el comentario de CI (`gh pr view --comments`),
+   alguien lo revisa y CI hace `apply` del plan aprobado con otro rol.
 
 ## Flujo con AWS CDK
 1. Pruebas del stack (`pytest` con `aws_cdk.assertions.Template`)
@@ -36,7 +41,8 @@ Si el plan tiene cualquier destroy o reemplazo de un recurso con estado, detener
 
 ## Reglas
 - El agente no ejecuta `apply`, `destroy`, `cdk deploy` ni `cdk destroy`, tampoco con `-auto-approve` "solo en dev". El plugin `barreras` del kit lo bloquea de forma determinista y las reglas deny de `aws-acceso-agente` lo refuerzan.
-- Estado remoto con bloqueo (S3 + lock nativo o DynamoDB); nunca editar el state a mano; `terraform import` y `state mv` también van por PR.
+- Estado remoto en S3 con `use_lockfile = true` (lock nativo, GA desde Terraform 1.11) y `required_version = ">= 1.11"`. El lock con DynamoDB (`dynamodb_table`) está obsoleto: para migrar, deja los dos, corre `terraform init -reconfigure` y quita `dynamodb_table` cuando todos usen 1.11 o más.
+- Nunca editar el state a mano; `terraform import` y `state mv` también van por PR.
 - Versiones fijadas: `required_version` y providers con `~>` y `.terraform.lock.hcl` commiteado.
 - Recursos con datos: `prevent_destroy` (Terraform) o `RemovalPolicy.RETAIN` (CDK).
 - Si la empresa usa Terraform: MCP de HashiCorp solo con `--toolsets registry` (documentación, sin operaciones).
