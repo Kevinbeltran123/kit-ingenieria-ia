@@ -15,11 +15,12 @@ Visión por computador y MLOps para el proyecto de enfermedades en palma (y simi
 ## Hooks (PreToolUse)
 | Hook | Bloquea |
 |---|---|
-| `evaluador_bloqueado.py` | Editar o escribir (también por Bash: `>`, `rm`, `mv`, `tee`, `sed -i`, `cp` hacia...) en `eval/`, `splits/`, `data/splits/` si existen, o en las rutas de `.claude/ml-vision.json` (`{"rutas_protegidas": [...]}`). Leer está permitido. |
+| `evaluador_bloqueado.py` | Editar o escribir (también por Bash: `>`, `rm`, `mv`, `tee`, `sed -i`, `cp` hacia...) en `eval/`, `splits/`, `data/splits/` si existen, o en las rutas de `.claude/ml-vision.json` (`{"rutas_protegidas": [...]}`). Ese archivo también queda protegido: solo lo cambia la persona. Leer está permitido. |
 | `licencias.py` | Agregar `ultralytics` o `rfdetr[plus]` a archivos de dependencias (también `requirements/` y el bloque PEP 723 de un script) o instalarlos o ejecutarlos (pip, uv, uvx, `uv run --with`, pipx, poetry, conda, pixi), salvo línea `APROBADO: <paquete> — ...` en `LICENSES.md`. |
 
 ## Límites
-- El análisis de Bash es heurístico: cubre los comandos comunes, no un `python -c` que escriba en `eval/`. La métrica oficial la debe recalcular CI, y un cambio en `eval/` o `splits/` lo aprueba una persona: el perfil ml de `bin/adoptar.py` crea `.github/CODEOWNERS` para eso.
+- El análisis de Bash es heurístico: cubre los comandos comunes, no un `python -c` que escriba en `eval/` ni un
+  comando sobre la carpeta que contiene lo protegido (`mv .claude otra`, `rm -r data`). La métrica oficial la debe recalcular CI, y un cambio en `eval/` o `splits/` lo aprueba una persona: el perfil ml de `bin/adoptar.py` crea `.github/CODEOWNERS` para eso.
 - Los hooks no reemplazan la revisión legal ni la de código.
 
 ## Probar

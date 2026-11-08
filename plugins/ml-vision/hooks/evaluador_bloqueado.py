@@ -2,6 +2,8 @@
 
 Rutas protegidas: las de `.claude/ml-vision.json` ({"rutas_protegidas": ["eval/", ...]}).
 Sin ese archivo, se protegen `eval/`, `splits/` y `data/splits/`, solo si existen.
+El propio `.claude/ml-vision.json` también queda protegido: si el agente pudiera
+cambiarlo, vaciaría la lista (o crearía una vacía) y después escribiría en `eval/`.
 
 Bloquea Edit/Write/MultiEdit/NotebookEdit sobre esas rutas y comandos de Bash que
 escriban en ellas (redirecciones, rm, mv, tee, sed -i, cp hacia ellas...). En Bash
@@ -22,6 +24,7 @@ import sys
 from pathlib import Path
 
 POR_DEFECTO = ["eval/", "splits/", "data/splits/"]
+CONFIG = Path(".claude", "ml-vision.json")
 ESCRIBEN = {"rm", "rmdir", "mv", "tee", "truncate", "touch", "chmod", "chown", "ln", "dd", "shred", "unlink"}
 DESTINO_AL_FINAL = {"cp", "rsync", "install"}
 PREFIJOS = {"sudo", "env", "command", "time", "nohup"}
@@ -34,14 +37,18 @@ ENTRADA = {"<", "<<", "<<<"}
 
 
 def rutas_protegidas(raiz: Path) -> list[Path]:
-    config = raiz / ".claude" / "ml-vision.json"
+    config = raiz / CONFIG
     if config.is_file():
         try:
             rutas = json.loads(config.read_text()).get("rutas_protegidas", [])
         except (json.JSONDecodeError, AttributeError):
             rutas = POR_DEFECTO  # config rota: proteger lo de siempre
-        return [normalizar(raiz, r) for r in rutas]
-    return [normalizar(raiz, r) for r in POR_DEFECTO if (raiz / r).exists()]
+        protegidas = [normalizar(raiz, r) for r in rutas]
+    else:
+        protegidas = [normalizar(raiz, r) for r in POR_DEFECTO if (raiz / r).exists()]
+    if protegidas or config.is_file():
+        protegidas.append(normalizar(raiz, str(CONFIG)))
+    return protegidas
 
 
 def normalizar(raiz: Path, ruta: str) -> Path:
@@ -202,6 +209,10 @@ def main() -> int:
         # También la copia de las rutas protegidas en el worktree donde está el archivo.
         propia = raiz_git(c)
         base = protegida(c, protegidas + (rutas_protegidas(propia) if propia else []))
+        if base and base.parts[-2:] == CONFIG.parts:
+            print(f"Bloqueado: '{c}' es la configuración que define qué protege este hook; solo la cambia "
+                  "la persona. Pídele el cambio.", file=sys.stderr)
+            return 2
         if base:
             print(
                 f"Bloqueado: '{c}' está bajo '{base}', que es el evaluador o los splits protegidos. "

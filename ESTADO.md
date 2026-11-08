@@ -25,16 +25,16 @@ los primeros arreglos están en `.explicaciones/commits/` (fuera de git). Hecho:
 - Nuevo: plugin `explicador` (vista B, línea por línea, exigido antes de `gh pr create`; `--commit` para un
   commit puntual). Es para el código de la empresa; en el kit no se generan explicaciones.
 
-Verificación: 485 pruebas pasan (14 se saltan sin OR-Tools; con OR-Tools 9.15 también pasan), cada commit pasa
+Verificación: 493 pruebas pasan (14 se saltan sin OR-Tools; con OR-Tools 9.15 también pasan), cada commit pasa
 todas las suites por sí solo, los hooks y scripts corren con Python 3.9, y `claude plugin validate .` pasa.
 
 ## Siguiente
 1. Al subir el kit a GitHub: A10 (revisión en CI con plugin fijado), E1 (CI del kit) y B6 (versiones).
-2. Hallazgos nuevos de esta tanda, para decidir:
-   - **NECESARIO:** `evaluador_bloqueado` no protege su propia configuración: el agente puede vaciar
-     `rutas_protegidas` en `.claude/ml-vision.json` y después escribir en `eval/`. Arreglo propuesto: proteger
-     siempre ese archivo (el CODEOWNERS del perfil ml ya lo cubre en el PR, no en la sesión).
-   - **EXTRA:** `licencias.py` no revisa Dockerfiles (`RUN pip install ultralytics`).
+2. Hallazgos nuevos de esta tanda:
+   - Hecho (Kevin dijo «dale»): `evaluador_bloqueado` protege su propia configuración `.claude/ml-vision.json`
+     (antes el agente podía vaciar `rutas_protegidas` y después escribir en `eval/`). Límite documentado: no ve
+     comandos sobre la carpeta entera (`mv .claude otra`); eso lo frena el CODEOWNERS en el PR.
+   - **EXTRA, para decidir:** `licencias.py` no revisa Dockerfiles (`RUN pip install ultralytics`).
 
 ## Pendiente que decide Kevin
 1. Subir el kit a un repo privado de GitHub. Al hacerlo: CI propio (E1) y decidir versiones (B6: subir `version`

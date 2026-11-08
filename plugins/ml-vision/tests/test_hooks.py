@@ -98,6 +98,50 @@ def test_config_rota_protege_los_defaults(repo):
     assert evaluador(repo, "Write", file_path=str(repo / "eval" / "a.py"), content="").returncode == 2
 
 
+def config(repo, rutas):
+    (repo / ".claude").mkdir(exist_ok=True)
+    archivo = repo / ".claude" / "ml-vision.json"
+    archivo.write_text(json.dumps({"rutas_protegidas": rutas}))
+    return archivo
+
+
+def test_la_configuracion_no_la_cambia_el_agente(repo):
+    """Si pudiera editarla, el agente vaciaría rutas_protegidas y después escribiría en eval/."""
+    archivo = config(repo, ["eval/"])
+    r = evaluador(repo, "Write", file_path=str(archivo), content='{"rutas_protegidas": []}')
+    assert r.returncode == 2 and "configuración" in r.stderr
+    assert evaluador(repo, "Edit", file_path=str(archivo), old_string="eval/", new_string="x/").returncode == 2
+
+
+def test_tampoco_puede_crear_una_que_desproteja_los_defaults(repo):
+    archivo = repo / ".claude" / "ml-vision.json"  # no existe; eval/ está protegido por defecto
+    assert evaluador(repo, "Write", file_path=str(archivo), content='{"rutas_protegidas": []}').returncode == 2
+
+
+@pytest.mark.parametrize("comando", [
+    "echo '{\"rutas_protegidas\": []}' > .claude/ml-vision.json",
+    "rm .claude/ml-vision.json",
+    "mv .claude/ml-vision.json /tmp/x",
+    "sed -i '' 's/eval//' .claude/ml-vision.json",
+])
+def test_bash_que_cambia_la_configuracion_se_bloquea(repo, comando):
+    config(repo, ["eval/"])
+    assert bash(repo, comando).returncode == 2, comando
+
+
+def test_leer_la_configuracion_se_permite(repo):
+    config(repo, ["eval/"])
+    assert bash(repo, "cat .claude/ml-vision.json").returncode == 0
+
+
+def test_sin_nada_protegido_se_puede_crear_la_configuracion(tmp_path):
+    raiz = tmp_path / "vacio"
+    raiz.mkdir()
+    archivo = raiz / ".claude" / "ml-vision.json"
+    r = evaluador(raiz, "Write", file_path=str(archivo), content='{"rutas_protegidas": ["eval/"]}')
+    assert r.returncode == 0
+
+
 def test_json_invalido_en_stdin_no_bloquea(repo):
     assert hook("evaluador_bloqueado.py", None, repo, crudo="basura").returncode == 0
 
@@ -207,6 +251,8 @@ def test_eval_de_un_worktree_tambien_se_protege(repo):
     assert evaluador(repo, "Edit", file_path=str(wt / "eval" / "metricas.py"), old_string="a", new_string="b").returncode == 2
     assert bash(repo, "rm eval/metricas.py", cwd=wt).returncode == 2
     assert evaluador(repo, "Write", file_path=str(wt / "src" / "train.py"), content="").returncode == 0
+    # y la configuración propia del worktree
+    assert evaluador(repo, "Write", file_path=str(wt / ".claude" / "ml-vision.json"), content="{}").returncode == 2
 
 
 # --- licencias.py ---
