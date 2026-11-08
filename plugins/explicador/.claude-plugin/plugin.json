@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "explicador",
-  "version": "0.1.0",
   "description": "Explica cada cambio línea por línea en un HTML local (código y terminal lado a lado) y lo exige antes de abrir un PR",
   "author": { "name": "Kevin Beltran" },
   "license": "MIT",

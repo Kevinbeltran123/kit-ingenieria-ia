@@ -29,4 +29,4 @@
 Solo Markdown, un `.ts` de ejemplo (no se ejecuta) y `find-polluter.sh` (bisección local que corre `npm test` por archivo; sin red ni lecturas fuera del repo). Sin hooks, MCP ni binarios.
 
 ## Actualizar
-Ver `terceros/README.md`: comparar `git diff <SHA viejo> <SHA nuevo> -- skills/<skill>` de las 5 skills, reaplicar los cambios de arriba y subir `version` (`<upstream>-kit.N`).
+Ver `terceros/README.md`: comparar `git diff <SHA viejo> <SHA nuevo> -- skills/<skill>` de las 5 skills, reaplicar los cambios de arriba. El plugin no lleva `version`: el commit nuevo ya es la versión nueva.

@@ -37,6 +37,17 @@ Luego, en el repo: abrir Claude Code, aceptar la confianza de la carpeta e insta
 
 Para probar un plugin sin instalarlo: `claude --plugin-dir ~/Desarrollo/kit-ingenieria-ia/plugins/<plugin>`.
 
+## Entregas y versiones
+Los plugins propios no llevan `version`: Claude Code usa el commit como versión, así que ningún cambio se queda
+sin llegar por olvidar subirla. Las entregas para el equipo son tags (`v0.2.0`, `v0.3.0`…) y cada repo fija la suya:
+```sh
+python3 bin/adoptar.py /ruta/al/repo --marketplace-github Kevinbeltran123/kit-ingenieria-ia --ref v0.2.0
+```
+Para pasar un repo a una entrega nueva, se vuelve a correr con el tag nuevo (cambia la fuente en
+`.claude/settings.json`) y después `claude plugin marketplace update kit-ingenieria-ia`. Sin `--ref`, el repo
+sigue la cabeza de `main`. Los plugins de terceros que declaran `version` en su propio `plugin.json` solo se
+actualizan cuando su autor la sube (ver `terceros/README.md`).
+
 ## Carpetas
 - `investigacion/` — 8 informes con evidencia y fuentes + `00-resumen.md`
 - `plugins/` — plugins propios, cada uno con README y pruebas

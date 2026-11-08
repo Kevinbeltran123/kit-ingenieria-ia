@@ -70,7 +70,6 @@
     },
     "description": "Pyright como LSP: navegación y diagnósticos de tipos. Requiere pyright-langserver en el PATH.",
     "category": "development",
-    "version": "1.0.0",
     "strict": false,
     "lspServers": {
       "pyright": {

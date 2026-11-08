@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "datos-optimizacion",
-  "version": "0.1.1",
   "description": "Skills de ingeniería de datos y optimización: formular modelos (OR-Tools, HiGHS) con verificador independiente, ingesta idempotente, contratos de datos y migraciones con Alembic",
   "author": { "name": "Kevin Beltran" },
   "license": "MIT",

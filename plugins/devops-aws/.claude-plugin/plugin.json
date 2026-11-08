@@ -1,7 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "devops-aws",
-  "version": "0.1.1",
   "description": "Skills de DevOps para Python + GitHub + AWS: acceso seguro del agente a AWS, GitHub Actions seguras, Dockerfile con uv, IaC con plan sin apply y observabilidad",
   "author": { "name": "Kevin Beltran" },
   "license": "MIT",

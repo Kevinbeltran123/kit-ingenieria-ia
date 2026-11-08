@@ -5,7 +5,7 @@ Reglas para todo lo que se agregue a este marketplace.
 ## Estructura de un plugin
 ```
 plugins/<nombre>/
-├── .claude-plugin/plugin.json   # name, version (semver), description, author {name: "Kevin Beltran"}, license MIT
+├── .claude-plugin/plugin.json   # name, description, author {name: "Kevin Beltran"}, license MIT; sin version (ver README, «Entregas»)
 ├── skills/<skill>/SKILL.md      # + scripts/ y references/ si hacen falta
 ├── hooks/hooks.json             # + scripts de hooks
 ├── tests/                       # pytest para todo script o hook
