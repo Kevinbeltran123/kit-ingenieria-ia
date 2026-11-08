@@ -1,6 +1,6 @@
 ---
 name: calidad-pruebas
-description: Pruebas Python que de verdad prueban algo - evita los anti-patrones de pruebas generadas por IA (mocks excesivos, asserts triviales, pruebas que replican la implementación), usa Hypothesis, testcontainers/LocalStack y schemathesis, y cierra con un gate de mutación con mutmut sobre el código cambiado. Úsala al escribir o revisar pruebas, cuando la cobertura sea alta pero haya bugs, o pidan "tests", "pytest", "mutation testing", "property-based", "mocks".
+description: Pruebas Python que de verdad prueban algo - evita los anti-patrones de pruebas generadas por IA (mocks excesivos, asserts triviales, pruebas que replican la implementación), usa Hypothesis, moto, testcontainers y schemathesis, y cierra con un gate de mutación con mutmut sobre el código cambiado. Úsala al escribir o revisar pruebas, cuando la cobertura sea alta pero haya bugs, o pidan "tests", "pytest", "mutation testing", "property-based", "mocks".
 ---
 
 # Calidad de pruebas
@@ -23,7 +23,7 @@ Una prueba vale si **falla cuando el código está mal**. La evidencia de 2026 m
 | Replicar la implementación | la prueba recalcula con la misma fórmula del código | valores esperados calculados a mano o propiedades |
 | Mock del sistema bajo prueba | `patch("app.application.registrar.RegistrarCosecha.__call__")` | probar la clase real con fakes de sus puertos |
 | Solo verificar llamadas | `mock.assert_called_once()` como único assert | verificar el efecto (estado, valor) |
-| `boto3` mockeado a mano | `MagicMock()` para S3 | LocalStack con testcontainers, o `moto` si no hay Docker |
+| `boto3` mockeado a mano | `MagicMock()` para S3 | `moto` (`@mock_aws`): S3, SQS y DynamoDB en memoria, sin Docker ni cuenta |
 | Capturar todo | `with pytest.raises(Exception)` | el error de dominio específico + `match=` |
 | Borrar o saltar una prueba que falla | `@pytest.mark.skip` sin issue | arreglar el código, o explicar y enlazar issue |
 | Snapshot de todo | comparar JSON gigante generado | asserts sobre los campos que importan |
@@ -32,7 +32,7 @@ Una prueba vale si **falla cuando el código está mal**. La evidencia de 2026 m
 
 - **Unitarias de dominio y casos de uso**: pytest + fakes en memoria. Sin red, sin Docker, rápidas.
 - **Propiedades (Hypothesis)**: para funciones con muchas entradas posibles (parsers, cálculos, transformaciones de datos, optimización). Propiedades típicas: ida y vuelta (`decode(encode(x)) == x`), invariantes (el total no cambia al reordenar), comparación con una implementación simple de referencia, nunca lanza para entradas válidas. Fija la reproducibilidad en CI con `@settings(derandomize=True)` o un perfil de settings, y guarda los ejemplos que fallaron con `@example(...)`.
-- **Integración de adaptadores**: `testcontainers` con Postgres real y LocalStack para S3/SQS/DynamoDB. Marca con `@pytest.mark.integration` para correrlas aparte si son lentas.
+- **Integración de adaptadores**: `testcontainers` con Postgres real; para AWS, `moto` (`@mock_aws` en memoria, o `ThreadedMotoServer` si hace falta un endpoint HTTP). LocalStack exige cuenta y token desde marzo de 2026 y su plan gratis prohíbe el uso comercial: úsalo solo si la empresa paga la licencia. Marca las lentas con `@pytest.mark.integration` y córrelas aparte (`-m integration`); el marcador ya está registrado en el fragmento de `pyproject.toml`, porque con `--strict-markers` uno sin registrar rompe la colección.
 - **API**: `TestClient` de FastAPI para flujos concretos; `schemathesis` contra el OpenAPI para encontrar entradas que rompen el servicio (`schemathesis run http://localhost:8000/openapi.json`, o su integración con pytest).
 
 ## Gate de mutación (mutmut 3) sobre lo que cambiaste

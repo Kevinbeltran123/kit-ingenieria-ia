@@ -75,6 +75,8 @@ python-version = "3.12"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+# Con --strict-markers, un marcador sin registrar rompe la colección de pruebas.
+markers = ["integration: usa servicios reales o contenedores (lentas); correr aparte con -m integration"]
 
 [tool.coverage.run]
 branch = true

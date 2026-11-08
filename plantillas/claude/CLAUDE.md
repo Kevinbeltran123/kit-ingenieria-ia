@@ -30,7 +30,7 @@
 ## Pruebas
 - Toda corrección de bug empieza con una prueba que falla.
 - Probar comportamiento, no implementación. Mocks solo en los bordes (AWS, red, reloj).
-- AWS en pruebas: <moto / LocalStack con testcontainers>.
+- AWS en pruebas: <moto (por defecto) / LocalStack solo con licencia paga>.
 
 ## Cómo verificar antes de decir "listo"
 1. `uv run pytest -q` pasa.

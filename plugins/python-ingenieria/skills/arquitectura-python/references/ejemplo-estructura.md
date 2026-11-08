@@ -19,7 +19,7 @@ servicio-cosechas/
 │       └── config.py         # pydantic-settings
 └── tests/
     ├── unit/                 # dominio y casos de uso con fakes en memoria
-    ├── integration/          # adaptadores con testcontainers / LocalStack
+    ├── integration/          # adaptadores con testcontainers (Postgres) y moto (AWS)
     └── api/                  # TestClient o schemathesis
 ```
 
