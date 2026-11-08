@@ -9,7 +9,9 @@ Un archivo `.pt`, `.pth`, `.pkl`, `.bin` o `.ckpt` es pickle: **cargarlo puede e
 
 ## Reglas
 
-1. **`torch>=2.6`** en `pyproject.toml`. Hasta 2.5.1, `weights_only=True` tenía un RCE (CVE-2025-32434).
+1. **`torch>=2.10`** en `pyproject.toml`. `weights_only=True` tuvo dos fallas que permiten ejecutar código al cargar
+   un checkpoint: CVE-2025-32434 (hasta 2.5.1) y CVE-2026-24747 (hasta 2.9.1). PyTorch no publica parches para
+   versiones viejas.
 2. **Guardar en safetensors** (`safetensors.torch.save_file`) u ONNX. Los checkpoints de entrenamiento (optimizador, estado) solo dentro del bucket propio.
 3. **Cargar con `weights_only=True`** cuando no haya alternativa a `torch.load`:
    ```python
@@ -40,7 +42,7 @@ En CI, como segunda capa (no como garantía):
 uvx fickling --check-safety modelos/*.pt
 ```
 
-Revisa también que `torch` en `uv.lock` sea ≥ 2.6.
+Revisa también que `torch` en `uv.lock` sea ≥ 2.10.
 
 ## Excepciones
 

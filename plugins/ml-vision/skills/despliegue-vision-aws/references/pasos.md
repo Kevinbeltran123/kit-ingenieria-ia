@@ -10,7 +10,7 @@ from sagemaker.pytorch import PyTorch
 estimator = PyTorch(
     entry_point="train.py", source_dir="src",
     role=ROL_SAGEMAKER, instance_type="ml.g5.xlarge", instance_count=1,
-    framework_version="<versión de PyTorch ≥ 2.6 soportada>", py_version="py312",
+    framework_version="<versión de PyTorch ≥ 2.10 soportada>", py_version="py312",
     use_spot_instances=True, max_run=4 * 3600, max_wait=8 * 3600,
     checkpoint_s3_uri=f"s3://{BUCKET}/checkpoints/{EXPERIMENTO}/",
     environment={"MLFLOW_TRACKING_URI": MLFLOW_ARN, "GIT_SHA": GIT_SHA},

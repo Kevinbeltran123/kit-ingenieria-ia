@@ -44,7 +44,7 @@ Nunca: `pip install` fuera de uv, `curl | sh`, instalar desde un fork o URL git 
 
 - `pickle.load`, `joblib.load`, `torch.load` sin `weights_only=True` y `trust_remote_code=True` ejecutan código del archivo. Solo con archivos propios y verificados.
 - Preferir `safetensors` para pesos y fijar `revision=` (commit) al descargar de Hugging Face.
-- PyTorch ≥ 2.6 (CVE-2025-32434).
+- PyTorch ≥ 2.10 (CVE-2025-32434 y CVE-2026-24747).
 - Los escáneres de pickle se pueden evadir: no son garantía.
 
 ## Secretos

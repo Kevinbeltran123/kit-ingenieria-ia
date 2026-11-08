@@ -7,7 +7,7 @@ Visión por computador y MLOps para el proyecto de enfermedades en palma (y simi
 |---|---|
 | `division-sin-fuga` | Diseñar splits por palma/lote/finca/fecha y verificarlos con `scripts/verificar_division.py` (falla si hay fuga). |
 | `receta-entrenamiento` | Fases de Karpathy adaptadas: datos → baselines tontos → DINOv3 congelado → regularizar → evaluar por finca → piloto en campo. |
-| `carga-segura-modelos` | torch ≥ 2.6, `weights_only=True`, safetensors con revisión fija, sin `trust_remote_code`. |
+| `carga-segura-modelos` | torch ≥ 2.10, `weights_only=True`, safetensors con revisión fija, sin `trust_remote_code`. |
 | `licencias-vision` | AGPL de Ultralytics, RF-DETR sin `[plus]`, DINOv3/SAM 3; cómo registrar aprobaciones. |
 | `ficha-modelo` | Plantillas de model card y dataset card con límites de validación en campo. |
 | `despliegue-vision-aws` | SageMaker spot, MLflow serverless, Batch Transform, Lambda + ONNX, paridad ONNX, drift de embeddings. |
