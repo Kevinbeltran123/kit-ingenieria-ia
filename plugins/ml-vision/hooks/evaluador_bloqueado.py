@@ -127,8 +127,10 @@ def main() -> int:
         if base:
             print(
                 f"Bloqueado: '{c}' está bajo '{base}', que es el evaluador o los splits protegidos. "
-                "La métrica oficial no la cambia el agente. Si de verdad hay que modificarlo, "
-                "pídeselo a la persona; ella edita `.claude/ml-vision.json` o el archivo a mano.",
+                "La métrica oficial no la cambia el agente. Para proponer una división nueva, escríbela "
+                "fuera (por ejemplo `splits_propuesta/manifest.csv`), verifícala con la skill division-sin-fuga "
+                "y pídele a la persona que la mueva. Para otro cambio, pídeselo a ella; edita "
+                "`.claude/ml-vision.json` o el archivo a mano.",
                 file=sys.stderr,
             )
             return 2

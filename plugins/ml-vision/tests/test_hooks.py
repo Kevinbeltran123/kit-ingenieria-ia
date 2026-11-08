@@ -75,6 +75,13 @@ def test_splits_por_defecto_se_protege_si_existe(repo):
     assert evaluador(repo, "Write", file_path=str(repo / "data" / "splits" / "test.csv"), content="").returncode == 2
 
 
+def test_el_bloqueo_de_splits_indica_como_proponer_una_division(repo):
+    (repo / "splits").mkdir()
+    r = evaluador(repo, "Write", file_path=str(repo / "splits" / "manifest.csv"), content="imagen,split\n")
+    assert r.returncode == 2
+    assert "splits_propuesta" in r.stderr
+
+
 def test_config_personalizada_reemplaza_los_defaults(repo):
     (repo / ".claude").mkdir()
     (repo / ".claude" / "ml-vision.json").write_text(json.dumps({"rutas_protegidas": ["benchmarks/"]}))

@@ -37,10 +37,13 @@ Reglas que siempre aplican:
 2. Normalización, oversampling (SMOTE), selección de features y aumento de datos se ajustan **solo con train**.
 3. No usar como feature el ID de lote, finca o fecha.
 4. Guardar el split como archivo versionado (`splits/manifest.csv` con DVC o en git) y no recalcularlo en cada corrida. Fija la semilla.
+   `splits/` está protegido por el hook del plugin: escribe la propuesta en `splits_propuesta/manifest.csv`,
+   verifícala (paso 3) y pídele a la persona que la mueva a `splits/`. Así nadie cambia la división sin que la persona la vea.
 
 ## 3. Verifica (obligatorio)
 
-Corre el verificador sobre el manifiesto (una fila por imagen):
+Corre el verificador sobre el manifiesto (una fila por imagen). Si es una propuesta, pásale
+`splits_propuesta/manifest.csv`:
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/skills/division-sin-fuga/scripts/verificar_division.py" splits/manifest.csv \
