@@ -27,6 +27,8 @@ entrenador.train(input_data_config=[
 - La imagen de PyTorch 2.10.0 solo viene con Python 3.13 (`py313`; SDK 3.28.0). Para otra versión, mira las que
   trae `image_uris` en el SDK instalado.
 - `train.py` debe reanudar desde `/opt/ml/checkpoints` (spot puede interrumpir).
+- El contenedor necesita el plugin `sagemaker-mlflow` (por ejemplo en `SourceCode(requirements=...)`): sin él, la ARN
+  de la MLflow App en `MLFLOW_TRACKING_URI` falla con `UnsupportedModelRegistryStoreURIException`.
 - Registra en MLflow: `GIT_SHA`, `HASH_DVC`, semilla, `uv.lock` como artefacto.
 
 ## 2. Registro

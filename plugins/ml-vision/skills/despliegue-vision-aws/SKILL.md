@@ -1,6 +1,6 @@
 ---
 name: despliegue-vision-aws
-description: Cómo entrenar, registrar, desplegar y monitorear modelos de visión en AWS con costo bajo: SageMaker Training con spot, MLflow serverless y Model Registry, Batch Transform para ortomosaicos de dron, Lambda con ONNX en CPU para fotos sueltas, modelos INT8 sin conexión en campo, paridad ONNX y drift de embeddings. Úsala al diseñar el despliegue, exportar a ONNX o configurar monitoreo de un modelo de visión. SageMaker, MLOps, ONNX Runtime, model drift.
+description: Cómo entrenar, registrar, desplegar y monitorear modelos de visión en AWS con costo bajo: SageMaker Training con spot, MLflow App (serverless) y Model Registry, Batch Transform para ortomosaicos de dron, Lambda con ONNX en CPU para fotos sueltas, modelos INT8 sin conexión en campo, paridad ONNX y drift de embeddings. Úsala al diseñar el despliegue, exportar a ONNX o configurar monitoreo de un modelo de visión. SageMaker, MLOps, ONNX Runtime, model drift.
 ---
 
 # Despliegue de visión en AWS
@@ -14,7 +14,7 @@ Elige la arquitectura por el patrón de uso, no por la herramienta. Detalle de c
 | Datos y ortomosaicos | S3 con versionado y cifrado KMS; DVC con remoto S3 |
 | Anotación | Label Studio o CVAT autoalojado + pre-anotación SAM con revisión humana |
 | Entrenamiento | SageMaker Training Jobs con instancias spot y checkpoints en S3 |
-| Tracking y registro | MLflow serverless de SageMaker AI → SageMaker Model Registry |
+| Tracking y registro | MLflow App de SageMaker AI (la oferta administrada actual, preferida sobre los Tracking Servers) → SageMaker Model Registry |
 | Vuelo completo → mapa de alertas | SageMaker Batch Transform o Processing Job con GPU |
 | Foto suelta desde app | Lambda (imagen de contenedor) + ONNX Runtime CPU, o Serverless Inference |
 | Campo sin señal | ONNX INT8 / TFLite / CoreML en el celular |

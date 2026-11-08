@@ -53,7 +53,7 @@ En este orden, midiendo cada cambio contra el anterior:
 4. Pérdida ponderada o focal para el desbalance (muestreo solo en train).
 5. Early stopping con la métrica de validación que importa, no con la pérdida.
 
-Un cambio a la vez. Registra cada experimento en MLflow con: commit de git, hash del dataset (DVC), semilla y `uv.lock`.
+Un cambio a la vez. Registra cada experimento en MLflow con: commit de git, hash del dataset (DVC), semilla y `uv.lock`. En la máquina del agente, MLflow local (`MLFLOW_TRACKING_URI=sqlite:///mlflow.db`, el backend por defecto de MLflow 3, fuera de git): su rol de lectura no escribe en la MLflow App de SageMaker, y los runs oficiales salen de los jobs de entrenamiento.
 
 ## Fase 5: evaluar como en campo
 

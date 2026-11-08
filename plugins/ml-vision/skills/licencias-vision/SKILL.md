@@ -12,10 +12,11 @@ Esto no es asesoría legal: la decisión final es del área legal de la empresa.
 | Componente | Licencia | Producto cerrado | Nota |
 |---|---|---|---|
 | Ultralytics (YOLOv8/11/26) | AGPL-3.0 | Requiere licencia Enterprise | Según su FAQ, los **pesos entrenados** también quedan bajo AGPL. Servirlo por red obliga a publicar el código. |
-| RF-DETR Nano–Large, RF-DETR-Seg | Apache-2.0 | Sí | Instalar `rfdetr` **sin** el extra `[plus]` |
-| RF-DETR `[plus]` (XL/2XL) | Licencia propia de Roboflow | Revisar | El hook de este plugin lo bloquea sin aprobación |
-| supervision, timm | MIT / Apache-2.0 | Sí | |
-| DINOv3 | Licencia propia de Meta (DINOv3 License) | Con restricciones | Incluir el texto de la licencia; revisar usos prohibidos |
+| RF-DETR Nano–Large (detección) y RF-DETR-Seg (todos los tamaños) | Apache-2.0 | Sí | Instalar `rfdetr` **sin** el extra `[plus]` |
+| RF-DETR Atto, Femto, Pico, XL y 2XL de detección (`rfdetr[plus]`) | Roboflow PML 1.0 | Solo con plan de Roboflow; autoalojado comercial exige el add-on Enterprise | El hook de este plugin lo bloquea sin aprobación |
+| supervision | MIT | Sí | |
+| timm | Código Apache-2.0; los pesos, según el modelo | Revisar los pesos | Su README advierte que los pesos entrenados en ImageNet heredan su uso solo para investigación, y algunos de Facebook son CC-BY-NC 4.0: mira la licencia en la ficha de cada modelo |
+| DINOv3 | DINOv3 License (Meta) | Sí, con usos prohibidos | Permite uso comercial; prohíbe usos bajo ITAR y fines militares, nucleares, de espionaje o de armas. Incluir el texto de la licencia al redistribuir |
 | SAM 2 | Apache-2.0 | Sí | |
 | SAM 3 | Licencia propia de Meta (SAM License) | Con restricciones | Útil para pre-anotación; revisar antes de desplegar |
 | FiftyOne, Label Studio, CVAT | Apache-2.0 / MIT | Sí (autoalojados) | Versiones empresariales aparte |
