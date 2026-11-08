@@ -88,9 +88,9 @@ def cargar(script: Path):
 
 
 @pytest.mark.parametrize(("ruta", "esperado"), [
-    ("src/app/domain/lote.py", "app.domain.lote*"),
-    ("app/servicio.py", "app.servicio*"),
-    ("src/app/__init__.py", "app*"),
+    ("src/app/domain/lote.py", "app.domain.lote.*"),
+    ("app/servicio.py", "app.servicio.*"),
+    ("src/app/__init__.py", "app.x*"),  # solo las funciones del __init__, no todo el paquete
     ("tests/test_lote.py", None),
     ("src/app/test_algo.py", None),
     ("conftest.py", None),
@@ -117,13 +117,39 @@ def test_mutantes_desde_git(tmp_path):
     (tmp_path / "tests" / "test_nuevo.py").write_text("")
     r = correr(MUTANTES, "--base", "main", cwd=tmp_path)
     assert r.returncode == 0
-    assert r.stdout.split() == ["app.nuevo*"]
+    assert r.stdout.split() == ["app.nuevo.*"]
+
+
+def test_base_inexistente_es_error_y_no_lista_vacia(tmp_path):
+    """Sin la rama base, la lista vacía haría que mutmut mutara todo el repo."""
+    def git(*args):
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+
+    git("init", "-q", "-b", "trunk")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    (tmp_path / "x.py").write_text("x = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "base")
+    r = correr(MUTANTES, "--base", "origin/main", cwd=tmp_path)
+    assert r.returncode == 2
+    assert r.stdout == ""
+    assert "origin/main" in r.stderr
 
 
 def test_mutantes_sin_cambios_sale_con_1(tmp_path):
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    def git(*args):
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+
+    git("init", "-q", "-b", "main")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    (tmp_path / "x.py").write_text("x = 1\n")
+    git("add", ".")
+    git("commit", "-qm", "base")
     r = correr(MUTANTES, "--base", "main", cwd=tmp_path)
     assert r.returncode == 1
+    assert r.stdout == ""
 
 
 # --- suministro.py ---

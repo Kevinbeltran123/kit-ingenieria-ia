@@ -52,7 +52,8 @@ Correrlo solo sobre los módulos cambiados:
 
 ```bash
 uv add --dev mutmut
-uv run mutmut run $(python3 "${CLAUDE_PLUGIN_ROOT}/skills/calidad-pruebas/scripts/mutantes_del_diff.py" --base origin/main)
+pats=$(python3 "${CLAUDE_PLUGIN_ROOT}/skills/calidad-pruebas/scripts/mutantes_del_diff.py" --base origin/main) || exit 1
+uv run mutmut run $pats
 uv run mutmut results          # lista sobrevivientes
 uv run mutmut show <mutante>   # muestra el cambio
 ```
