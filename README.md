@@ -66,3 +66,9 @@ claude plugin validate .
 for t in plugins/*/tests bin/tests; do python3 -m pytest "$t" -q; done
 python3 bin/humo_plantillas.py   # repo nuevo con las plantillas y los pasos de su CI (necesita red)
 ```
+
+## Licencia
+MIT (ver `LICENSE`). Lo que viene de otros conserva su licencia: `plugins/flujo` es una copia editada de
+obra/superpowers (MIT, © Jesse Vincent, ver `plugins/flujo/LICENSE`) y las fuentes IBM Plex Mono del explicador son
+OFL 1.1 (ver su `OFL.txt`). Los plugins de terceros del marketplace no están copiados aquí: se instalan desde sus
+repos, con sus licencias.
