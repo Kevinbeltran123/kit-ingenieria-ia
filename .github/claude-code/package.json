@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Claude Code fijado con lockfile para el CI del kit (claude plugin validate).",
+  "dependencies": {
+    "@anthropic-ai/claude-code": "2.1.315"
+  }
+}

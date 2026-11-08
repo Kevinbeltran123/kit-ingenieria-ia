@@ -46,7 +46,10 @@ Para probar un plugin sin instalarlo: `claude --plugin-dir ~/Desarrollo/kit-inge
 - `ESTADO.md` — dónde quedamos
 
 ## Verificar el kit
+El CI (`.github/workflows/ci.yml`) lo hace en cada push: las pruebas de cada plugin con Python 3.9 y 3.12,
+`claude plugin validate`, la prueba de humo de las plantillas y zizmor. En local:
 ```sh
 claude plugin validate .
 for t in plugins/*/tests bin/tests; do python3 -m pytest "$t" -q; done
+python3 bin/humo_plantillas.py   # repo nuevo con las plantillas y los pasos de su CI (necesita red)
 ```

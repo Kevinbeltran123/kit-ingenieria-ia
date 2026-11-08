@@ -35,9 +35,11 @@ Ejemplo de referencia: `plugins/calidad-python/`.
 - Pruebas con pytest que alimentan JSON por stdin (ver `plugins/calidad-python/tests/test_hooks.py`).
 
 ## Verificación antes de dar algo por terminado
-1. `python3 -m pytest plugins/<nombre>/tests -q` pasa.
+1. `python3 -m pytest plugins/<nombre>/tests -q` pasa, también con Python 3.9: las pruebas y los scripts no usan
+   sintaxis de 3.10 o más sin `from __future__ import annotations`.
 2. `claude plugin validate .` pasa desde la raíz del kit.
-3. Nada instalado globalmente, nada fuera de la carpeta del kit, sin operaciones de git.
+3. Si cambian las plantillas: `python3 bin/humo_plantillas.py` pasa. El CI del kit corre los tres en cada push.
+4. Nada instalado globalmente, nada fuera de la carpeta del kit, sin operaciones de git.
 
 ## Terceros
 - Siempre fijados por `sha` de 40 caracteres en `marketplace.json`.

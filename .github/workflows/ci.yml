@@ -1,0 +1,90 @@
+# CI del kit: pruebas de cada plugin con Python 3.9 y 3.12, validación del marketplace, prueba de
+# humo de las plantillas y zizmor sobre los workflows. Acciones fijadas por SHA (las mismas de
+# plantillas/github/workflows) y herramientas con más de 7 días de publicadas.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    name: pruebas (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 3.9 es el python3 de macOS y de Amazon Linux 2023: con él corren los hooks.
+          - python: "3.9"
+            extra: ""
+          - python: "3.12"
+            extra: "--with ortools"  # las pruebas del ejemplo de optimización
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+      - name: Pruebas de cada plugin (por separado, porque varios tienen un test_hooks.py)
+        env:
+          PYTHON: ${{ matrix.python }}
+          EXTRA: ${{ matrix.extra }}
+        run: |
+          fallos=0
+          for suite in plugins/*/tests bin/tests; do
+            echo "::group::$suite"
+            # shellcheck disable=SC2086  # EXTRA va vacío o con varias palabras
+            uv run --no-project --exclude-newer "7 days" --python "$PYTHON" --with "pytest>=8.4" $EXTRA \
+              python -m pytest "$suite" -q -p no:cacheprovider || fallos=1
+            echo "::endgroup::"
+          done
+          exit "$fallos"
+
+  marketplace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Claude Code 2.1.315 (2026-10-30), desde el lockfile con hashes de integridad
+        run: npm ci --prefix .github/claude-code --no-audit --no-fund
+      - name: Validar el marketplace y cada plugin
+        run: .github/claude-code/node_modules/.bin/claude plugin validate .
+
+  plantillas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+      - name: Prueba de humo (repo nuevo con las plantillas y los pasos de su CI)
+        run: python3 bin/humo_plantillas.py
+
+  workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+      - name: zizmor sobre los workflows del kit y los de las plantillas
+        run: uvx zizmor==1.31.1 --offline .github/workflows/*.yml plantillas/github/workflows/*.yml

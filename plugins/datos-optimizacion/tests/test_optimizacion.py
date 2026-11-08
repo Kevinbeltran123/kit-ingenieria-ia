@@ -1,5 +1,7 @@
 """Pruebas del ejemplo de asignación de cuadrillas y de su verificador independiente."""
 
+from __future__ import annotations
+
 import itertools
 import random
 import sys
