@@ -13,9 +13,9 @@ En 2026 hubo paquetes de PyPI comprometidos (litellm, mrmustard, PyTorch Lightni
 python3 "${CLAUDE_PLUGIN_ROOT}/skills/cadena-suministro-python/scripts/suministro.py" .
 ```
 
-Revisa lock, enfriamiento, CVE (pip-audit y osv-scanner), secretos en el historial (gitleaks) y workflows de GitHub (zizmor). Lista las herramientas no instaladas en vez de fallar en silencio. Para instalarlas en el repo: `uv add --dev pip-audit`; osv-scanner, gitleaks y zizmor como binarios (Homebrew o CI).
+Revisa lock, enfriamiento, CVE (pip-audit y osv-scanner), secretos en el historial (gitleaks) y workflows de GitHub (zizmor). Lista las herramientas no instaladas y sale con 1: lo que no se revisó no cuenta como OK. Para instalarlas en el repo: `uv add --dev pip-audit`; osv-scanner, gitleaks y zizmor como binarios (Homebrew o CI).
 
-Nota: `pip-audit` audita el entorno donde está instalado; corre la revisión después de `uv sync`.
+Nota: `pip-audit` audita el entorno donde está instalado, así que el script solo usa el del `.venv` del proyecto (uno global se revisaría a sí mismo). Corre la revisión después de `uv sync`.
 
 ## Configuración base del repo
 
@@ -54,6 +54,6 @@ Nunca: `pip install` fuera de uv, `curl | sh`, instalar desde un fork o URL git 
 
 ## Verificación
 
-1. `suministro.py` termina con `0 avisos` y sin `FALLA`.
+1. `suministro.py` sale con 0: sin `FALLA`, con `0 avisos` y `0 sin revisar`.
 2. Cada dependencia nueva del diff tiene justificación (para qué, alternativas, licencia) en la descripción del PR.
 3. `uv sync --locked` pasa en CI.

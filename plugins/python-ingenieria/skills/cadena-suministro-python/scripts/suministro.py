@@ -2,13 +2,15 @@
 
 Pasos (solo los que apliquen): lock al día (uv lock --check), enfriamiento
 `exclude-newer` configurado, pip-audit, osv-scanner, gitleaks y zizmor.
-Sale con 1 si algún paso falla o falta una protección básica.
+Sale con 1 si algún paso falla, falta una protección básica o falta una
+herramienta: lo que no se revisó no cuenta como OK.
 
 Uso: python3 suministro.py [raiz]
 """
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
@@ -22,6 +24,22 @@ def buscar_herramienta(raiz: Path, nombre: str) -> str | None:
     return str(local) if local.exists() else shutil.which(nombre)
 
 
+def enfriamiento_configurado(pyproject: str) -> bool:
+    """True si [tool.uv] fija exclude-newer en una línea sin comentar.
+
+    Va línea por línea porque tomllib no existe en Python 3.9. `[tool.uv.pip]` no cuenta:
+    solo aplica a `uv pip`, no al lock.
+    """
+    tabla = ""
+    for linea in pyproject.splitlines():
+        linea = linea.strip()
+        if linea.startswith("["):
+            tabla = linea.split("#", 1)[0].strip()
+        elif tabla == "[tool.uv]" and re.match(r"exclude-newer\s*=", linea):
+            return True
+    return False
+
+
 def pasos(raiz: Path) -> tuple[list[tuple[str, list[str]]], list[str], list[str]]:
     """Devuelve (pasos a correr, avisos de configuración, herramientas faltantes)."""
     lista, avisos, faltan = [], [], []
@@ -31,13 +49,22 @@ def pasos(raiz: Path) -> tuple[list[tuple[str, list[str]]], list[str], list[str]
     uv = buscar_herramienta(raiz, "uv")
     if (raiz / "uv.lock").exists() and uv:
         lista.append(("uv lock --check", [uv, "lock", "--check"]))
-    elif pyproject.exists() and not (raiz / "uv.lock").exists():
+    elif (raiz / "uv.lock").exists():
+        faltan.append("uv")
+    elif pyproject.exists():
         avisos.append("No hay uv.lock: las dependencias no están fijadas con hashes.")
-    if pyproject.exists() and "exclude-newer" not in texto:
+    if pyproject.exists() and not enfriamiento_configurado(texto):
         avisos.append('Falta `exclude-newer = "7 days"` en [tool.uv]: se instalarían versiones recién publicadas.')
 
+    # Sin argumentos, pip-audit revisa el entorno donde está instalado: uno global (pipx,
+    # Homebrew) revisaría sus propias dependencias y no las del proyecto.
+    pip_audit = raiz / ".venv" / "bin" / "pip-audit"
+    if pip_audit.exists():
+        lista.append(("pip-audit", [str(pip_audit)]))
+    else:
+        faltan.append("pip-audit (en el .venv: uv add --dev pip-audit)")
+
     for nombre, args in [
-        ("pip-audit", []),
         ("osv-scanner", ["scan", "source", "-r", "."]),
         ("gitleaks", ["git", "--no-banner", "."]),
     ]:
@@ -73,8 +100,11 @@ def main() -> int:
         print(f"AVISO {aviso}")
     if faltan:
         print(f"\nNo instalados (no se revisó): {', '.join(faltan)}")
-    print(f"\n{len(lista) - fallos}/{len(lista)} pasos OK, {len(avisos)} avisos")
-    return 1 if fallos or avisos else 0
+    if not lista:
+        print("\nNada se revisó: instala las herramientas de arriba y vuelve a correrlo.")
+        return 1
+    print(f"\n{len(lista) - fallos}/{len(lista)} pasos OK, {len(avisos)} avisos, {len(faltan)} sin revisar")
+    return 1 if fallos or avisos or faltan else 0
 
 
 if __name__ == "__main__":

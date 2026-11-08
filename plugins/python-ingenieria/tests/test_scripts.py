@@ -164,13 +164,13 @@ def test_suministro_avisa_si_falta_lock_y_enfriamiento(raiz):
 
 def test_suministro_todo_ok(raiz):
     (raiz / "pyproject.toml").write_text('[tool.uv]\nexclude-newer = "7 days"\n')
-    (raiz / "uv.lock").write_text("")
+    (raiz / "uv.lock").write_text('[options]\nexclude-newer-span = "P7D"\n')
     (raiz / ".github" / "workflows").mkdir(parents=True)
     for nombre in ["uv", "pip-audit", "osv-scanner", "gitleaks", "zizmor"]:
         falsa(raiz, nombre, 0)
     r = correr(SUMINISTRO, raiz)
     assert r.returncode == 0, r.stdout
-    assert "5/5 pasos OK, 0 avisos" in r.stdout
+    assert "5/5 pasos OK, 0 avisos, 0 sin revisar" in r.stdout
 
 
 def test_suministro_falla_si_hay_cve(raiz):
@@ -181,3 +181,54 @@ def test_suministro_falla_si_hay_cve(raiz):
     r = correr(SUMINISTRO, raiz)
     assert r.returncode == 1
     assert "FALLA pip-audit" in r.stdout and "GHSA-xxxx" in r.stdout
+
+
+def no_instalados(salida: str) -> list[str]:
+    linea = next(l for l in salida.splitlines() if l.startswith("No instalados"))
+    return linea.split(": ", 1)[1].split(", ")
+
+
+def test_suministro_sin_herramientas_no_dice_ok(raiz):
+    """Con lock y enfriamiento bien pero nada instalado decía "0/0 pasos OK" y salía con 0."""
+    (raiz / "pyproject.toml").write_text('[tool.uv]\nexclude-newer = "7 days"\n')
+    (raiz / "uv.lock").write_text('[options]\nexclude-newer-span = "P7D"\n')
+    r = correr(SUMINISTRO, raiz)
+    assert r.returncode == 1
+    assert "Nada se revisó" in r.stdout and "0/0 pasos OK" not in r.stdout
+    assert "uv" in no_instalados(r.stdout)  # hay uv.lock pero no uv para comprobarlo
+
+
+def test_herramienta_faltante_no_da_ok(raiz):
+    (raiz / "pyproject.toml").write_text('[tool.uv]\nexclude-newer = "7 days"\n')
+    (raiz / "uv.lock").write_text('[options]\nexclude-newer-span = "P7D"\n')
+    falsa(raiz, "uv", 0)
+    falsa(raiz, "pip-audit", 0)
+    r = correr(SUMINISTRO, raiz)
+    assert r.returncode == 1
+    assert "2/2 pasos OK, 0 avisos, 2 sin revisar" in r.stdout
+
+
+def test_suministro_no_usa_un_pip_audit_global(raiz, tmp_path):
+    """Un pip-audit global audita su propio entorno, no las dependencias del proyecto."""
+    global_bin = tmp_path / "global-bin"
+    global_bin.mkdir()
+    marca = tmp_path / "pip-audit-global-corrio"
+    (global_bin / "pip-audit").write_text(f'#!/bin/sh\ntouch "{marca}"\nexit 0\n')
+    (global_bin / "pip-audit").chmod(0o755)
+    (raiz / "pyproject.toml").write_text('[tool.uv]\nexclude-newer = "7 days"\n')
+    r = subprocess.run([sys.executable, "-I", str(SUMINISTRO), str(raiz)], capture_output=True, text=True,
+                       env={"PATH": f"{global_bin}:/usr/bin:/bin"})
+    assert not marca.exists()
+    assert any(h.startswith("pip-audit") for h in no_instalados(r.stdout))
+
+
+@pytest.mark.parametrize(("pyproject", "configurado"), [
+    ('[tool.uv]\nexclude-newer = "7 days"\n', True),
+    ('[tool.uv] # enfriamiento\nexclude-newer = "P7D"\n', True),
+    ('[tool.uv]\n# exclude-newer = "7 days"\n', False),
+    ('[tool.uv.pip]\nexclude-newer = "7 days"\n', False),  # solo aplica a `uv pip`, no al lock
+    ('[tool.uv]\nexclude-newer-package = { torch = false }\n', False),
+    ('[project]\ndescription = "usa exclude-newer"\n', False),
+])
+def test_enfriamiento_configurado(pyproject, configurado):
+    assert cargar(SUMINISTRO).enfriamiento_configurado(pyproject) is configurado
