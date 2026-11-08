@@ -45,7 +45,9 @@ python3 bin/adoptar.py /ruta/al/repo --marketplace-github Kevinbeltran123/kit-in
 ```
 Para pasar un repo a una entrega nueva, se vuelve a correr con el tag nuevo (cambia la fuente en
 `.claude/settings.json`) y después `claude plugin marketplace update kit-ingenieria-ia`. Sin `--ref`, el repo
-sigue la cabeza de `main`. Los plugins de terceros que declaran `version` en su propio `plugin.json` solo se
+sigue la cabeza de `main`. Sin adoptar.py, el marketplace en una entrega se agrega con
+`claude plugin marketplace add Kevinbeltran123/kit-ingenieria-ia#v0.2.0` (comprobado: el plugin instalado queda
+con el commit del tag como versión). Los plugins de terceros que declaran `version` en su propio `plugin.json` solo se
 actualizan cuando su autor la sube (ver `terceros/README.md`).
 
 ## Carpetas
