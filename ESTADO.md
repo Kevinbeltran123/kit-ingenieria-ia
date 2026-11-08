@@ -2,36 +2,39 @@
 
 ## Dónde quedamos (2026-11-08)
 Revisión completa del kit en `investigacion/09-revision-2026-11-08.md` (~60 hallazgos agrupados en 48, con
-evidencia y arreglo). Hechos ese día en la rama `revision-2026-11-08`, un commit por arreglo, cada uno con pruebas
-que fallaban antes del arreglo; sus explicaciones están en `.explicaciones/commits/` (fuera de git):
-1. **Hook de Stop** (calidad-python 0.2.1): vuelve a revisar después de que Claude corrige; 2 oportunidades y aviso.
-2. **Python 3.9** en todos los hooks y scripts (`from __future__ import annotations`) y `"onFailure": "block"` en
-   barreras y evaluador_bloqueado. Lo vigila `bin/tests/test_compatibilidad.py`.
-3. **Plantilla de import-linter**: `include_external_packages = true`, capas opcionales; prueba de humo real en
-   `bin/tests/test_plantillas.py`.
-4. **SCP de AWS**: `Bool aws:ViaAWSMCPService` (la clave anterior no denegaba nada); prueba en devops-aws.
-5. **Plugin `explicador` 0.1.0** (vista B elegida por Kevin): explica cada cambio línea por línea en un HTML local y
-   lo exige antes de `gh pr create`. En los tres perfiles de `adoptar.py`.
+evidencia y arreglo). Todo está en la rama `revision-2026-11-08` (sin pasar a `main`), un commit por arreglo,
+cada uno con pruebas que fallaban antes; las explicaciones de los primeros arreglos están en
+`.explicaciones/commits/` (fuera de git). Hecho:
+- Seguridad: A1 Python 3.9 y `onFailure`, A2 SCP, A3 regla `local` en barreras (borrados, `--no-verify`),
+  A4 `Read(**/.env)`, A5–A6 sesión de AWS solo con el rol de lectura, A7 aws-core no se activa (proxy 1.7.0),
+  A8 tfstate y `GetParameterHistory`, A9 Claude no se aprueba licencias, A11 torch ≥ 2.10, A12 `torch.hub.load`
+  y descargas sin revisión, A13 MLflow registra ONNX.
+- Bugs: B1 import-linter, B2 hook de Stop, B3 migraciones recién generadas, B4 splits contra el evaluador,
+  B5 `adoptar.py` con GitHub.
+- Terceros: AUDITORIA.md corregida (aws-core, `/clean_gone`, pyright-lsp, hf-cloud-sagemaker, react, modern-python).
+- Nuevo: plugin `explicador` (vista B, línea por línea, exigido antes de `gh pr create`; `--commit` para un
+  commit puntual). Es para el código de la empresa; en el kit no se generan explicaciones.
 
-Verificación: 338 pruebas pasan (14 se saltan sin OR-Tools), 199 también con el Python 3.9 de macOS, y
+Verificación: 403 pruebas pasan (14 se saltan sin OR-Tools), los hooks y scripts también con Python 3.9, y
 `claude plugin validate .` pasa.
 
 ## Siguiente, en este orden (detalle en la revisión)
-1. A3: borrados locales en barreras (`rm -rf`, `git reset --hard`, `push --force`, `clean -fdx`, `--no-verify`),
-   pasando las reglas del hook global `~/.claude/hooks/block-destructive-bash.py` con sus pruebas.
-2. A9: que licencias.py impida que Claude escriba `APROBADO:` en `LICENSES.md`.
-3. A4: `Read(**/.env)` en vez de `Read(./.env)` en la plantilla de settings.
-4. B3 y B4: barreras contra migraciones-alembic, evaluador_bloqueado contra division-sin-fuga.
-5. B5: `adoptar.py` mezcla fuentes al re-adoptar con `--marketplace-github`.
-6. A5–A8, A10–A13: AWS (perfil SSO, `--skip-auth`, proxy 1.7.0, política de lectura), CI de revisión, torch ≥ 2.10,
-   carga segura y MLflow.
-7. Resto de B (bugs de scripts y hooks), C (contenido desactualizado) y E (proceso).
+1. B7–B13, bugs en scripts y hooks: verificar_division da OK sin imágenes; vulture al 80 % no ve funciones
+   muertas; mutantes sin rama base muta todo; suministro.py da OK sin revisar; evaluador_bloqueado y rutas
+   (`cwd`, `cd`, worktrees); licencias.py y `uv run --with`, `uvx`, PEP 723; Pandera sobre LazyFrame.
+2. C1–C8, contenido: SageMaker SDK v3, LocalStack de pago (moto por defecto), escala ICA, receta (selección en
+   test, IC por bootstrap), paridad ONNX con preprocesamiento, CODEOWNERS en el perfil ml, Terraform plan en CI,
+   detalles menores.
+3. E2–E4 y E6: pre-commit en el CI de la plantilla, versiones duplicadas (ruff, complexipy, uv), verify frente a
+   CI, huecos menores de barreras.
+4. Al subir el kit a GitHub: A10 (revisión en CI con plugin fijado), E1 (CI del kit) y B6 (versiones).
 
 ## Pendiente que decide Kevin
 1. Pasar la rama `revision-2026-11-08` a `main` (cada commit pasa sus pruebas por sí solo).
+   Después se puede quitar el hook global `~/.claude/hooks/block-destructive-bash.py`: la regla `local` lo cubre.
 2. Subir el kit a un repo privado de GitHub. Al hacerlo: CI propio (E1) y decidir versiones (B6: subir `version`
    en cada cambio o quitarla para que Claude Code use el SHA).
-3. Terceros a quitar: hf-cloud-sagemaker, react-best-practices, plugin-dev (D2, D3); `/clean_gone` "no usar" (D1).
+3. Terceros a quitar: hf-cloud-sagemaker, react-best-practices, plugin-dev (D2, D3).
 4. Limpieza de lo instalado en global (`~/.claude`): quitar/reemplazar software-architecture, write-concisely,
    code-simplifier, review-local-changes, commit, create-pr, playwright-skill, ui-ux-pro-max, antislop;
    security-guidance de global a proyecto; context7 en modo CLI y versión parcheada (CVE-2026-75130).
