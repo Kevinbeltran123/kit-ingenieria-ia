@@ -5,7 +5,8 @@ Revisión completa del kit en `investigacion/09-revision-2026-11-08.md` (~60 hal
 evidencia y arreglo). Están hechos todos los arreglos NECESARIOS que no dependen de GitHub, un commit por arreglo:
 los de código con pruebas que fallaban antes, los de contenido verificados contra la fuente (docs oficiales o
 corriendo la librería). `main` los tiene (fast-forward desde la rama `revision-2026-11-08`) y está en GitHub, en
-el repo privado https://github.com/Kevinbeltran123/kit-ingenieria-ia (subido el 2026-11-08). Las explicaciones de
+el repo https://github.com/Kevinbeltran123/kit-ingenieria-ia (subido el 2026-11-08; público desde ese día para
+que GitHub Actions corra gratis). Las explicaciones de
 los primeros arreglos están en `.explicaciones/commits/` (fuera de git). Hecho:
 - Seguridad: A1 Python 3.9 y `onFailure`, A2 SCP, A3 regla `local` en barreras (borrados, `--no-verify`),
   A4 `Read(**/.env)`, A5–A6 sesión de AWS solo con el rol de lectura, A7 aws-core no se activa (proxy 1.7.0),
@@ -32,8 +33,9 @@ commit pasa todas las suites por sí solo, la prueba de humo de las plantillas p
 
 Con el kit en GitHub (2026-11-08) también quedaron hechos:
 - E1: CI del kit en `.github/workflows/ci.yml` (pruebas en 3.9 y 3.12, validación, prueba de humo
-  `bin/humo_plantillas.py` y zizmor). Cada job se probó en local con sus mismos comandos; **en GitHub todavía no
-  corre**: los jobs no arrancan por facturación de la cuenta (ver Pendiente 1).
+  `bin/humo_plantillas.py` y zizmor). Cada job se probó en local con sus mismos comandos; en GitHub corre desde que
+  el repo es público (ver Pendiente 1), y el primer run pasó entero: los 5 jobs en verde, con las suites en 3.9
+  y 3.12 (más las 19 de OR-Tools) y la prueba de humo 8/8 en el runner nuevo (Ubuntu con Python 3.14).
 - A10: la revisión en CI instala `pr-review-toolkit` desde el commit auditado, con un marketplace propio que
   arma el workflow (una copia local del oficial no sirve: Claude Code reserva su nombre).
 - B6: los plugins propios no llevan `version`; las entregas son tags (`v0.2.0` es la primera).
@@ -47,9 +49,9 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
    - **EXTRA, para decidir:** `licencias.py` no revisa Dockerfiles (`RUN pip install ultralytics`).
 
 ## Pendiente que decide Kevin
-1. **Facturación de GitHub Actions:** los jobs del CI no arrancan ("recent account payments have failed or your
-   spending limit needs to be increased"). Se arregla en GitHub → Settings → Billing and plans. Después,
-   `gh run rerun <id>` o cualquier push a `main` corre el CI.
+1. Resuelto el 2026-11-08: el repo pasó a público, así Actions corre gratis (Kevin no va a pagar más). Si vuelve a
+   ser privado, el CI deja de correr hasta que la cuenta tenga minutos ("recent account payments have failed or
+   your spending limit needs to be increased").
 2. Limpieza de lo instalado en global (`~/.claude`): quitar/reemplazar software-architecture, write-concisely,
    code-simplifier, review-local-changes, commit, create-pr, playwright-skill, ui-ux-pro-max, antislop;
    security-guidance de global a proyecto; context7 en modo CLI y versión parcheada (CVE-2026-75130).

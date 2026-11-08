@@ -23,7 +23,7 @@ Se aplican con `bin/adoptar.py`, que **nunca sobrescribe** archivos existentes:
 ## Marketplace: local o GitHub
 JSON no admite comentarios, así que la variante se elige al adoptar:
 - **Local (por defecto):** `{"source": "directory", "path": "/Users/.../kit-ingenieria-ia"}`. Sirve para probar en tu máquina; la ruta no existe en la de otra persona ni en CI.
-- **GitHub privado:** `python3 bin/adoptar.py REPO --marketplace-github Kevinbeltran123/kit-ingenieria-ia --ref v0.2.0` escribe `{"source": "github", "repo": "Kevinbeltran123/kit-ingenieria-ia", "ref": "v0.2.0"}`. Es la opción para el equipo: cada repo queda en una entrega (tag) y pasa a la siguiente volviendo a correrlo con el tag nuevo. Como el repo es privado, cada persona necesita acceso de lectura y git autenticado (`gh auth login`).
+- **GitHub:** `python3 bin/adoptar.py REPO --marketplace-github Kevinbeltran123/kit-ingenieria-ia --ref v0.2.0` escribe `{"source": "github", "repo": "Kevinbeltran123/kit-ingenieria-ia", "ref": "v0.2.0"}`. Es la opción para el equipo: cada repo queda en una entrega (tag) y pasa a la siguiente volviendo a correrlo con el tag nuevo. Hoy el repo es público; si vuelve a ser privado, cada persona necesita acceso de lectura y git autenticado (`gh auth login`).
 
 El marketplace del repo solo se registra después de aceptar el diálogo de confianza de la carpeta. Las reglas `deny` aplican de inmediato.
 
