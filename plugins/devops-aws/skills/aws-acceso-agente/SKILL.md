@@ -59,8 +59,13 @@ Las políticas de `references/` son punto de partida: ajustar a la cuenta y vali
 ```bash
 aws accessanalyzer validate-policy --policy-type IDENTITY_POLICY \
   --policy-document file://references/politica-agente-solo-lectura.json
+aws accessanalyzer validate-policy --policy-type SERVICE_CONTROL_POLICY \
+  --policy-document file://references/scp-sin-escritura-via-mcp.json
 ```
-Sin hallazgos de tipo ERROR. Revisar los SUGGESTION y WARNING (por ejemplo, comodines de acción).
+Sin hallazgos de tipo ERROR. Revisar los SUGGESTION y WARNING (por ejemplo, comodines de acción): un
+"Type mismatch" es grave aunque salga como WARNING, porque la condición nunca se cumple.
+Para "la llamada vino por un servidor MCP de AWS" se usa la clave booleana `aws:ViaAWSMCPService`;
+`aws:CalledViaAWSMCP` es de texto (vale `aws-mcp.amazonaws.com`) y con `Bool` no coincide nunca.
 
 ## Verificación (antes de cada sesión que toque AWS)
 ```bash

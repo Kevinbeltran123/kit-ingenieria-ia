@@ -15,7 +15,7 @@
       ],
       "Resource": "*",
       "Condition": {
-        "Bool": { "aws:CalledViaAWSMCP": "true" }
+        "Bool": { "aws:ViaAWSMCPService": "true" }
       }
     }
   ]
