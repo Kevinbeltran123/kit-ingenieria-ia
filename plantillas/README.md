@@ -11,7 +11,7 @@ Se aplican con `bin/adoptar.py`, que **nunca sobrescribe** archivos existentes:
 | Plantilla | Destino en el repo | Notas |
 |---|---|---|
 | `python/pyproject.toml.fragmento` | (manual) `pyproject.toml` | ruff, ty, pytest, coverage, complexipy, deptry, vulture, import-linter, `exclude-newer = "7 days"` |
-| `python/.pre-commit-config.yaml` | `.pre-commit-config.yaml` | Para `prek` (`uvx prek install`) o pre-commit |
+| `python/.pre-commit-config.yaml` | `.pre-commit-config.yaml` | Para `prek` (`uvx prek install`) o pre-commit. ruff y complexipy corren con `uv run`, con la versión de `uv.lock` |
 | `claude/settings.json` | `.claude/settings.json` | Marketplace del kit, plugins por perfil, reglas deny, sandbox, sin co-autoría de Claude. Si ya existe, se fusiona agregando sin borrar |
 | `claude/CLAUDE.md` | `CLAUDE.md` | < 80 líneas, con huecos `<...>` |
 | `github/workflows/ci.yml` | `.github/workflows/ci.yml` | Acciones fijadas por SHA, permisos mínimos, zizmor y pip-audit. Vuelve a correr los hooks de pre-commit (`--no-verify` los salta en local) y gitleaks sobre toda la historia |
