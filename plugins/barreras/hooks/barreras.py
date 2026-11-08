@@ -19,6 +19,7 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 from pathlib import Path
 
@@ -306,6 +307,16 @@ LOCKFILES = {"uv.lock", "poetry.lock", "Pipfile.lock", "pdm.lock", "package-lock
              "yarn.lock", "bun.lockb", "Cargo.lock"}
 
 
+def sin_commit(p: Path) -> bool:
+    """True solo si git dice que el archivo no está rastreado (recién creado). Sin git, False: se protege."""
+    try:
+        r = subprocess.run(["git", "ls-files", "--error-unmatch", "--", p.name], cwd=p.parent,
+                           capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return r.returncode == 1  # 1 = git no lo conoce; 128 = no es un repo de git
+
+
 def regla_archivos(ruta: str) -> str | None:
     p = Path(ruta)
     partes = p.parts
@@ -315,11 +326,11 @@ def regla_archivos(ruta: str) -> str | None:
         return f"{p.name} contiene secretos; edita .env.example y pide al usuario que actualice su .env"
     if p.name in LOCKFILES:
         return f"{p.name} se cambia con el gestor de paquetes (p. ej. `uv add`, `uv lock`), no a mano"
-    for i in range(len(partes) - 2):
-        if partes[i] in ("migrations", "alembic") and partes[i + 1] == "versions" and p.exists():
-            return "esa migración ya existe; crea una nueva en lugar de editarla"
-    if p.parent.name == "migrations" and re.match(r"^\d{4}_.*\.py$", p.name) and p.exists():
-        return "esa migración de Django ya existe; crea una nueva en lugar de editarla"
+    alembic = any(partes[i] in ("migrations", "alembic") and partes[i + 1] == "versions" for i in range(len(partes) - 2))
+    django = p.parent.name == "migrations" and re.match(r"^\d{4}_.*\.py$", p.name)
+    if (alembic or django) and p.exists() and not sin_commit(p):
+        return ("esa migración ya está en git y puede estar aplicada; crea una nueva en lugar de editarla "
+                "(una recién generada y sin commit sí se puede corregir)")
     return None
 
 

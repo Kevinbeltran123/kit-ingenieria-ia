@@ -17,7 +17,9 @@ Si el repo tiene la skill `supabase-postgres-best-practices`, úsala para decidi
 
 1. Cambia el modelo.
 2. `alembic revision --autogenerate -m "descripcion corta"`.
-3. **Revisa el archivo generado línea por línea.** Autogenerate no detecta todo y a veces propone cosas peligrosas:
+3. **Revisa el archivo generado línea por línea, antes del commit.** Una migración recién generada y sin commit se
+   puede corregir; cuando ya está en git, el plugin `barreras` bloquea editarla y hay que crear otra.
+   Autogenerate no detecta todo y a veces propone cosas peligrosas:
    - No detecta cambios en valores de un `Enum`, renombres (los ve como borrar + crear, perdiendo datos), cambios en server defaults en algunos casos, ni ciertos índices funcionales o parciales.
    - Si ves un `drop_column` + `add_column` que en realidad es un renombre, reemplázalo por `alter_column(..., new_column_name=...)`.
 4. Escribe `downgrade()` real. Si no es reversible (borrar datos), dilo explícitamente con un comentario y lanza una excepción en `downgrade()`.

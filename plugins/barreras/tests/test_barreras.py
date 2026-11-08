@@ -302,6 +302,24 @@ def test_migracion_django_existente_bloqueada(raiz):
     assert editar(d / "0004_otro.py", raiz, "Write").returncode == 0
 
 
+def git(raiz, *args):
+    entorno = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+    subprocess.run(["git", *args], cwd=raiz, env=entorno, check=True, capture_output=True)
+
+
+def test_migracion_recien_generada_sin_commit_se_puede_editar(raiz):
+    """La skill migraciones-alembic manda revisar y corregir lo que genera autogenerate antes del commit."""
+    git(raiz, "init", "-q")
+    d = raiz / "alembic" / "versions"
+    d.mkdir(parents=True)
+    (d / "0001_inicial.py").write_text("# aplicada")
+    git(raiz, "add", ".")
+    git(raiz, "-c", "user.email=p@example.com", "-c", "user.name=P", "commit", "-q", "-m", "inicial")
+    (d / "0002_columna.py").write_text("# recién generada por autogenerate")
+    assert editar(d / "0002_columna.py", raiz).returncode == 0
+    assert editar(d / "0001_inicial.py", raiz).returncode == 2
+
+
 def test_notebook_edit_usa_notebook_path(raiz):
     r = correr({"tool_name": "NotebookEdit", "tool_input": {"notebook_path": str(raiz / ".env")}}, raiz)
     assert r.returncode == 2
