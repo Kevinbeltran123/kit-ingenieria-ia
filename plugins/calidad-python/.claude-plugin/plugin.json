@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "calidad-python",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Hooks de calidad para repos Python: ruff al editar, tipos, import-linter y pytest al terminar el turno, y aviso de macOS",
   "author": { "name": "Kevin Beltran" },
   "license": "MIT",

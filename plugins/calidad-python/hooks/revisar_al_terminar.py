@@ -2,8 +2,10 @@
 
 Solo actúa si en esta sesión se editaron archivos .py (lo anota
 ruff_al_editar.py) y solo corre lo que el repo tenga configurado.
-Si algo falla, sale con 2 y Claude debe arreglarlo. Un solo reintento:
-si ya está continuando por este hook, lo deja terminar.
+Si algo falla, sale con 2 y Claude debe arreglarlo. Revisa cada vez que
+Claude intenta terminar, también después de corregir. Bloquea como máximo
+MAX_BLOQUEOS veces por mensaje de la persona; si sigue fallando, deja
+terminar y le avisa a la persona.
 """
 
 import json
@@ -16,6 +18,7 @@ import tempfile
 from pathlib import Path
 
 MAX_LINEAS = 40
+MAX_BLOQUEOS = 2
 
 
 def buscar_herramienta(raiz: Path, nombre: str) -> str | None:
@@ -55,30 +58,50 @@ def comandos(raiz: Path, editados: list[str]) -> list[tuple[str, list[str], set[
     return lista
 
 
+def bloqueos_previos(contador: Path) -> int:
+    try:
+        return int(contador.read_text())
+    except (OSError, ValueError):
+        return 0
+
+
 def main() -> int:
     datos = json.load(sys.stdin)
     sesion = re.sub(r"[^A-Za-z0-9_-]", "", datos.get("session_id", "")) or "sin-sesion"
-    marca = Path(tempfile.gettempdir()) / "claude-calidad-python" / sesion
+    carpeta = Path(tempfile.gettempdir()) / "claude-calidad-python"
+    marca = carpeta / sesion
+    contador = carpeta / f"{sesion}.bloqueos"
     if not marca.exists():
-        return 0
-    if datos.get("stop_hook_active"):
-        marca.unlink()
         return 0
 
     raiz = Path(os.environ.get("CLAUDE_PROJECT_DIR") or datos.get("cwd") or ".")
     editados = sorted({p for p in marca.read_text().splitlines() if p and Path(p).exists()})
 
-    fallos = []
+    fallos = {}
     for nombre, cmd, aceptados in comandos(raiz, editados):
         r = subprocess.run(cmd, cwd=raiz, capture_output=True, text=True)
         if r.returncode not in aceptados:
             salida = (r.stdout + r.stderr).strip().splitlines()[-MAX_LINEAS:]
-            fallos.append(f"## {nombre} falló\n" + "\n".join(salida))
+            fallos[nombre] = f"## {nombre} falló\n" + "\n".join(salida)
 
-    if fallos:
-        print("Antes de terminar, corrige esto:\n\n" + "\n\n".join(fallos), file=sys.stderr)
+    if not fallos:
+        marca.unlink()
+        contador.unlink(missing_ok=True)
+        return 0
+
+    # stop_hook_active también es True si bloqueó otro plugin; por eso se cuentan
+    # solo los bloqueos propios. Sin stop_hook_active, la persona escribió de nuevo.
+    bloqueos = bloqueos_previos(contador) if datos.get("stop_hook_active") else 0
+    if bloqueos < MAX_BLOQUEOS:
+        contador.write_text(str(bloqueos + 1))
+        print("Antes de terminar, corrige esto:\n\n" + "\n\n".join(fallos.values()), file=sys.stderr)
         return 2
+
     marca.unlink()
+    contador.unlink(missing_ok=True)
+    aviso = (f"calidad-python: después de {MAX_BLOQUEOS} intentos sigue fallando "
+             f"{', '.join(fallos)}. Revísalo antes de dar la tarea por terminada.")
+    print(json.dumps({"systemMessage": aviso}, ensure_ascii=False))
     return 0
 
 

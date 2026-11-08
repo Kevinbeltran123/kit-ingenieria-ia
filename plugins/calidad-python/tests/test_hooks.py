@@ -100,15 +100,59 @@ def test_pruebas_que_fallan_bloquean_el_final(proyecto):
     assert marca(temporal, "s1").exists()
 
 
-def test_un_solo_reintento(proyecto):
+def test_tras_corregir_vuelve_a_verificar(proyecto):
+    raiz, temporal = proyecto
+    herramienta_falsa(raiz, "ruff", 0)
+    registro = herramienta_falsa(raiz, "pytest", 1, "FAILED tests/test_app.py::test_suma")
+    (raiz / "tests").mkdir()
+    editar(raiz, temporal)
+    assert correr("revisar_al_terminar.py", {"session_id": "s1"}, raiz, temporal).returncode == 2
+
+    herramienta_falsa(raiz, "pytest", 0)  # Claude corrigió el bug
+    r = correr("revisar_al_terminar.py", {"session_id": "s1", "stop_hook_active": True}, raiz, temporal)
+    assert r.returncode == 0
+    assert len(registro.read_text().splitlines()) == 2  # pytest corrió también al reintentar
+    assert not marca(temporal, "s1").exists()
+
+
+def test_si_sigue_fallando_bloquea_dos_veces_y_despues_avisa(proyecto):
+    raiz, temporal = proyecto
+    herramienta_falsa(raiz, "ruff", 0)
+    herramienta_falsa(raiz, "pytest", 1, "FAILED tests/test_app.py::test_suma")
+    (raiz / "tests").mkdir()
+    editar(raiz, temporal)
+    assert correr("revisar_al_terminar.py", {"session_id": "s1"}, raiz, temporal).returncode == 2
+    continuar = {"session_id": "s1", "stop_hook_active": True}
+    assert correr("revisar_al_terminar.py", continuar, raiz, temporal).returncode == 2
+
+    r = correr("revisar_al_terminar.py", continuar, raiz, temporal)
+    assert r.returncode == 0
+    assert "pytest" in json.loads(r.stdout)["systemMessage"]
+    assert not marca(temporal, "s1").exists()
+
+
+def test_el_bloqueo_de_otro_plugin_no_salta_la_revision(proyecto):
+    """stop_hook_active también es True cuando bloqueó otro plugin: igual hay que revisar."""
     raiz, temporal = proyecto
     herramienta_falsa(raiz, "ruff", 0)
     herramienta_falsa(raiz, "pytest", 1)
     (raiz / "tests").mkdir()
     editar(raiz, temporal)
     r = correr("revisar_al_terminar.py", {"session_id": "s1", "stop_hook_active": True}, raiz, temporal)
-    assert r.returncode == 0
-    assert not marca(temporal, "s1").exists()
+    assert r.returncode == 2
+
+
+def test_un_mensaje_nuevo_de_la_persona_reinicia_las_oportunidades(proyecto):
+    raiz, temporal = proyecto
+    herramienta_falsa(raiz, "ruff", 0)
+    herramienta_falsa(raiz, "pytest", 1)
+    (raiz / "tests").mkdir()
+    editar(raiz, temporal)
+    assert correr("revisar_al_terminar.py", {"session_id": "s1"}, raiz, temporal).returncode == 2
+    continuar = {"session_id": "s1", "stop_hook_active": True}
+    assert correr("revisar_al_terminar.py", continuar, raiz, temporal).returncode == 2
+    # La persona escribe de nuevo (stop_hook_active=False): empieza otra ronda.
+    assert correr("revisar_al_terminar.py", {"session_id": "s1"}, raiz, temporal).returncode == 2
 
 
 def test_sin_pruebas_recolectadas_no_es_fallo(proyecto):
