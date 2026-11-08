@@ -17,7 +17,7 @@ Antes de tocar código, escribe: qué operación, cuánto tarda hoy, cuánto deb
 |---|---|---|
 | Proceso corriendo (API, worker) sin reiniciar | py-spy | `py-spy top --pid <PID>` o `py-spy record -o perfil.svg --pid <PID>` |
 | Script o prueba de principio a fin | py-spy | `py-spy record -o perfil.svg -- python script.py` |
-| CPU vs memoria vs Python vs código nativo, línea por línea | scalene | `scalene --cli --reduced-profile script.py` |
+| CPU vs memoria vs Python vs código nativo, línea por línea | scalene 2.x | `scalene run script.py` y después `scalene view --cli -r` (solo las líneas con actividad) |
 | Comparar dos implementaciones de una función | pytest-benchmark | `uv run pytest tests/bench --benchmark-only` |
 | Consultas a base de datos | logs de SQLAlchemy | `create_engine(..., echo=True)` o `EXPLAIN ANALYZE` |
 
