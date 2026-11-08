@@ -2,8 +2,8 @@
   "permissions": {
     "deny": [
       "Read(~/.aws/**)",
-      "Read(./.env)",
-      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
       "Bash(aws iam *)",
       "Bash(aws * delete-*)",
       "Bash(aws * terminate-*)",

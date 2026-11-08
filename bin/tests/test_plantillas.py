@@ -6,6 +6,7 @@ siempre porque faltaba `include_external_packages = true`.
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -53,6 +54,14 @@ def test_dominio_que_importa_boto3_falla(tmp_path):
     r = lint_imports(raiz)
     assert r.returncode == 1
     assert "app.domain.reglas -> boto3" in r.stdout
+
+
+def test_las_reglas_de_secretos_cubren_cualquier_carpeta():
+    """Read(./.env) solo cubre la raíz; Read(**/.env) cubre services/api/.env y cualquier otra carpeta."""
+    reglas = json.loads((KIT / "plantillas" / "claude" / "settings.json").read_text())["permissions"]["deny"]
+    for patron in ("Read(**/.env)", "Read(**/.env.*)", "Read(**/.envrc)", "Read(**/secrets/**)"):
+        assert patron in reglas, patron
+    assert not [r for r in reglas if r.startswith("Read(./")]
 
 
 def test_repo_sin_adaptadores_ni_entrypoints_todavia_pasa(tmp_path):

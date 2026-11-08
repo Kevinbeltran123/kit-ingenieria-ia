@@ -34,10 +34,10 @@ Un hook que lee texto se puede esquivar (scripts, `make deploy`, `npm run deploy
 {
   "permissions": {
     "deny": [
-      "Read(./.env)", "Read(./.env.*)", "Read(~/.aws/**)", "Read(~/.ssh/**)",
-      "Edit(./.env)", "Edit(./.env.*)", "Edit(./uv.lock)",
-      "Bash(terraform apply:*)", "Bash(terraform destroy:*)",
-      "Bash(cdk deploy:*)", "Bash(cdk destroy:*)", "Bash(pulumi up:*)", "Bash(pulumi destroy:*)"
+      "Read(**/.env)", "Read(**/.env.*)", "Read(**/.envrc)", "Read(~/.aws/**)", "Read(~/.ssh/**)",
+      "Edit(**/.env)", "Edit(**/.env.*)", "Edit(**/uv.lock)",
+      "Bash(terraform apply *)", "Bash(terraform destroy *)",
+      "Bash(cdk deploy *)", "Bash(cdk destroy *)", "Bash(pulumi up *)", "Bash(pulumi destroy *)"
     ]
   },
   "sandbox": { "enabled": true }

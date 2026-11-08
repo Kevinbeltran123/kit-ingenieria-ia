@@ -22,6 +22,12 @@ def condiciones_mcp(politica: dict) -> list[tuple[str, str, str]]:
             for clave, valor in claves.items() if "MCP" in clave]
 
 
+def test_los_permisos_de_referencia_cubren_env_en_cualquier_carpeta():
+    reglas = json.loads((REFS / "settings-permisos-aws.json").read_text())["permissions"]["deny"]
+    assert "Read(**/.env)" in reglas and "Read(**/.env.*)" in reglas
+    assert not [r for r in reglas if r.startswith("Read(./")]
+
+
 @pytest.mark.parametrize("archivo", ["scp-sin-escritura-via-mcp.json", "politica-agente-solo-lectura.json"])
 def test_la_condicion_de_mcp_es_la_booleana(archivo):
     politica = json.loads((REFS / archivo).read_text())

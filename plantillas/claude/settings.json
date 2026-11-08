@@ -19,9 +19,10 @@
   },
   "permissions": {
     "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(./secrets/**)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/.envrc)",
+      "Read(**/secrets/**)",
       "Read(~/.aws/**)",
       "Read(~/.ssh/**)",
       "Bash(terraform apply)",
