@@ -19,7 +19,7 @@ Visión por computador y MLOps para el proyecto de enfermedades en palma (y simi
 | `licencias.py` | Agregar `ultralytics` o `rfdetr[plus]` a archivos de dependencias (también `requirements/` y el bloque PEP 723 de un script) o instalarlos o ejecutarlos (pip, uv, uvx, `uv run --with`, pipx, poetry, conda, pixi), salvo línea `APROBADO: <paquete> — ...` en `LICENSES.md`. |
 
 ## Límites
-- El análisis de Bash es heurístico: cubre los comandos comunes, no un `python -c` que escriba en `eval/`. La métrica oficial la debe recalcular CI.
+- El análisis de Bash es heurístico: cubre los comandos comunes, no un `python -c` que escriba en `eval/`. La métrica oficial la debe recalcular CI, y un cambio en `eval/` o `splits/` lo aprueba una persona: el perfil ml de `bin/adoptar.py` crea `.github/CODEOWNERS` para eso.
 - Los hooks no reemplazan la revisión legal ni la de código.
 
 ## Probar

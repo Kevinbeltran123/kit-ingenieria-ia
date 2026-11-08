@@ -36,6 +36,10 @@ COPIAS = [
     ("github/dependabot.yml", ".github/dependabot.yml"),
 ]
 DOCKER = [("docker/Dockerfile", "Dockerfile"), ("docker/.dockerignore", ".dockerignore")]
+COPIAS_POR_PERFIL = {"ml": [("github/CODEOWNERS.ml", ".github/CODEOWNERS")]}
+# GitHub usa el primer CODEOWNERS que encuentra en .github/, la raíz y docs/: si el repo ya tiene
+# uno en otra de esas ubicaciones, crear .github/CODEOWNERS lo reemplazaría en silencio.
+EQUIVALENTES = {".github/CODEOWNERS": [".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"]}
 
 
 def settings_para(perfil: str, github: str | None, ref: str | None) -> dict:
@@ -101,10 +105,11 @@ def adoptar(repo: Path, perfil: str, dry_run: bool, github: str | None, ref: str
     informe: list[str] = []
     prefijo = "[dry-run] " if dry_run else ""
 
-    for origen, destino in COPIAS + ([] if sin_docker else DOCKER):
+    for origen, destino in COPIAS + COPIAS_POR_PERFIL.get(perfil, []) + ([] if sin_docker else DOCKER):
         objetivo = repo / destino
-        if objetivo.exists():
-            informe.append(f"ya existe, no se tocó: {destino}")
+        existentes = [d for d in EQUIVALENTES.get(destino, [destino]) if (repo / d).exists()]
+        if existentes:
+            informe.append(f"ya existe, no se tocó: {existentes[0]}")
             continue
         informe.append(f"{prefijo}creado: {destino}")
         if not dry_run:
@@ -144,6 +149,10 @@ Pasos manuales siguientes:
   5. Para la revisión en CI: agrega el secreto ANTHROPIC_API_KEY al repo (o borra claude-review.yml).
   6. Revisa el diff antes de commitear: git status && git diff
 """
+PASO_ML = """  7. Perfil ml: en .github/CODEOWNERS (o en el CODEOWNERS que ya tenía el repo) cambia @ORG/EQUIPO-ML
+     por el equipo real (ver plantillas/github/CODEOWNERS.ml) y activa "Require review from Code Owners"
+     en la protección de main: sin eso, CODEOWNERS pide la revisión pero no la exige.
+"""
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -168,7 +177,8 @@ def main(argv: list[str] | None = None) -> int:
     for linea in adoptar(repo, args.perfil, args.dry_run, args.marketplace_github, args.ref,
                          args.sin_docker):
         print(linea)
-    print(PASOS.format(fragmento=PLANTILLAS / "python" / "pyproject.toml.fragmento"))
+    print(PASOS.format(fragmento=PLANTILLAS / "python" / "pyproject.toml.fragmento")
+          + (PASO_ML if args.perfil == "ml" else ""))
     return 0
 
 

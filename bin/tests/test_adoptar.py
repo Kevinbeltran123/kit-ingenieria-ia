@@ -46,6 +46,33 @@ def test_nunca_sobrescribe(tmp_path):
     assert "ya existe, no se tocó: CLAUDE.md" in r.stdout
 
 
+def test_perfil_ml_crea_codeowners_del_evaluador(tmp_path):
+    r = correr(tmp_path, "--perfil", "ml", "--sin-docker")
+    assert r.returncode == 0, r.stderr
+    reglas = [l.split()[0] for l in (tmp_path / ".github/CODEOWNERS").read_text().splitlines()
+              if l.strip() and not l.startswith("#")]
+    for ruta in ["/eval/", "/splits/", "/data/splits/", "/.claude/ml-vision.json"]:
+        assert ruta in reglas, ruta
+    assert "Require review from Code Owners" in r.stdout
+
+
+def test_otros_perfiles_no_crean_codeowners(tmp_path):
+    assert correr(tmp_path, "--perfil", "datos", "--sin-docker").returncode == 0
+    assert not (tmp_path / ".github/CODEOWNERS").exists()
+
+
+@pytest.mark.parametrize("existente", ["CODEOWNERS", "docs/CODEOWNERS"])
+def test_codeowners_en_otra_ubicacion_no_se_tapa(tmp_path, existente):
+    """GitHub usa el primero que encuentra en .github/, raíz y docs/: crear .github/CODEOWNERS
+    reemplazaría en silencio los dueños que el repo ya tiene."""
+    (tmp_path / existente).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / existente).write_text("* @equipo\n")
+    r = correr(tmp_path, "--perfil", "ml", "--sin-docker")
+    assert r.returncode == 0, r.stderr
+    assert not (tmp_path / ".github/CODEOWNERS").exists()
+    assert f"ya existe, no se tocó: {existente}" in r.stdout
+
+
 def fuente_del_kit(repo):
     settings = json.loads((repo / ".claude/settings.json").read_text())
     return settings["extraKnownMarketplaces"]["kit-ingenieria-ia"]["source"]
