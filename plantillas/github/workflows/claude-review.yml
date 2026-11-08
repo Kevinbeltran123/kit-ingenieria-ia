@@ -24,11 +24,36 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+      # Marketplace propio con pr-review-toolkit fijado en el commit que auditó el kit (la misma entrada
+      # de su marketplace.json). Con la URL del marketplace oficial, la acción lo instalaría desde la
+      # cabeza de main, con permiso para comentar en el PR y la API key en el entorno. Una copia local
+      # del oficial no sirve: Claude Code reserva el nombre claude-plugins-official a GitHub de anthropics.
+      - name: Marketplace con el plugin de revisión fijado por SHA
+        run: |
+          mkdir -p "$RUNNER_TEMP/marketplace-revision/.claude-plugin"
+          cat > "$RUNNER_TEMP/marketplace-revision/.claude-plugin/marketplace.json" <<'JSON'
+          {
+            "name": "revision-pr",
+            "owner": {"name": "kit-ingenieria-ia"},
+            "plugins": [
+              {
+                "name": "pr-review-toolkit",
+                "source": {
+                  "source": "git-subdir",
+                  "url": "https://github.com/anthropics/claude-plugins-official.git",
+                  "path": "plugins/pr-review-toolkit",
+                  "ref": "main",
+                  "sha": "0412be76f50ab4f4f8abff3753efa9269fbbca5b"
+                }
+              }
+            ]
+          }
+          JSON
       - uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1.0.269
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          plugin_marketplaces: "https://github.com/anthropics/claude-plugins-official.git"
-          plugins: "pr-review-toolkit@claude-plugins-official"
+          plugin_marketplaces: ${{ runner.temp }}/marketplace-revision
+          plugins: "pr-review-toolkit@revision-pr"
           prompt: |
             Revisa este PR (${{ github.repository }}#${{ github.event.pull_request.number }}).
             Reporta solo problemas con evidencia: bugs, seguridad, pruebas que no prueban nada,

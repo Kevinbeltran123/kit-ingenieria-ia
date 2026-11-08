@@ -67,3 +67,19 @@ def test_las_reglas_de_secretos_cubren_cualquier_carpeta():
 def test_repo_sin_adaptadores_ni_entrypoints_todavia_pasa(tmp_path):
     r = lint_imports(crear_proyecto(tmp_path, capas=("domain", "application")))
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def marketplace_de_revision(flujo: str) -> dict:
+    """El marketplace.json que arma claude-review.yml en el heredoc <<'JSON'."""
+    return json.loads(flujo.split("<<'JSON'\n", 1)[1].split("\n          JSON\n", 1)[0])
+
+
+def test_la_revision_usa_pr_review_toolkit_en_el_commit_auditado():
+    """claude-review.yml instala pr-review-toolkit desde el commit que el kit fijó y auditó, no desde main."""
+    flujo = (KIT / "plantillas" / "github" / "workflows" / "claude-review.yml").read_text()
+    entradas = json.loads((KIT / ".claude-plugin" / "marketplace.json").read_text())["plugins"]
+    auditada = next(p["source"] for p in entradas if p["name"] == "pr-review-toolkit")
+    marketplace = marketplace_de_revision(flujo)
+    assert [p["source"] for p in marketplace["plugins"]] == [auditada]  # mismo url, path, ref y sha
+    assert re.search(r"plugin_marketplaces: \$\{\{ runner\.temp \}\}/marketplace-revision\n", flujo)
+    assert f'plugins: "pr-review-toolkit@{marketplace["name"]}"' in flujo

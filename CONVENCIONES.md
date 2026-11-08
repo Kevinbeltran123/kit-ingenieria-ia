@@ -42,5 +42,6 @@ Ejemplo de referencia: `plugins/calidad-python/`.
 4. Nada instalado globalmente, nada fuera de la carpeta del kit, sin operaciones de git.
 
 ## Terceros
-- Siempre fijados por `sha` de 40 caracteres en `marketplace.json`.
+- Siempre fijados por `sha` de 40 caracteres en `marketplace.json`. Si cambia el de `pr-review-toolkit`, cambia
+  también en `plantillas/github/workflows/claude-review.yml` (una prueba de `bin/tests` lo exige).
 - Auditados con la checklist de `investigacion/04-pruebas-revision-seguridad.md` antes de entrar; resultado en `terceros/AUDITORIA.md`.
