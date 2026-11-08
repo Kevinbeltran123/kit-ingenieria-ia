@@ -57,13 +57,13 @@ Un cambio a la vez. Registra cada experimento en MLflow con: commit de git, hash
 
 ## Fase 5: evaluar como en campo
 
-Sobre el test que nunca se tocó, una sola vez por modelo candidato:
+Elige el modelo final, su umbral y su calibración **en validación** (o con validación cruzada agrupada, ver `division-sin-fuga`). Después evalúa **ese único modelo** sobre el test que nunca se tocó, una sola vez. Si comparas candidatos en test y te quedas con el mejor, el número de test ya es parte de la selección y sale optimista.
 
-- **Por palma:** recall de la clase enferma con intervalo de confianza, PR-AUC (no accuracy), matriz de confusión por grado de severidad.
+- **Por palma:** recall de la clase enferma con intervalo de confianza, PR-AUC (no accuracy), matriz de confusión por grado de severidad. El intervalo sale de un bootstrap por **lote** (se remuestrean lotes enteros con reemplazo), nunca por imagen: las fotos de una palma y las palmas de un lote no son independientes, y remuestrear imágenes da un intervalo falsamente angosto. Con pocos lotes en test el intervalo sale ancho, y así se reporta.
 - **Detección:** mAP@50 y recall a IoU fijo.
 - **Por finca y por fecha**, con el peor caso explícito.
 - **Calibración:** ECE y diagrama de confiabilidad; temperature scaling ajustado en validación.
-- **Umbral** elegido por costo de errores, documentado.
+- **Umbral** elegido en validación por costo de errores y documentado; en test solo se aplica.
 - Comparación contra los baselines tontos de la fase 2.
 
 Un reporte que solo trae accuracy no pasa esta fase.
@@ -79,6 +79,7 @@ Piloto prospectivo: el modelo marca palmas, un técnico verifica sin conocer la 
 - Métrica de test muy superior a lo publicado → revisa fuga (`division-sin-fuga`).
 - Gran diferencia entre fincas → el modelo aprendió la finca, no la enfermedad.
 - Mejora que desaparece al cambiar la semilla → ruido, no mejora.
+- Se compararon varios modelos en test → ese test ya sirvió para elegir; la estimación honesta necesita datos nuevos (otra finca o fechas posteriores).
 - El agente propone cambiar la métrica o el evaluador → no; la métrica es fija.
 
 ## Referencias
