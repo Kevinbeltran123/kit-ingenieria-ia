@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AgenteSinEscrituraEnProd",
+      "Effect": "Deny",
+      "Action": [
+        "*:Create*",
+        "*:Delete*",
+        "*:Put*",
+        "*:Update*",
+        "*:Modify*",
+        "*:Terminate*",
+        "iam:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Bool": { "aws:CalledViaAWSMCP": "true" }
+      }
+    }
+  ]
+}

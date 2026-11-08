@@ -1,0 +1,206 @@
+[
+  {
+    "name": "aws-core",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/aws/agent-toolkit-for-aws.git",
+      "path": "plugins/aws-core",
+      "ref": "main",
+      "sha": "0a218f8cc13220013f72147e2e0fdbe350b34ae2"
+    },
+    "description": "AWS oficial: 25 skills (CDK, IAM, serverless, observabilidad, costos...), MCP remoto de AWS y hook de secretos. Usar con perfil de solo lectura.",
+    "category": "devops"
+  },
+  {
+    "name": "pr-review-toolkit",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/anthropics/claude-plugins-official.git",
+      "path": "plugins/pr-review-toolkit",
+      "ref": "main",
+      "sha": "0412be76f50ab4f4f8abff3753efa9269fbbca5b"
+    },
+    "description": "Revisión de PR con 6 agentes: tests débiles, fallos silenciosos, tipos, comentarios.",
+    "category": "development"
+  },
+  {
+    "name": "commit-commands",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/anthropics/claude-plugins-official.git",
+      "path": "plugins/commit-commands",
+      "ref": "main",
+      "sha": "0412be76f50ab4f4f8abff3753efa9269fbbca5b"
+    },
+    "description": "/commit, /commit-push-pr y /clean_gone. commit-push-pr hace push y abre PR sin preguntar.",
+    "category": "development"
+  },
+  {
+    "name": "security-guidance",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/anthropics/claude-plugins-official.git",
+      "path": "plugins/security-guidance",
+      "ref": "main",
+      "sha": "0412be76f50ab4f4f8abff3753efa9269fbbca5b"
+    },
+    "description": "Avisos por patrones al editar y revisión del diff con un LLM al terminar. Instala el Agent SDK en ~/.claude/security.",
+    "category": "development"
+  },
+  {
+    "name": "plugin-dev",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/anthropics/claude-plugins-official.git",
+      "path": "plugins/plugin-dev",
+      "ref": "main",
+      "sha": "0412be76f50ab4f4f8abff3753efa9269fbbca5b"
+    },
+    "description": "Skills y agentes para escribir plugins, hooks y MCP (para mantener este kit).",
+    "category": "development"
+  },
+  {
+    "name": "skill-creator",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/anthropics/claude-plugins-official.git",
+      "path": "plugins/skill-creator",
+      "ref": "main",
+      "sha": "0412be76f50ab4f4f8abff3753efa9269fbbca5b"
+    },
+    "description": "Crear y evaluar skills (para mantener este kit). Sus evals corren claude -p.",
+    "category": "development"
+  },
+  {
+    "name": "pyright-lsp",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/anthropics/claude-plugins-official.git",
+      "path": "plugins/pyright-lsp",
+      "ref": "main",
+      "sha": "0412be76f50ab4f4f8abff3753efa9269fbbca5b"
+    },
+    "description": "Pyright como LSP: navegación y diagnósticos de tipos. Requiere pyright-langserver en el PATH.",
+    "category": "development",
+    "version": "1.0.0",
+    "strict": false,
+    "lspServers": {
+      "pyright": {
+        "command": "pyright-langserver",
+        "args": [
+          "--stdio"
+        ],
+        "extensionToLanguage": {
+          ".py": "python",
+          ".pyi": "python"
+        }
+      }
+    }
+  },
+  {
+    "name": "property-based-testing",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/trailofbits/skills.git",
+      "path": "plugins/property-based-testing",
+      "ref": "main",
+      "sha": "e4dd0bb5b15535f7c5a0834187dffba6ac37e4ff"
+    },
+    "description": "Trail of Bits: pruebas basadas en propiedades (Hypothesis).",
+    "category": "security"
+  },
+  {
+    "name": "static-analysis",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/trailofbits/skills.git",
+      "path": "plugins/static-analysis",
+      "ref": "main",
+      "sha": "e4dd0bb5b15535f7c5a0834187dffba6ac37e4ff"
+    },
+    "description": "Trail of Bits: Semgrep y CodeQL guiados, salida SARIF. Requiere semgrep/codeql instalados.",
+    "category": "security"
+  },
+  {
+    "name": "supply-chain-risk-auditor",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/trailofbits/skills.git",
+      "path": "plugins/supply-chain-risk-auditor",
+      "ref": "main",
+      "sha": "e4dd0bb5b15535f7c5a0834187dffba6ac37e4ff"
+    },
+    "description": "Trail of Bits: riesgo de dependencias (consulta OSV, PyPI, npm, deps.dev, scorecard).",
+    "category": "security"
+  },
+  {
+    "name": "differential-review",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/trailofbits/skills.git",
+      "path": "plugins/differential-review",
+      "ref": "main",
+      "sha": "e4dd0bb5b15535f7c5a0834187dffba6ac37e4ff"
+    },
+    "description": "Trail of Bits: revisión de seguridad de un diff o PR.",
+    "category": "security"
+  },
+  {
+    "name": "modern-python",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/trailofbits/skills.git",
+      "path": "plugins/modern-python",
+      "ref": "main",
+      "sha": "e4dd0bb5b15535f7c5a0834187dffba6ac37e4ff"
+    },
+    "description": "Trail of Bits: uv/ruff/ty/prek. Su hook mete shims en el PATH que bloquean pip/pipx y python script.py.",
+    "category": "development"
+  },
+  {
+    "name": "hf-cli",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/huggingface/skills.git",
+      "path": "skills/hf-cli",
+      "ref": "main",
+      "sha": "25910b3d0ba31a2ba102f901cdc9e008c278a69c"
+    },
+    "description": "Hugging Face: uso del CLI hf (modelos, datasets, repos).",
+    "category": "ml",
+    "skills": "./"
+  },
+  {
+    "name": "hf-cloud-sagemaker",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/huggingface/skills.git",
+      "path": "skills",
+      "ref": "main",
+      "sha": "25910b3d0ba31a2ba102f901cdc9e008c278a69c"
+    },
+    "description": "Hugging Face en SageMaker: contexto AWS, entorno, imagen de serving, IAM, planificación y despliegue con defaults de producción. Puede crear roles IAM y endpoints con costo.",
+    "category": "ml",
+    "skills": [
+      "./hf-cloud-aws-context-discovery",
+      "./hf-cloud-python-env-setup",
+      "./hf-cloud-serving-image-selection",
+      "./hf-cloud-sagemaker-iam-preflight",
+      "./hf-cloud-sagemaker-deployment-planner",
+      "./hf-cloud-sagemaker-production-defaults"
+    ]
+  },
+  {
+    "name": "react-best-practices",
+    "source": {
+      "source": "git-subdir",
+      "url": "https://github.com/vercel-labs/agent-skills.git",
+      "path": "skills/react-best-practices",
+      "ref": "main",
+      "sha": "1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62"
+    },
+    "description": "Vercel: reglas de rendimiento para React/Next.js.",
+    "category": "frontend",
+    "skills": "./"
+  }
+]

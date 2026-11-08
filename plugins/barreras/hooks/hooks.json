@@ -1,0 +1,17 @@
+{
+  "description": "Barreras: infra, SQL destructivo, archivos protegidos y secretos",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/barreras.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

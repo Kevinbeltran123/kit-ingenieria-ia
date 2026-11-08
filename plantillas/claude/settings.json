@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "extraKnownMarketplaces": {
+    "kit-ingenieria-ia": {
+      "source": { "source": "directory", "path": "__RUTA_DEL_KIT__" }
+    }
+  },
+  "enabledPlugins": {
+    "calidad-python@kit-ingenieria-ia": true,
+    "barreras@kit-ingenieria-ia": true,
+    "flujo@kit-ingenieria-ia": true,
+    "python-ingenieria@kit-ingenieria-ia": true
+  },
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.ssh/**)",
+      "Bash(terraform apply)",
+      "Bash(terraform apply *)",
+      "Bash(terraform destroy *)",
+      "Bash(tofu apply *)",
+      "Bash(tofu destroy *)",
+      "Bash(cdk deploy *)",
+      "Bash(cdk destroy *)",
+      "Bash(sam deploy *)",
+      "Bash(serverless deploy *)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "credentials": {
+      "files": [
+        { "path": "~/.aws/credentials", "mode": "deny" }
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "pypi.org",
+        "files.pythonhosted.org",
+        "github.com",
+        "api.github.com",
+        "objects.githubusercontent.com"
+      ]
+    }
+  }
+}

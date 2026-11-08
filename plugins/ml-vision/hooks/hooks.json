@@ -1,0 +1,22 @@
+{
+  "description": "ML visión: evaluador y splits protegidos, licencias de dependencias",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/evaluador_bloqueado.py\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/licencias.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

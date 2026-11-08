@@ -1,0 +1,116 @@
+# Fragmento para pegar en el pyproject.toml del repo. adoptar.py NO lo fusiona solo:
+# revísalo y copia las secciones que el repo no tenga. Versiones verificadas el 2026-11-07.
+# Aquí van rangos; las versiones exactas las fija uv.lock.
+# Cambia "app" por el paquete real del repo.
+
+[dependency-groups]
+dev = [
+  "ruff>=0.17",
+  # ty es beta: se fija exacto y se sube a propósito. Debe tener más de 7 días
+  # (ver exclude-newer abajo); 0.0.95 es del 2026-10-29.
+  "ty==0.0.95",
+  "pytest>=9.2",
+  "pytest-cov>=7.1",
+  "hypothesis",
+  "import-linter>=2.15",
+  "deptry>=0.25.1",
+  "vulture>=2.16",
+  "complexipy>=8.3",
+  "pip-audit>=2.10",
+]
+
+[tool.uv]
+# No instalar versiones publicadas hace menos de 7 días (defensa contra paquetes comprometidos).
+# Acepta duraciones "friendly" ("7 days") o ISO 8601 ("P7D"). Para una urgencia de seguridad:
+# exclude-newer-package = { paquete = false }
+exclude-newer = "7 days"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W", "F",        # pycodestyle + pyflakes (imports y variables sin uso)
+  "I",                  # orden de imports
+  "UP",                 # sintaxis moderna (reemplaza pyupgrade)
+  "B",                  # bugbear
+  "SIM", "RET", "PIE",  # simplificación: lo que la IA infla
+  "C4", "PERF",
+  "ARG",                # argumentos sin uso
+  "ERA",                # código comentado
+  "T20",                # print() olvidados
+  "S",                  # bandit (seguridad básica)
+  "PTH",                # pathlib
+  "N",                  # nombres
+  "D",                  # docstrings (reemplaza interrogate)
+  "C90",                # complejidad ciclomática
+  "PLR09",              # demasiados args/ramas/returns
+  "TID",                # imports prohibidos
+  "FAST",               # FastAPI
+  "RUF",
+]
+ignore = ["D100", "D104", "D105", "D107"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "D", "PLR2004", "ARG"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-args = 6
+
+# Ejemplo de API prohibida (ajusta al repo):
+# [tool.ruff.lint.flake8-tidy-imports.banned-api]
+# "requests".msg = "Usa httpx."
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.complexipy]
+paths = ["src"]
+max-complexity-allowed = 15
+
+[tool.vulture]
+paths = ["src"]
+min_confidence = 80
+
+[tool.deptry]
+known_first_party = ["app"]
+
+# Arquitectura hexagonal: entrypoints → adapters → application → domain
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "Capas hexagonales"
+type = "layers"
+layers = [
+  "app.entrypoints",   # routers FastAPI, handlers Lambda
+  "app.adapters",      # boto3, SQLAlchemy, httpx
+  "app.application",   # casos de uso, puertos (Protocols)
+  "app.domain",        # entidades y reglas puras
+]
+
+[[tool.importlinter.contracts]]
+name = "Dominio y aplicación sin frameworks ni AWS"
+type = "forbidden"
+source_modules = ["app.domain", "app.application"]
+forbidden_modules = ["fastapi", "sqlalchemy", "boto3", "botocore", "httpx"]

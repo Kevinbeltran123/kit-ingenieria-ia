@@ -1,0 +1,27 @@
+# ml-vision
+
+Visión por computador y MLOps para el proyecto de enfermedades en palma (y similares), con foco en que las métricas sean creíbles.
+
+## Skills
+| Skill | Para qué |
+|---|---|
+| `division-sin-fuga` | Diseñar splits por palma/lote/finca/fecha y verificarlos con `scripts/verificar_division.py` (falla si hay fuga). |
+| `receta-entrenamiento` | Fases de Karpathy adaptadas: datos → baselines tontos → DINOv3 congelado → regularizar → evaluar por finca → piloto en campo. |
+| `carga-segura-modelos` | torch ≥ 2.6, `weights_only=True`, safetensors con revisión fija, sin `trust_remote_code`. |
+| `licencias-vision` | AGPL de Ultralytics, RF-DETR sin `[plus]`, DINOv3/SAM 3; cómo registrar aprobaciones. |
+| `ficha-modelo` | Plantillas de model card y dataset card con límites de validación en campo. |
+| `despliegue-vision-aws` | SageMaker spot, MLflow serverless, Batch Transform, Lambda + ONNX, paridad ONNX, drift de embeddings. |
+
+## Hooks (PreToolUse)
+| Hook | Bloquea |
+|---|---|
+| `evaluador_bloqueado.py` | Editar o escribir (también por Bash: `>`, `rm`, `mv`, `tee`, `sed -i`, `cp` hacia...) en `eval/`, `splits/`, `data/splits/` si existen, o en las rutas de `.claude/ml-vision.json` (`{"rutas_protegidas": [...]}`). Leer está permitido. |
+| `licencias.py` | Agregar `ultralytics` o `rfdetr[plus]` a archivos de dependencias o instalarlos (pip/uv/poetry/conda/pixi), salvo línea `APROBADO: <paquete> — ...` en `LICENSES.md`. |
+
+## Límites
+- El análisis de Bash es heurístico: cubre los comandos comunes, no un `python -c` que escriba en `eval/`. La métrica oficial la debe recalcular CI.
+- Los hooks no reemplazan la revisión legal ni la de código.
+
+## Probar
+    python3 -m pytest tests -q
+    claude --plugin-dir ./plugins/ml-vision

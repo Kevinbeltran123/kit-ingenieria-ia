@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "flujo",
+  "version": "7.0.2-kit.1",
+  "description": "Flujo de trabajo: brainstorming, planes, TDD, depuración sistemática y verificación antes de terminar (selección de obra/superpowers v7.0.2, sin hooks)",
+  "author": { "name": "Kevin Beltran" },
+  "license": "MIT",
+  "keywords": ["tdd", "debugging", "planes", "verificacion", "superpowers"]
+}

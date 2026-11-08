@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "barreras",
+  "version": "0.1.0",
+  "description": "Hooks PreToolUse que bloquean apply/deploy/destroy, SQL destructivo en producción, edición de archivos protegidos y lectura de secretos",
+  "author": { "name": "Kevin Beltran" },
+  "license": "MIT",
+  "keywords": ["seguridad", "terraform", "aws", "sql", "hooks"]
+}

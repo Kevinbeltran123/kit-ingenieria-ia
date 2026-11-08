@@ -1,0 +1,38 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SinSecretosNiDescifrado",
+      "Effect": "Deny",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath",
+        "kms:Decrypt"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SinEscriturasDesdeElAgente",
+      "Effect": "Deny",
+      "Action": [
+        "*:Create*",
+        "*:Delete*",
+        "*:Put*",
+        "*:Update*",
+        "*:Modify*",
+        "*:Attach*",
+        "*:Detach*",
+        "*:Terminate*",
+        "iam:*",
+        "organizations:*",
+        "sts:AssumeRole"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Bool": { "aws:ViaAWSMCPService": "true" }
+      }
+    }
+  ]
+}

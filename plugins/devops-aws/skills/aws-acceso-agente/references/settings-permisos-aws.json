@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(~/.aws/**)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(aws iam *)",
+      "Bash(aws * delete-*)",
+      "Bash(aws * terminate-*)",
+      "Bash(aws secretsmanager get-secret-value*)",
+      "Bash(terraform apply*)",
+      "Bash(terraform destroy*)",
+      "Bash(tofu apply*)",
+      "Bash(tofu destroy*)",
+      "Bash(cdk deploy*)",
+      "Bash(cdk destroy*)"
+    ],
+    "ask": [
+      "Bash(aws * --profile *prod*)",
+      "mcp__*aws-mcp*__aws___run_script"
+    ]
+  }
+}

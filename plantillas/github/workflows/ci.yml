@@ -1,0 +1,55 @@
+# Acciones fijadas por SHA (verificadas el 2026-11-07). Actualízalas con Dependabot.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calidad:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+      - name: Instalar
+        run: uv sync --locked
+      - name: Lint y formato
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Tipos
+        run: uv run ty check
+      - name: Arquitectura
+        run: uv run lint-imports
+      - name: Pruebas
+        run: uv run pytest -q --cov --cov-report=term-missing
+      - name: Dependencias sin usar
+        run: uv run deptry .
+      - name: Vulnerabilidades en dependencias
+        run: uv run pip-audit
+      - name: Código muerto (reporte, no bloquea)
+        run: uv run vulture || true
+
+  workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Seguridad de GitHub Actions
+        run: uvx zizmor==1.32.0 --offline .
