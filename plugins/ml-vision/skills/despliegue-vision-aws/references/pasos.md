@@ -23,11 +23,18 @@ estimator.fit({"train": f"s3://{BUCKET}/datasets/{HASH_DVC}/"})
 ## 2. Registro
 
 ```python
-mlflow.pytorch.log_model(modelo, "model", registered_model_name="palma-pc-clasificador")
+import onnx
+
+# Se registra el ONNX del paso 3 y los pesos en safetensors. No uses mlflow.pytorch.log_model: cargar ese
+# formato (pickle o pt2) ejecuta código, lo que contradice la skill carga-segura-modelos.
+mlflow.onnx.log_model(onnx.load("modelos/palma.onnx"), name="model", input_example=ejemplo,
+                      registered_model_name="palma-pc-clasificador")
+mlflow.log_artifact("modelos/pesos.safetensors")
 mlflow.log_artifact("docs/model-card.md")
 mlflow.log_artifact("reportes/evaluacion.html")
 ```
-Promueve a "aprobado" en Model Registry solo tras revisión humana.
+Exporta a ONNX (paso 3) antes de registrar. Promueve a "aprobado" en Model Registry solo tras revisión humana.
+En el servicio, carga el ONNX con onnxruntime; no uses `mlflow.pytorch.load_model`.
 
 ## 3. Export ONNX y paridad
 
