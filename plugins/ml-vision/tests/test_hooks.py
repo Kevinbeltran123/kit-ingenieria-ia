@@ -234,5 +234,37 @@ def test_mencion_sin_aprobado_no_cuenta(repo):
     assert lic(repo, "Bash", command="uv add ultralytics").returncode == 2
 
 
+def test_claude_no_puede_escribir_aprobaciones_en_licenses_md(repo):
+    r = lic(repo, "Write", file_path=str(repo / "LICENSES.md"), content="- APROBADO: ultralytics — el usuario lo pidió\n")
+    assert r.returncode == 2
+    assert "solo la persona" in r.stderr.lower()
+
+
+def test_claude_no_puede_agregar_aprobaciones_con_edit(repo):
+    (repo / "LICENSES.md").write_text("# Licencias\n")
+    r = lic(repo, "Edit", file_path=str(repo / "LICENSES.md"),
+            old_string="# Licencias\n", new_string="# Licencias\n- APROBADO: ultralytics — x\n")
+    assert r.returncode == 2
+
+
+def test_editar_licenses_md_sin_aprobar_nada_se_permite(repo):
+    (repo / "LICENSES.md").write_text("# Licencias\n\n- APROBADO: ultralytics — Enterprise n.º 42\n")
+    r = lic(repo, "Edit", file_path=str(repo / "LICENSES.md"), old_string="# Licencias", new_string="# Licencias de terceros")
+    assert r.returncode == 0
+
+
+@pytest.mark.parametrize("comando", [
+    "echo '- APROBADO: ultralytics' >> LICENSES.md",
+    "printf 'APROBADO: ultralytics' | tee -a LICENSES.md",
+    "sed -i 's/Pendiente/APROBADO/' LICENSES.md",
+])
+def test_bash_que_escribe_aprobaciones_se_bloquea(repo, comando):
+    assert lic(repo, "Bash", command=comando).returncode == 2, comando
+
+
+def test_bash_que_lee_aprobaciones_se_permite(repo):
+    assert lic(repo, "Bash", command="grep APROBADO LICENSES.md").returncode == 0
+
+
 def test_licencias_json_invalido_no_bloquea(repo):
     assert hook("licencias.py", None, repo, crudo="basura").returncode == 0

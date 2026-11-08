@@ -7,7 +7,8 @@ proyecto tiene una línea como:
     APROBADO: ultralytics — licencia Enterprise n.º 123, legal (2026-11-07)
 
 Revisa Edit/Write/MultiEdit en archivos de dependencias y comandos de instalación
-en Bash (pip, uv, poetry, conda, pixi).
+en Bash (pip, uv, poetry, conda, pixi). Las líneas APROBADO: solo las escribe la
+persona: si Claude intenta agregarlas a LICENSES.md (por edición o por Bash), se bloquea.
 """
 
 from __future__ import annotations
@@ -43,6 +44,33 @@ def agregados(antes: str, despues: str) -> list[str]:
     return [n for n, rx in PAQUETES.items() if len(rx.findall(despues)) > len(rx.findall(antes))]
 
 
+APROBACION = re.compile(r"^\s*[-*]?\s*APROBADO:", re.IGNORECASE | re.MULTILINE)
+ESCRIBE = re.compile(r">|\btee\b|\bsed\s+(?:-\w+\s+)*-i|\bperl\s+-\w*i")
+SOLO_LA_PERSONA = ("Bloqueado: solo la persona registra aprobaciones de licencia en LICENSES.md. "
+                   "Pídele que agregue ella misma la línea 'APROBADO: <paquete> — <licencia y quién aprobó>'.")
+
+
+def antes_y_despues(herramienta: str, entrada: dict) -> tuple[str, str]:
+    if herramienta == "Write":
+        ruta = Path(entrada.get("file_path", ""))
+        actual = ruta.read_text(encoding="utf-8", errors="ignore") if ruta.is_file() else ""
+        return actual, entrada.get("content", "")
+    if herramienta == "Edit":
+        return entrada.get("old_string", ""), entrada.get("new_string", "")
+    edits = entrada.get("edits") or []
+    return ("\n".join(e.get("old_string", "") for e in edits), "\n".join(e.get("new_string", "") for e in edits))
+
+
+def agrega_aprobacion(herramienta: str, entrada: dict) -> bool:
+    if herramienta in {"Edit", "Write", "MultiEdit"}:
+        if Path(entrada.get("file_path", "")).name != "LICENSES.md":
+            return False
+        antes, despues = antes_y_despues(herramienta, entrada)
+        return len(APROBACION.findall(despues)) > len(APROBACION.findall(antes))
+    comando = entrada.get("command", "") if herramienta == "Bash" else ""
+    return "APROBADO" in comando.upper() and "LICENSES.MD" in comando.upper() and bool(ESCRIBE.search(comando))
+
+
 def main() -> int:
     try:
         datos = json.load(sys.stdin)
@@ -52,6 +80,10 @@ def main() -> int:
     herramienta = datos.get("tool_name", "")
     entrada = datos.get("tool_input") or {}
     nuevos: list[str] = []
+
+    if agrega_aprobacion(herramienta, entrada):
+        print(SOLO_LA_PERSONA, file=sys.stderr)
+        return 2
 
     if herramienta in {"Edit", "Write", "MultiEdit"}:
         ruta = entrada.get("file_path", "")
