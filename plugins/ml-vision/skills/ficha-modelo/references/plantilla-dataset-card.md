@@ -8,7 +8,7 @@
 - **Quién capturó y con qué protocolo:** <...>
 
 ## Etiquetas
-- **Taxonomía:** <p. ej., escala ICA de PC 1–5 + sana confirmada>
+- **Taxonomía:** <p. ej., escala ICA de PC (Res. 092771 de 2021): grado 0 sana, grados 1–5, cráter y hoja clorótica; recuperada aparte>
 - **Origen de la etiqueta:** censo de campo / inspección visual de la imagen / mixto
 - **Quién etiquetó y cómo se revisó:** <agrónomo, técnico, doble anotación, acuerdo inter-anotador>
 - **Qué significa "negativo":** <sana confirmada en campo vs. sin hallazgo>

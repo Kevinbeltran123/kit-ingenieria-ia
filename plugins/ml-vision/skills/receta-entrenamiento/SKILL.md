@@ -12,7 +12,7 @@ Antes de empezar: la división debe estar hecha y verificada con la skill `divis
 ## Fase 0: el problema y la taxonomía
 
 - Escribe qué decisión toma alguien con la salida del modelo (p. ej., "enviar técnico a inspeccionar esta palma") y qué cuesta cada error. Pasar por alto una pudrición del cogollo (PC) cuesta mucho más que una inspección extra.
-- Fija las etiquetas con la autoridad del dominio. Ejemplo para PC: escala de severidad 1–5 de la resolución ICA 092771 de 2021, más "sana confirmada en campo". Valida el esquema con Cenipalma o el agrónomo de la empresa.
+- Fija las etiquetas con la autoridad del dominio. Ejemplo para PC, la escala de la resolución ICA 092771 de 2021 (numeral 2.4.3): grado 0 (sana); leve, grados 1–2 (lesiones hasta el 40 % de la hoja flecha); intermedio, grados 3–4 (hasta el 80 %); avanzado, grado 5, cráter (sin flechas ni hojas jóvenes) y hoja clorótica. La misma resolución define palma recuperada (flechas sanas y al menos 8 hojas nuevas bien desarrolladas): etiquétala aparte de sana. Valida el esquema con Cenipalma o el agrónomo de la empresa.
 - La etiqueta sale del **censo de campo**, no de mirar la foto. "Sin etiqueta positiva" ≠ "sana".
 
 Artefacto: `docs/problema.md` con decisión, costos y taxonomía.

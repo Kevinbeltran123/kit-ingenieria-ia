@@ -1,7 +1,7 @@
 # Ficha del modelo: <nombre>
 
 ## Resumen
-- **Qué hace:** <p. ej., clasifica cada copa de palma en sana / PC grado 1–5>
+- **Qué hace:** <p. ej., clasifica cada copa de palma según la escala ICA de PC: grado 0 (sana), 1–5, cráter, hoja clorótica>
 - **Decisión que apoya:** <p. ej., priorizar inspección de técnicos>
 - **No usar para:** <p. ej., diagnóstico definitivo, otras especies, imágenes de celular>
 - **Versión / registro:** <nombre en Model Registry, versión>
