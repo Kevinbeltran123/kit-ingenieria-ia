@@ -293,6 +293,68 @@ def test_bash_sin_instalacion_restringida_se_permite(repo, comando):
     assert lic(repo, "Bash", command=comando).returncode == 0, comando
 
 
+@pytest.mark.parametrize("comando", [
+    "uv run --with ultralytics python train.py",
+    "uv run --with=ultralytics python train.py",
+    "uvx ultralytics settings",
+    "uvx --from ultralytics yolo train data=palmas.yaml",
+    "uv tool install ultralytics",
+    "pipx install ultralytics",
+    "pipx run --spec ultralytics yolo",
+    "python -m pip install ultralytics",
+    "sudo -H pip install ultralytics",
+    'bash -c "pip install ultralytics"',
+    "docker run --rm img pip install ultralytics",
+    "uv run pip install ultralytics",
+    "echo listo\npip install ultralytics",
+    "ssh gpu 'pip install ultralytics'",
+])
+def test_instalar_o_ejecutar_por_otras_vias_se_bloquea(repo, comando):
+    assert lic(repo, "Bash", command=comando).returncode == 2, comando
+
+
+@pytest.mark.parametrize("comando", [
+    'grep -rn "pip install ultralytics" docs/',
+    'git commit -m "docs: no usar uv add ultralytics (AGPL)"',
+    'gh pr create --title x --body "Se evita pip install ultralytics; usamos rfdetr"',
+    "uv run python scripts/ultralytics/convertir.py",   # uv run solo instala lo de --with
+    "uvx ruff check ultralytics/",                       # lo que va después de la herramienta es suyo
+])
+def test_texto_que_menciona_una_instalacion_se_permite(repo, comando):
+    r = lic(repo, "Bash", command=comando)
+    assert r.returncode == 0, f"{comando}: {r.stderr}"
+
+
+def test_requirements_en_carpeta_se_revisa(repo):
+    r = lic(repo, "Write", file_path=str(repo / "requirements" / "base.txt"), content="torch\nultralytics\n")
+    assert r.returncode == 2
+
+
+PEP723 = '# /// script\n# dependencies = [\n#   "numpy",\n# ]\n# ///\nimport numpy\n'
+
+
+def test_script_con_bloque_pep723_se_revisa(repo):
+    contenido = PEP723.replace('"numpy",', '"numpy",\n#   "ultralytics",')
+    assert lic(repo, "Write", file_path=str(repo / "tools" / "entrenar.py"), content=contenido).returncode == 2
+
+
+def test_editar_el_bloque_pep723_se_revisa(repo):
+    script = repo / "entrenar.py"
+    script.write_text(PEP723)
+    r = lic(repo, "Edit", file_path=str(script), old_string='#   "numpy",\n', new_string='#   "numpy",\n#   "ultralytics",\n')
+    assert r.returncode == 2
+
+
+def test_importar_en_codigo_sin_declararlo_se_permite(repo):
+    r = lic(repo, "Write", file_path=str(repo / "src" / "detectar.py"), content="from ultralytics import YOLO\n")
+    assert r.returncode == 0
+
+
+def test_setup_py_sigue_revisandose(repo):
+    r = lic(repo, "Edit", file_path=str(repo / "setup.py"), old_string="", new_string='install_requires=["ultralytics"]')
+    assert r.returncode == 2
+
+
 def test_aprobacion_en_licenses_md_permite(repo):
     (repo / "LICENSES.md").write_text("# Licencias\n\n- APROBADO: ultralytics — Enterprise n.º 42, legal (2026-11-07)\n")
     assert lic(repo, "Bash", command="uv add ultralytics").returncode == 0

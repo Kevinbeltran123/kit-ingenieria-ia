@@ -6,9 +6,13 @@ proyecto tiene una línea como:
 
     APROBADO: ultralytics — licencia Enterprise n.º 123, legal (2026-11-07)
 
-Revisa Edit/Write/MultiEdit en archivos de dependencias y comandos de instalación
-en Bash (pip, uv, poetry, conda, pixi). Las líneas APROBADO: solo las escribe la
-persona: si Claude intenta agregarlas a LICENSES.md (por edición o por Bash), se bloquea.
+Revisa Edit/Write/MultiEdit en archivos de dependencias (también `requirements/*.txt`
+y el bloque PEP 723 `# /// script` de un .py) y, en Bash, los comandos que instalan
+o ejecutan paquetes (pip, uv, uvx, `uv run --with`, pipx, poetry, conda, pixi), también
+dentro de `bash -c` o `ssh`. Las comillas se respetan: un mensaje de commit o un grep
+que menciona una instalación no es una instalación. Las líneas APROBADO: solo las
+escribe la persona: si Claude intenta agregarlas a LICENSES.md (por edición o por
+Bash), se bloquea.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -26,7 +31,14 @@ PAQUETES = {
 ARCHIVOS_DEPENDENCIAS = re.compile(
     r"^(pyproject\.toml|setup\.cfg|setup\.py|environment\.ya?ml|pixi\.toml|requirements[\w.-]*\.(txt|in))$"
 )
-INSTALACION = re.compile(r"\b(pip3?|uv|poetry|conda|mamba|pixi)\b[^;&|]*?\b(install|add)\b", re.IGNORECASE)
+PEP723 = re.compile(r"^# /// script\s*$(.*?)^# ///\s*$", re.MULTILINE | re.DOTALL)
+INSTALADORES = {"pip", "pip3", "uv", "uvx", "poetry", "conda", "mamba", "micromamba", "pixi", "pipx"}
+SHELLS = {"bash", "sh", "zsh", "dash"}
+PUNTUACION = "();<>|&`\n"
+OPCIONES_CON_PAQUETE = {"--with", "--with-editable", "--from", "--spec"}
+CON_VALOR = OPCIONES_CON_PAQUETE | {"--python", "-p"}
+INSTALAN = (["install"], ["add"], ["inject"], ["create"])
+INSTALAN_2 = (["pip", "install"], ["tool", "install"], ["global", "install"])
 
 
 def aprobados(raiz: Path) -> set[str]:
@@ -42,6 +54,82 @@ def aprobados(raiz: Path) -> set[str]:
 
 def agregados(antes: str, despues: str) -> list[str]:
     return [n for n, rx in PAQUETES.items() if len(rx.findall(despues)) > len(rx.findall(antes))]
+
+
+def es_dependencias(ruta: Path) -> bool:
+    return bool(ARCHIVOS_DEPENDENCIAS.match(ruta.name)) or (
+        ruta.parent.name == "requirements" and ruta.suffix in {".txt", ".in"})
+
+
+def archivo_antes_y_despues(herramienta: str, entrada: dict) -> tuple[str, str]:
+    """El archivo completo antes y después del cambio (Edit y MultiEdit traen solo fragmentos)."""
+    ruta = Path(entrada.get("file_path", ""))
+    antes = ruta.read_text(encoding="utf-8", errors="ignore") if ruta.is_file() else ""
+    if herramienta == "Write":
+        return antes, entrada.get("content", "")
+    despues = antes
+    for e in entrada.get("edits") or [entrada]:
+        viejo, nuevo = e.get("old_string", ""), e.get("new_string", "")
+        despues = despues.replace(viejo, nuevo) if e.get("replace_all") else despues.replace(viejo, nuevo, 1)
+    return antes, despues
+
+
+def segmentos(comando: str) -> list[list[str]]:
+    """Comandos simples del texto de Bash, ya en palabras; lo que va entre comillas es una sola."""
+    lex = shlex.shlex(comando.replace("\\\n", " "), posix=True, punctuation_chars=PUNTUACION)
+    lex.whitespace = " \t\r"  # el salto de línea separa comandos
+    lex.whitespace_split = True
+    try:
+        tokens = list(lex)
+    except ValueError:  # comillas sin cerrar: separar por espacios
+        tokens = re.sub(r"[;&|()`\n]", " ; ", comando).split()
+    segs: list[list[str]] = [[]]
+    for t in tokens:
+        if t and set(t) <= set(PUNTUACION):
+            segs.append([])
+        else:
+            segs[-1].append(t)
+    return [s for s in segs if s]
+
+
+def paquetes_que_instala(seg: list[str]) -> list[str]:
+    """Palabras de `seg` (empieza por el instalador) que se instalarían o ejecutarían."""
+    cmd, args = seg[0], seg[1:]
+    if cmd == "uvx":  # uvx es `uv tool run`
+        cmd, args = "uv", ["tool", "run", *args]
+    valores = [v for o, v in zip(args, args[1:]) if o in OPCIONES_CON_PAQUETE]
+    valores += [a.split("=", 1)[1] for a in args if a.split("=", 1)[0] in OPCIONES_CON_PAQUETE and "=" in a]
+    sub = [a for a in args if not a.startswith("-")]
+    if sub[:2] == ["tool", "run"] or (cmd == "pipx" and sub[:1] == ["run"]):
+        # La herramienta es el primer argumento que no es opción ni valor de una; lo demás es suyo.
+        resto = args[args.index("run") + 1:]
+        herramienta = [a for o, a in zip(["-"] + resto, resto) if not a.startswith("-") and o not in CON_VALOR]
+        return valores + herramienta[:1]
+    if sub[:1] == ["run"]:
+        return valores  # `uv run`, `poetry run`, `pixi run`: solo instalan lo de --with
+    if sub[:1] in INSTALAN or sub[:2] in INSTALAN_2:
+        return args
+    return []
+
+
+def restringidos_en_bash(comando: str) -> list[str]:
+    """Paquetes restringidos que el comando instalaría o ejecutaría, donde sea que esté el instalador."""
+    encontrados: list[str] = []
+    for seg in segmentos(comando):
+        for i, palabra in enumerate(seg):
+            nombre, resto = os.path.basename(palabra), seg[i + 1:]
+            if nombre == "ssh" or (nombre in SHELLS and any(
+                    a.startswith("-") and not a.startswith("--") and "c" in a for a in resto)):
+                # Lo que corren `bash -c '...'` o `ssh host '...'` es otro comando.
+                for texto in (a for a in resto if not a.startswith("-")):
+                    encontrados += restringidos_en_bash(texto)
+            elif nombre == "eval":
+                encontrados += restringidos_en_bash(" ".join(resto))
+            elif nombre in INSTALADORES or (re.fullmatch(r"python[\d.]*", nombre) and resto[:2] == ["-m", "pip"]):
+                instalador = [nombre, *resto] if nombre in INSTALADORES else ["pip", *resto[2:]]
+                paquetes = paquetes_que_instala(instalador)
+                encontrados += [n for n, rx in PAQUETES.items() if any(rx.search(p) for p in paquetes)]
+    return encontrados
 
 
 APROBACION = re.compile(r"^\s*[-*]?\s*APROBADO:", re.IGNORECASE | re.MULTILINE)
@@ -87,9 +175,13 @@ def main() -> int:
 
     if herramienta in {"Edit", "Write", "MultiEdit"}:
         ruta = entrada.get("file_path", "")
-        if not ARCHIVOS_DEPENDENCIAS.match(Path(ruta).name):
+        if Path(ruta).suffix == ".py" and not ARCHIVOS_DEPENDENCIAS.match(Path(ruta).name):
+            # Dependencias del bloque PEP 723, que `uv run script.py` instala.
+            antes, despues = archivo_antes_y_despues(herramienta, entrada)
+            nuevos = agregados("\n".join(PEP723.findall(antes)), "\n".join(PEP723.findall(despues)))
+        elif not es_dependencias(Path(ruta)):
             return 0
-        if herramienta == "Write":
+        elif herramienta == "Write":
             actual = Path(ruta).read_text(encoding="utf-8", errors="ignore") if Path(ruta).is_file() else ""
             nuevos = agregados(actual, entrada.get("content", ""))
         elif herramienta == "Edit":
@@ -99,10 +191,7 @@ def main() -> int:
             nuevos = agregados("\n".join(e.get("old_string", "") for e in edits),
                                "\n".join(e.get("new_string", "") for e in edits))
     elif herramienta == "Bash":
-        comando = entrada.get("command", "")
-        for parte in re.split(r"&&|\|\||;|\|", comando):
-            if INSTALACION.search(parte):
-                nuevos += [n for n, rx in PAQUETES.items() if rx.search(parte)]
+        nuevos = restringidos_en_bash(entrada.get("command", ""))
 
     pendientes = sorted(set(nuevos) - aprobados(raiz))
     if pendientes:

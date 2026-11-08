@@ -16,7 +16,7 @@ Visión por computador y MLOps para el proyecto de enfermedades en palma (y simi
 | Hook | Bloquea |
 |---|---|
 | `evaluador_bloqueado.py` | Editar o escribir (también por Bash: `>`, `rm`, `mv`, `tee`, `sed -i`, `cp` hacia...) en `eval/`, `splits/`, `data/splits/` si existen, o en las rutas de `.claude/ml-vision.json` (`{"rutas_protegidas": [...]}`). Leer está permitido. |
-| `licencias.py` | Agregar `ultralytics` o `rfdetr[plus]` a archivos de dependencias o instalarlos (pip/uv/poetry/conda/pixi), salvo línea `APROBADO: <paquete> — ...` en `LICENSES.md`. |
+| `licencias.py` | Agregar `ultralytics` o `rfdetr[plus]` a archivos de dependencias (también `requirements/` y el bloque PEP 723 de un script) o instalarlos o ejecutarlos (pip, uv, uvx, `uv run --with`, pipx, poetry, conda, pixi), salvo línea `APROBADO: <paquete> — ...` en `LICENSES.md`. |
 
 ## Límites
 - El análisis de Bash es heurístico: cubre los comandos comunes, no un `python -c` que escriba en `eval/`. La métrica oficial la debe recalcular CI.

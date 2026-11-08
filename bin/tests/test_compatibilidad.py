@@ -8,6 +8,7 @@ barrera abierta.
 from __future__ import annotations
 
 import ast
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -45,7 +46,10 @@ def test_difiere_las_anotaciones(ruta):
         "falta `from __future__ import annotations` después del docstring"
 
 
-@pytest.mark.parametrize("ruta", [s for s in SCRIPTS if "# /// script" not in s.read_text()], ids=nombre)
+# Los scripts PEP 723 (bloque `# /// script` en su propia línea) traen su propio Python vía uv.
+# Solo cuenta la línea exacta: un hook que menciona el bloque en un docstring sí se prueba.
+@pytest.mark.parametrize("ruta", [s for s in SCRIPTS if not re.search(r"(?m)^# /// script$", s.read_text())],
+                         ids=nombre)
 def test_carga_con_python_39(ruta):
     interprete = python_39()
     if interprete is None:
