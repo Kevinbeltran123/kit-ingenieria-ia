@@ -5,6 +5,9 @@ Reglas (se pueden desactivar por repo, salvo la autoprotección):
   sql       SQL destructivo con un cliente de base de datos (bloquea en producción, pregunta fuera)
   archivos  editar .env, lockfiles, migraciones existentes o .git/
   secretos  leer credenciales de AWS, llaves SSH, .env o volcar variables de entorno
+  local     borrar trabajo: rm -rf fuera de /tmp y cachés, find -delete, git reset --hard,
+            push --force, clean -f, checkout/restore de todo, branch -D, worktree remove --force,
+            commit --no-verify y borrar archivos de base de datos
 
 Falla cerrado: ante un error interno bloquea (exit 2).
 No es una barrera completa: la seguridad real son reglas deny, sandbox y permisos de solo lectura.
@@ -19,7 +22,7 @@ import shlex
 import sys
 from pathlib import Path
 
-REGLAS = {"infra", "sql", "archivos", "secretos"}
+REGLAS = {"infra", "sql", "archivos", "secretos", "local"}
 
 OPERADORES = {";", "&&", "||", "|", "&", "(", ")", "|&", ";;"}
 SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "fish"}
@@ -230,6 +233,66 @@ def regla_secretos(seg: list[str]) -> str | None:
     return None
 
 
+RM_SEGURO = ("/tmp/", "/private/tmp/", "/private/var/folders/")
+RM_PARTES_SEGURAS = ("__pycache__", "node_modules/.cache", ".pytest_cache", ".ruff_cache", ".mypy_cache")
+ARCHIVO_DB = re.compile(r"\.(sqlite3?|db)$")
+
+
+def banderas_cortas(args: list[str]) -> str:
+    return "".join(a[1:] for a in args if a.startswith("-") and not a.startswith("--"))
+
+
+def regla_local(seg: list[str]) -> str | None:
+    """Comandos que borran trabajo que puede no estar en git (reglas del hook global de Kevin)."""
+    nombre, args = Path(seg[0]).name, seg[1:]
+    if nombre in ("rm", "unlink"):
+        objetivos = [a for a in args if not a.startswith("-")]
+        if any(ARCHIVO_DB.search(o) for o in objetivos):
+            return "borrar un archivo de base de datos"
+        banderas = banderas_cortas(args)
+        recursivo = "r" in banderas or "R" in banderas or "--recursive" in args
+        forzado = "f" in banderas or "--force" in args
+        if nombre == "rm" and recursivo and forzado:
+            inseguros = [o for o in objetivos if not os.path.expanduser(o).startswith(RM_SEGURO)
+                         and not any(p in o for p in RM_PARTES_SEGURAS)]
+            if inseguros or not objetivos:
+                return f"rm -rf sobre {', '.join(inseguros) or 'nada explícito'}"
+    elif nombre == "find":
+        if "-delete" in args:
+            return "find -delete"
+        if any(a in ("-exec", "-execdir") and Path(b).name == "rm" for a, b in zip(args, args[1:])):
+            return "find -exec rm"
+    elif nombre == "git":
+        return regla_git(args)
+    return None
+
+
+def regla_git(args: list[str]) -> str | None:
+    i = 0
+    while i < len(args) and args[i].startswith("-"):
+        i += 2 if args[i] in ("-C", "-c") else 1
+    if i >= len(args):
+        return None
+    sub, resto = args[i], args[i + 1:]
+    banderas = banderas_cortas(resto)
+    if sub == "push" and ("--force" in resto or "f" in banderas or any(a.startswith("+") for a in resto)):
+        return "git push --force"
+    if sub == "reset" and "--hard" in resto:
+        return "git reset --hard"
+    if sub == "clean" and ("f" in banderas or "--force" in resto) and "n" not in banderas and "--dry-run" not in resto:
+        return "git clean -f"
+    if sub in ("checkout", "restore") and {".", ":/"} & set(resto) and ("--" in resto or sub == "restore") \
+            and "--staged" not in resto:
+        return f"git {sub} de todo el árbol"
+    if sub == "commit" and ("--no-verify" in resto or "n" in banderas):
+        return "git commit --no-verify"
+    if sub == "branch" and ("-D" in resto or ("--delete" in resto and "--force" in resto)):
+        return "git branch -D"
+    if sub == "worktree" and resto[:1] == ["remove"] and ("--force" in resto or "-f" in resto):
+        return "git worktree remove --force"
+    return None
+
+
 def toca_config_barreras(segs: list[list[str]]) -> bool:
     for seg in segs:
         if any("barreras.json" in t for t in seg) and Path(seg[0]).name not in ("cat", "less", "head", "jq", "grep"):
@@ -293,6 +356,9 @@ CONSEJO_INFRA = ("Los cambios de infraestructura van por PR y se aplican desde C
 CONSEJO_SQL = ("En producción solo se consulta con un rol de solo lectura; los cambios van como migración "
                "revisada en un PR. Explícale al usuario qué querías hacer.")
 CONSEJO_SECRETOS = "No leas ni imprimas credenciales. Si necesitas saber si existe una variable, usa `test -n \"$VAR\"`."
+CONSEJO_LOCAL = ("Puede borrar trabajo que no está en git. Si de verdad hace falta, pídele a la persona que lo "
+                 "corra ella. Alternativas: git stash, git push --force-with-lease, git clean -n para ver qué se "
+                 "borraría, git branch -d. Si fallan los hooks de pre-commit, corrige lo que reportan en vez de saltarlos.")
 
 
 def evaluar(datos: dict) -> int:
@@ -321,6 +387,8 @@ def evaluar(datos: dict) -> int:
             return bloquear("infra", f"`{motivo}`", CONSEJO_INFRA)
         if "secretos" not in apagadas and (motivo := regla_secretos(seg)):
             return bloquear("secretos", motivo, CONSEJO_SECRETOS)
+        if "local" not in apagadas and (motivo := regla_local(seg)):
+            return bloquear("local", motivo, CONSEJO_LOCAL)
     if "sql" not in apagadas and (resultado := regla_sql(cmd, segs)):
         decision, motivo = resultado
         if decision == "bloquear":

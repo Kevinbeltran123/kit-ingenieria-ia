@@ -200,6 +200,74 @@ def test_secretos_permitidos(cmd, raiz):
     assert bash(cmd, raiz).returncode == 0, cmd
 
 
+# ---------- local (casos tomados del hook global de Kevin, más los de la revisión) ----------
+
+@pytest.mark.parametrize("cmd", [
+    "rm -rf ~/project",
+    "rm -fr src",
+    "rm -r -f src",
+    "rm --recursive --force src",
+    "rm -Rf src",
+    "sudo rm -rf /",
+    "/bin/rm -rf src",
+    "cd ~ && rm -rf project",
+    "rm -rf ~/project /tmp/x",
+    "bash -c 'rm -rf src'",
+    "echo $(rm -rf src)",
+    "find . -name '*.py' -delete",
+    "find . -exec rm {} +",
+    "git clean -fdx",
+    "git clean -f",
+    "git checkout -- .",
+    "git restore .",
+    "git reset --hard",
+    "git reset --hard HEAD~3",
+    "git push --force origin main",
+    "git push -f",
+    "git push origin +main",
+    "git -C repo push --force",
+    "rm data.sqlite",
+    "unlink app.db",
+    "git commit --no-verify -m arreglo",
+    "git commit -nm arreglo",
+    "git branch -D feature",
+    "git worktree remove --force ../wt",
+])
+def test_local_bloquea_lo_que_borra_trabajo(cmd, raiz):
+    r = bash(cmd, raiz)
+    assert r.returncode == 2, cmd
+    assert "(local)" in r.stderr
+
+
+@pytest.mark.parametrize("cmd", [
+    "ls -la",
+    "rm file.txt",
+    "rm -rf /tmp/build",
+    "rm -rf /private/tmp/claude-501/x",
+    "rm -rf node_modules/.cache",
+    "rm -rf .pytest_cache",
+    "git push origin main",
+    "git push --force-with-lease origin feature",
+    "git checkout -b feature",
+    "git checkout main",
+    "git reset HEAD file.txt",
+    "git clean -n",
+    "find . -name '*.py'",
+    "grep -rn 'reset' src",
+    "echo 'use --force-with-lease, never git push --force'",
+    "git commit -m 'arreglo'",
+    "git commit --amend --no-edit",
+    "git branch -d feature",
+    "git worktree remove ../wt",
+])
+def test_local_deja_pasar_lo_seguro(cmd, raiz):
+    assert bash(cmd, raiz).returncode == 0, cmd
+
+
+def test_local_se_puede_desactivar(raiz):
+    assert bash("git reset --hard", raiz, env_extra={"BARRERAS_DESACTIVAR": "local"}).returncode == 0
+
+
 # ---------- archivos ----------
 
 @pytest.mark.parametrize("nombre", [".env", ".env.local", ".env.production", "uv.lock", "poetry.lock",
