@@ -28,12 +28,15 @@ def hook(nombre, datos, raiz, crudo=None):
     )
 
 
-def evaluador(raiz, herramienta, **entrada):
-    return hook("evaluador_bloqueado.py", {"tool_name": herramienta, "tool_input": entrada}, raiz)
+def evaluador(raiz, herramienta, cwd=None, **entrada):
+    datos = {"tool_name": herramienta, "tool_input": entrada}
+    if cwd is not None:
+        datos["cwd"] = str(cwd)
+    return hook("evaluador_bloqueado.py", datos, raiz)
 
 
-def bash(raiz, comando):
-    return evaluador(raiz, "Bash", command=comando)
+def bash(raiz, comando, cwd=None):
+    return evaluador(raiz, "Bash", cwd=cwd, command=comando)
 
 
 # --- evaluador_bloqueado.py: herramientas de archivo ---
@@ -143,6 +146,67 @@ def test_bash_no_analizable_que_menciona_eval_se_bloquea(repo):
 
 def test_bash_no_analizable_sin_eval_se_permite(repo):
     assert bash(repo, "echo 'sin cerrar").returncode == 0
+
+
+@pytest.mark.parametrize("comando", [
+    "echo listo\nrm eval/metricas.py",              # cada línea es un comando
+    "make &&\nrm eval/metricas.py",
+    "echo hola # nota\nrm eval/metricas.py",        # el comentario no se come la línea siguiente
+    "rm -f \\\n  eval/metricas.py",                # línea continuada con barra invertida
+    "(echo a);rm eval/metricas.py",                 # shlex junta ");" en un solo token
+    "true&&(rm eval/metricas.py)",
+    "echo `rm eval/metricas.py`",
+    "echo $(rm eval/metricas.py)",
+    'bash -c "rm eval/metricas.py"',
+    "sh -c 'echo x > eval/metricas.py'",
+    'bash -lc "cd eval && rm metricas.py"',
+    "eval 'rm eval/metricas.py'",
+    "time rm eval/metricas.py",
+    "cd eval && rm metricas.py",
+    "cd eval; echo hack > metricas.py",
+    "cd src && cd ../eval && rm metricas.py",
+    "(cd /tmp); rm eval/metricas.py",               # el cd del subshell no cambia el de afuera
+    'cd "$(git rev-parse --show-toplevel)" && rm eval/metricas.py',  # destino desconocido: no mueve
+])
+def test_bash_que_escribe_en_eval_por_caminos_indirectos_se_bloquea(repo, comando):
+    assert bash(repo, comando).returncode == 2, comando
+
+
+@pytest.mark.parametrize("comando", [
+    "cd src && rm -rf build",
+    "(cd eval && ls) && rm -rf build",              # al cerrar el subshell vuelve a la raíz
+    "cd eval && cat metricas.py",
+    'bash -c "cat eval/metricas.py"',
+    "cat eval/metricas.py\nls eval",
+    "python eval/metricas.py 2>&1 | tee resultados/log.txt",
+    "cat > notas.md <<'EOF'\nno tocar eval/metricas.py\nEOF",
+    'cd "$(git rev-parse --show-toplevel)" && python eval/metricas.py',
+])
+def test_bash_indirecto_que_no_escribe_en_eval_se_permite(repo, comando):
+    r = bash(repo, comando)
+    assert r.returncode == 0, f"{comando}: {r.stderr}"
+
+
+def test_bash_resuelve_rutas_desde_el_cwd_de_la_sesion(repo):
+    """El cwd de la sesión cambia con los `cd` de comandos anteriores: las rutas relativas parten de ahí."""
+    assert bash(repo, "rm ../eval/metricas.py", cwd=repo / "src").returncode == 2
+    assert bash(repo, "rm eval/metricas.py", cwd=repo / "src").returncode == 0  # sería src/eval, que no existe
+
+
+def test_eval_de_un_worktree_tambien_se_protege(repo):
+    def git(*args):
+        subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+
+    git("init", "-q", "-b", "main")
+    git("config", "user.email", "t@t")
+    git("config", "user.name", "t")
+    git("add", ".")
+    git("commit", "-qm", "base")
+    wt = repo / ".claude" / "worktrees" / "rama"
+    git("worktree", "add", "-q", "-b", "rama", str(wt))
+    assert evaluador(repo, "Edit", file_path=str(wt / "eval" / "metricas.py"), old_string="a", new_string="b").returncode == 2
+    assert bash(repo, "rm eval/metricas.py", cwd=wt).returncode == 2
+    assert evaluador(repo, "Write", file_path=str(wt / "src" / "train.py"), content="").returncode == 0
 
 
 # --- licencias.py ---

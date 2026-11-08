@@ -4,8 +4,11 @@ Rutas protegidas: las de `.claude/ml-vision.json` ({"rutas_protegidas": ["eval/"
 Sin ese archivo, se protegen `eval/`, `splits/` y `data/splits/`, solo si existen.
 
 Bloquea Edit/Write/MultiEdit/NotebookEdit sobre esas rutas y comandos de Bash que
-escriban en ellas (redirecciones, rm, mv, tee, sed -i, cp hacia ellas...). Leer
-está permitido. Ante un comando que no se puede analizar y menciona una ruta
+escriban en ellas (redirecciones, rm, mv, tee, sed -i, cp hacia ellas...). En Bash
+las rutas relativas parten del cwd de la sesión y siguen los `cd`; también se
+revisa lo que corre dentro de `bash -c` y `eval`. Cada archivo se compara con las
+rutas protegidas del proyecto y con las de su propio worktree de git. Leer está
+permitido. Ante un comando que no se puede analizar y menciona una ruta
 protegida, bloquea (falla cerrado).
 """
 
@@ -13,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -20,8 +24,13 @@ from pathlib import Path
 POR_DEFECTO = ["eval/", "splits/", "data/splits/"]
 ESCRIBEN = {"rm", "rmdir", "mv", "tee", "truncate", "touch", "chmod", "chown", "ln", "dd", "shred", "unlink"}
 DESTINO_AL_FINAL = {"cp", "rsync", "install"}
-SEPARADORES = {";", "&&", "||", "|", "&", "(", ")"}
-REDIRECCIONES = {">", ">>", ">|", "&>", "&>>", ">&"}
+PREFIJOS = {"sudo", "env", "command", "time", "nohup"}
+SHELLS = {"bash", "sh", "zsh", "dash"}
+PUNTUACION = "();<>|&`\n"
+# shlex junta signos seguidos (");", "&&\n"); esto los separa en operadores de bash.
+OPERADOR = re.compile(r"&>>|&>|>>|>\||>&|<>|<<<|<<|&&|\|\||\|&|;;|[;&|()<>`\n]")
+SALIDA = {">", ">>", ">|", "&>", "&>>", ">&", "<>"}
+ENTRADA = {"<", "<<", "<<<"}
 
 
 def rutas_protegidas(raiz: Path) -> list[Path]:
@@ -49,34 +58,100 @@ def protegida(ruta: Path, protegidas: list[Path]) -> Path | None:
     return None
 
 
-def objetivos_bash(comando: str) -> list[str] | None:
-    """Rutas en las que el comando escribiría. None si no se pudo analizar."""
+def raiz_git(ruta: Path) -> Path | None:
+    """Carpeta del repo o worktree de git que contiene la ruta (la que tiene `.git`)."""
+    for d in [ruta, *ruta.parents]:
+        if (d / ".git").exists():
+            return d
+    return None
+
+
+def tokens_bash(comando: str) -> list[str] | None:
+    """Palabras y operadores del comando. None si no se pudo analizar."""
+    # Como en bash: barra invertida + salto de línea une las líneas, y el salto de línea separa
+    # comandos. Sin comentarios: shlex se come el salto de línea que cierra un `# ...`.
+    lex = shlex.shlex(comando.replace("\\\n", " "), posix=True, punctuation_chars=PUNTUACION)
+    lex.whitespace = " \t\r"
+    lex.whitespace_split = True
+    lex.commenters = ""
     try:
-        lex = shlex.shlex(comando, posix=True, punctuation_chars=True)
-        lex.whitespace_split = True
-        tokens = list(lex)
+        crudos = list(lex)
     except ValueError:
         return None
+    tokens: list[str] = []
+    for t in crudos:
+        tokens += OPERADOR.findall(t) if t and set(t) <= set(PUNTUACION) else [t]
+    return tokens
 
-    objetivos = []
+
+def objetivos_bash(comando: str, cwd: Path) -> list[Path] | None:
+    """Rutas en las que el comando escribiría, ya resueltas. None si no se pudo analizar."""
+    tokens = tokens_bash(comando)
+    if tokens is None:
+        return None
+    objetivos: list[Path] = []
+    actual = cwd
+    pila: list[Path] = []  # directorio de afuera de cada subshell abierto
+    en_backtick = False
     segmento: list[str] = []
-    for i, tok in enumerate(tokens):
-        if tok in REDIRECCIONES or (tok.endswith(">") and tok.rstrip(">").rstrip("&").isdigit()):
-            if i + 1 < len(tokens):
-                objetivos.append(tokens[i + 1])
+    i = 0
+    while i <= len(tokens):
+        tok = tokens[i] if i < len(tokens) else ";"  # un separador al final cierra el último segmento
+        i += 1
+        if not OPERADOR.fullmatch(tok):
+            segmento.append(tok)
             continue
-        if tok in SEPARADORES:
-            objetivos += objetivos_segmento(segmento)
-            segmento = []
+        if tok in SALIDA or tok in ENTRADA:  # el token siguiente es el archivo de la redirección
+            if i < len(tokens) and not OPERADOR.fullmatch(tokens[i]):
+                if tok in SALIDA:
+                    objetivos.append(normalizar(actual, tokens[i]))
+                i += 1
             continue
-        segmento.append(tok)
-    objetivos += objetivos_segmento(segmento)
+        # Separador: el segmento se analiza con el directorio de ese momento.
+        seg = sin_prefijos(segmento)
+        segmento = []
+        scripts = scripts_internos(seg)
+        if seg[:1] == ["cd"]:
+            destinos = [a for a in seg[1:] if not a.startswith("-")]
+            # Un destino desconocido (variable, $(...), `cd -`, `cd` solo) no mueve el directorio:
+            # así las rutas se siguen revisando desde donde estaban, como antes de seguir los cd.
+            if destinos and "$" not in destinos[0]:
+                actual = normalizar(actual, destinos[0])
+        elif scripts is not None:
+            for script in scripts:
+                internos = objetivos_bash(script, actual)
+                if internos is None:
+                    return None
+                objetivos += internos
+        else:
+            objetivos += [normalizar(actual, a) for a in objetivos_segmento(seg)]
+        if tok == "(" or (tok == "`" and not en_backtick):
+            pila.append(actual)
+        elif tok in {")", "`"} and pila:
+            actual = pila.pop()  # el cd de adentro no cambia el directorio de afuera
+        if tok == "`":
+            en_backtick = not en_backtick
     return objetivos
 
 
-def objetivos_segmento(seg: list[str]) -> list[str]:
-    while seg and ("=" in seg[0] and not seg[0].startswith("-") or seg[0] in {"sudo", "env", "command"}):
+def sin_prefijos(seg: list[str]) -> list[str]:
+    while seg and ("=" in seg[0] and not seg[0].startswith("-") or seg[0] in PREFIJOS):
         seg = seg[1:]
+    return seg
+
+
+def scripts_internos(seg: list[str]) -> list[str] | None:
+    """Textos que el segmento corre como comandos: `bash -c '...'` (y sh, zsh, dash) o `eval ...`."""
+    cmd = os.path.basename(seg[0]) if seg else ""
+    if cmd == "eval":
+        return [" ".join(seg[1:])]
+    if cmd in SHELLS and any(a.startswith("-") and not a.startswith("--") and "c" in a for a in seg[1:]):
+        # Todos los argumentos que no son opciones: así `-o pipefail -c '...'` no esconde el script.
+        return [a for a in seg[1:] if not a.startswith("-")]
+    return None
+
+
+def objetivos_segmento(seg: list[str]) -> list[str]:
     if not seg:
         return []
     cmd = os.path.basename(seg[0])
@@ -98,21 +173,22 @@ def main() -> int:
     except json.JSONDecodeError:
         return 0
     raiz = Path(os.environ.get("CLAUDE_PROJECT_DIR") or datos.get("cwd") or ".")
+    cwd = Path(datos.get("cwd") or raiz)
     protegidas = rutas_protegidas(raiz)
     if not protegidas:
         return 0
 
     herramienta = datos.get("tool_name", "")
     entrada = datos.get("tool_input") or {}
-    candidatas: list[str] = []
+    candidatas: list[Path] = []
 
     if herramienta in {"Edit", "Write", "MultiEdit", "NotebookEdit"}:
         ruta = entrada.get("file_path") or entrada.get("notebook_path")
         if ruta:
-            candidatas = [ruta]
+            candidatas = [normalizar(cwd, ruta)]
     elif herramienta == "Bash":
         comando = entrada.get("command", "")
-        objetivos = objetivos_bash(comando)
+        objetivos = objetivos_bash(comando, normalizar(cwd, "."))
         if objetivos is None:
             raiz_real = normalizar(raiz, ".")
             menciona = [str(b.relative_to(raiz_real)) if raiz_real in b.parents else str(b) for b in protegidas]
@@ -123,7 +199,9 @@ def main() -> int:
         candidatas = objetivos
 
     for c in candidatas:
-        base = protegida(normalizar(raiz, c), protegidas)
+        # También la copia de las rutas protegidas en el worktree donde está el archivo.
+        propia = raiz_git(c)
+        base = protegida(c, protegidas + (rutas_protegidas(propia) if propia else []))
         if base:
             print(
                 f"Bloqueado: '{c}' está bajo '{base}', que es el evaluador o los splits protegidos. "
