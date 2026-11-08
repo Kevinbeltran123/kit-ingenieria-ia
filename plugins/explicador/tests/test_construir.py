@@ -92,6 +92,9 @@ def test_un_commit_viejo_se_puede_explicar_aunque_haya_otros_despues(repo):
     r = correr(CONSTRUIR, repo, str(destino))
     assert r.returncode == 0, r.stderr
     assert "commits/" + sha[:7] in (repo / ".explicaciones" / "index.html").read_text()
+    # Con la ruta relativa que imprime recolectar.py (desde la raíz del repo) también funciona.
+    r = correr(CONSTRUIR, repo, f".explicaciones/commits/{sha[:7]}")
+    assert r.returncode == 0, r.stderr
 
 
 def test_alerta_descartada_necesita_motivo(repo):

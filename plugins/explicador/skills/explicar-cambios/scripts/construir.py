@@ -216,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
 
     raiz = Path(git(Path.cwd(), "rev-parse", "--show-toplevel"))
-    carpeta = Path(args.carpeta) if args.carpeta else raiz / CARPETA / carpeta_de_rama(git(raiz, "rev-parse", "--abbrev-ref", "HEAD"))
+    carpeta = Path(args.carpeta).resolve() if args.carpeta else raiz / CARPETA / carpeta_de_rama(git(raiz, "rev-parse", "--abbrev-ref", "HEAD"))
     if not (carpeta / "datos.json").is_file():
         sys.exit(f"No hay {carpeta / 'datos.json'}: corre primero recolectar.py.")
     datos = json.loads((carpeta / "datos.json").read_text())
