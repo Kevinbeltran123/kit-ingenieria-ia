@@ -46,6 +46,25 @@ def test_nunca_sobrescribe(tmp_path):
     assert "ya existe, no se tocó: CLAUDE.md" in r.stdout
 
 
+def fuente_del_kit(repo):
+    settings = json.loads((repo / ".claude/settings.json").read_text())
+    return settings["extraKnownMarketplaces"]["kit-ingenieria-ia"]["source"]
+
+
+def test_pasar_a_github_reemplaza_la_fuente_local(tmp_path):
+    assert correr(tmp_path, "--sin-docker").returncode == 0
+    r = correr(tmp_path, "--sin-docker", "--marketplace-github", "acme/kit-ingenieria-ia", "--ref", "v0.2.0")
+    assert r.returncode == 0, r.stderr
+    assert fuente_del_kit(tmp_path) == {"source": "github", "repo": "acme/kit-ingenieria-ia", "ref": "v0.2.0"}
+    assert "cambiado:" in r.stdout
+
+
+def test_sin_marketplace_github_no_toca_una_fuente_existente(tmp_path):
+    assert correr(tmp_path, "--sin-docker", "--marketplace-github", "acme/kit-ingenieria-ia").returncode == 0
+    assert correr(tmp_path, "--sin-docker").returncode == 0
+    assert fuente_del_kit(tmp_path) == {"source": "github", "repo": "acme/kit-ingenieria-ia"}
+
+
 def test_dry_run_no_escribe(tmp_path):
     r = correr(tmp_path, "--dry-run")
     assert r.returncode == 0

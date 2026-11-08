@@ -74,6 +74,28 @@ def fusionar(existente: dict, nuevo: dict) -> tuple[dict, list[str]]:
     return resultado, agregados
 
 
+def describir(fuente: dict) -> str:
+    if fuente.get("source") == "github":
+        return f"github {fuente.get('repo')}" + (f"@{fuente['ref']}" if fuente.get("ref") else "")
+    return f"{fuente.get('source')} {fuente.get('path', '')}".strip()
+
+
+def fijar_fuente(existente: dict, nuevo: dict, pidio_github: bool) -> list[str]:
+    """La fuente del kit va entera: nunca se mezclan claves de dos fuentes (local y GitHub).
+
+    Se reemplaza solo si se pidió --marketplace-github; si no, se respeta la que ya tenía el repo.
+    """
+    previa = existente.get("extraKnownMarketplaces", {}).get(MARKETPLACE, {}).get("source")
+    pedida = nuevo["extraKnownMarketplaces"][MARKETPLACE]["source"]
+    if previa is None or previa == pedida:
+        return []
+    if not pidio_github:
+        nuevo["extraKnownMarketplaces"][MARKETPLACE]["source"] = previa
+        return []
+    existente["extraKnownMarketplaces"][MARKETPLACE]["source"] = pedida
+    return [f"cambiado: fuente del kit → {describir(pedida)} (antes: {describir(previa)})"]
+
+
 def adoptar(repo: Path, perfil: str, dry_run: bool, github: str | None, ref: str | None,
             sin_docker: bool) -> list[str]:
     informe: list[str] = []
@@ -93,11 +115,13 @@ def adoptar(repo: Path, perfil: str, dry_run: bool, github: str | None, ref: str
     ruta_settings = repo / ".claude" / "settings.json"
     if ruta_settings.exists():
         existente = json.loads(ruta_settings.read_text())
+        cambios = fijar_fuente(existente, nuevo, github is not None)
         final, agregados = fusionar(existente, nuevo)
+        informe.extend(f"{prefijo}{c}" for c in cambios)
         if agregados:
             informe.append(f"{prefijo}fusionado: .claude/settings.json ({len(agregados)} cosas agregadas)")
             informe.extend(f"    + {a}" for a in agregados)
-        else:
+        elif not cambios:
             informe.append("ya tenía todo: .claude/settings.json")
     else:
         final = nuevo
