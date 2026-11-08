@@ -19,9 +19,9 @@ Se instala **por repo**, nunca global.
 | `explicador` | Explica cada cambio línea por línea en un HTML local (código y terminal lado a lado); el hook lo exige antes de `gh pr create` | base |
 
 ### Terceros (fijados por SHA, auditados en `terceros/AUDITORIA.md`)
-aws-core, pr-review-toolkit, commit-commands, security-guidance, plugin-dev, skill-creator, pyright-lsp,
+aws-core, pr-review-toolkit, commit-commands, security-guidance, skill-creator, pyright-lsp,
 property-based-testing, static-analysis, supply-chain-risk-auditor, differential-review, modern-python,
-hf-cli, hf-cloud-sagemaker, react-best-practices. Varios con advertencias: leer la auditoría antes de activarlos.
+hf-cli. Varios con advertencias: leer la auditoría antes de activarlos.
 
 ### Plantillas para repos (`plantillas/`)
 `pyproject` (ruff, ty, import-linter, deptry, complexipy, `exclude-newer`), pre-commit (prek), `.claude/settings.json`

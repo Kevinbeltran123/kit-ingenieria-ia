@@ -94,18 +94,6 @@
       "category": "development"
     },
     {
-      "name": "plugin-dev",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/anthropics/claude-plugins-official.git",
-        "path": "plugins/plugin-dev",
-        "ref": "main",
-        "sha": "0412be76f50ab4f4f8abff3753efa9269fbbca5b"
-      },
-      "description": "Skills y agentes para escribir plugins, hooks y MCP (para mantener este kit).",
-      "category": "development"
-    },
-    {
       "name": "skill-creator",
       "source": {
         "source": "git-subdir",
@@ -214,39 +202,6 @@
       },
       "description": "Hugging Face: uso del CLI hf (modelos, datasets, repos).",
       "category": "ml",
-      "skills": "./"
-    },
-    {
-      "name": "hf-cloud-sagemaker",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/huggingface/skills.git",
-        "path": "skills",
-        "ref": "main",
-        "sha": "25910b3d0ba31a2ba102f901cdc9e008c278a69c"
-      },
-      "description": "Hugging Face en SageMaker: contexto AWS, entorno, imagen de serving, IAM, planificación y despliegue con defaults de producción. Puede crear roles IAM y endpoints con costo.",
-      "category": "ml",
-      "skills": [
-        "./hf-cloud-aws-context-discovery",
-        "./hf-cloud-python-env-setup",
-        "./hf-cloud-serving-image-selection",
-        "./hf-cloud-sagemaker-iam-preflight",
-        "./hf-cloud-sagemaker-deployment-planner",
-        "./hf-cloud-sagemaker-production-defaults"
-      ]
-    },
-    {
-      "name": "react-best-practices",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/vercel-labs/agent-skills.git",
-        "path": "skills/react-best-practices",
-        "ref": "main",
-        "sha": "1a2c79d4e6c4a2283dc2c614b6538cbe1ed5ca62"
-      },
-      "description": "Vercel: reglas de rendimiento para React/Next.js.",
-      "category": "frontend",
       "skills": "./"
     }
   ]
