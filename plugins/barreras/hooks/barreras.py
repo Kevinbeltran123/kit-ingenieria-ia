@@ -4,7 +4,7 @@ Reglas (se pueden desactivar por repo, salvo la autoprotección):
   infra     apply/deploy/destroy de Terraform, CDK, SAM, Pulumi, Serverless y AWS CLI destructivo
   sql       SQL destructivo con un cliente de base de datos (bloquea en producción, pregunta fuera)
   archivos  editar .env, lockfiles, migraciones existentes o .git/
-  secretos  leer credenciales de AWS, llaves SSH, .env o volcar variables de entorno
+  secretos  leer credenciales de AWS, llaves SSH, .env, .envrc o volcar variables de entorno
   local     borrar trabajo: rm -rf fuera de /tmp y cachés, find -delete, git reset --hard,
             push --force, clean -f, checkout/restore de todo, branch -D, worktree remove --force,
             commit --no-verify y borrar archivos de base de datos
@@ -30,6 +30,7 @@ SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "fish"}
 PREFIJOS_SIMPLES = {"sudo", "time", "nohup", "exec", "command", "nice", "env", "builtin", "npx", "bunx", "doas"}
 EJECUTORES = {"uv": "run", "poetry": "run", "pipenv": "run", "pnpm": "exec", "pdm": "run", "hatch": "run"}
 FLAGS_CON_VALOR = {"--with", "--python", "-p", "--from", "--project", "--directory", "-u", "--user", "-g"}
+TIMEOUT_CON_VALOR = {"-s", "--signal", "-k", "--kill-after"}  # aparte: en sudo, -s y -k no llevan valor
 
 PROD = re.compile(r"(?i)(?<![a-z])(prod|production|prd)(?![a-z])")
 VARIABLES_ENTORNO_DB = ("DATABASE_URL", "PGHOST", "PGDATABASE", "ENV", "APP_ENV", "ENVIRONMENT", "STAGE")
@@ -84,7 +85,7 @@ def quitar_prefijos(seg: list[str]) -> list[str]:
         elif primero in PREFIJOS_SIMPLES and len(seg) > 1:
             seg = saltar_flags(seg[1:])
         elif primero == "timeout":
-            seg = saltar_flags(seg[1:])[1:]
+            seg = saltar_flags(seg[1:], TIMEOUT_CON_VALOR)[1:]  # [1:] quita la duración
         elif primero in EJECUTORES and len(seg) > 1 and seg[1] in (EJECUTORES[primero], "dlx"):
             seg = saltar_flags(seg[2:])
         elif primero == "aws-vault" and "--" in seg:
@@ -94,10 +95,10 @@ def quitar_prefijos(seg: list[str]) -> list[str]:
     return seg
 
 
-def saltar_flags(seg: list[str]) -> list[str]:
+def saltar_flags(seg: list[str], con_valor: set[str] = FLAGS_CON_VALOR) -> list[str]:
     i = 0
     while i < len(seg) and seg[i].startswith("-"):
-        i += 2 if seg[i] in FLAGS_CON_VALOR else 1
+        i += 2 if seg[i] in con_valor else 1
     return seg[i:]
 
 
@@ -207,8 +208,8 @@ LECTORES = {"cat", "less", "more", "head", "tail", "bat", "strings", "xxd", "od"
             "grep", "rg", "awk", "sed", "nl", "tac", "curl", "nc", "openssl", "vim", "nano"}
 CREDENCIALES = re.compile(r"\.aws/(credentials|sso/cache)|\.ssh/id_[^/\s]*(?<!\.pub)$|\.config/gcloud/.*credentials")
 VAR_SECRETA = re.compile(r"\$\{?[A-Z0-9_]*(SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|ACCESS_KEY|PRIVATE_KEY)[A-Z0-9_]*")
-ENV_REAL = re.compile(r"(^|/)\.env(\.[\w.-]+)?$")
-ENV_EJEMPLO = re.compile(r"\.env\.(example|sample|template|dist)$")
+ENV_REAL = re.compile(r"(^|/)\.env(rc)?(\.[\w.-]+)?$")  # .envrc es el de direnv
+ENV_EJEMPLO = re.compile(r"\.env(rc)?\.(example|sample|template|dist)$")
 
 
 def regla_secretos(seg: list[str]) -> str | None:

@@ -78,6 +78,10 @@ def raiz(tmp_path):
     "aws-vault exec prod -- terraform apply",
     "echo $(terraform apply)",
     "terraform plan\nterraform apply",
+    "timeout 60 terraform apply",
+    "timeout -s KILL 60 terraform apply",   # -s y -k llevan valor: KILL no es la duración
+    "timeout -k 5 60 terraform apply",
+    "timeout --preserve-status -s TERM 2m cdk deploy",
 ])
 def test_infra_bloqueada(cmd, raiz):
     r = bash(cmd, raiz)
@@ -178,6 +182,8 @@ def test_sql_permitido(cmd, raiz):
     "cat .env",
     "grep KEY .env.production",
     'bash -c "cat ~/.aws/credentials"',
+    "cat .envrc",                            # direnv
+    "grep AWS_ .envrc",
 ])
 def test_secretos_bloqueados(cmd, raiz):
     r = bash(cmd, raiz)
@@ -193,6 +199,7 @@ def test_secretos_bloqueados(cmd, raiz):
     "env FOO=1 python script.py",
     "echo $HOME",
     "cat .env.example",
+    "cat .envrc.example",
     "test -n \"$AWS_PROFILE\"",
     "cat ~/.aws/config",
 ])
