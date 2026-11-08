@@ -34,11 +34,12 @@ En `pyproject.toml` (ajusta `app` al paquete real):
 ```toml
 [tool.importlinter]
 root_package = "app"
+include_external_packages = true   # sin esto, el contrato "forbidden" falla siempre
 
 [[tool.importlinter.contracts]]
 name = "Capas hexagonales"
 type = "layers"
-layers = ["app.entrypoints", "app.adapters", "app.application", "app.domain"]
+layers = ["(app.entrypoints)", "(app.adapters)", "app.application", "app.domain"]  # () = opcional
 
 [[tool.importlinter.contracts]]
 name = "Dominio y aplicación sin frameworks ni AWS"
@@ -48,6 +49,8 @@ forbidden_modules = ["fastapi", "sqlalchemy", "boto3", "botocore", "httpx", "pyd
 ```
 
 `lint-imports` falla si alguien rompe la regla; el hook de `calidad-python` y la skill `verify` lo corren solos.
+El proyecto debe estar instalado como paquete (`uv init --package` o una sección `[build-system]`); si no,
+`lint-imports` responde "Could not find package 'app'".
 
 ## Inyección de dependencias: simple
 

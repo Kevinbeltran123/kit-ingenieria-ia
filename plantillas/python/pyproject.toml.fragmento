@@ -96,21 +96,26 @@ min_confidence = 80
 known_first_party = ["app"]
 
 # Arquitectura hexagonal: entrypoints → adapters → application → domain
+# lint-imports necesita que el proyecto esté instalado como paquete: créalo con `uv init --package`
+# o agrega una sección [build-system]; si no, responde "Could not find package 'app'".
 [tool.importlinter]
 root_package = "app"
+# Necesario para que el contrato "forbidden" de abajo pueda prohibir paquetes externos.
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Capas hexagonales"
 type = "layers"
+# Entre paréntesis, capas opcionales: el contrato no falla mientras todavía no existan.
 layers = [
-  "app.entrypoints",   # routers FastAPI, handlers Lambda
-  "app.adapters",      # boto3, SQLAlchemy, httpx
-  "app.application",   # casos de uso, puertos (Protocols)
-  "app.domain",        # entidades y reglas puras
+  "(app.entrypoints)",   # routers FastAPI, handlers Lambda
+  "(app.adapters)",      # boto3, SQLAlchemy, httpx
+  "app.application",     # casos de uso, puertos (Protocols)
+  "app.domain",          # entidades y reglas puras
 ]
 
 [[tool.importlinter.contracts]]
 name = "Dominio y aplicación sin frameworks ni AWS"
 type = "forbidden"
 source_modules = ["app.domain", "app.application"]
-forbidden_modules = ["fastapi", "sqlalchemy", "boto3", "botocore", "httpx"]
+forbidden_modules = ["fastapi", "sqlalchemy", "boto3", "botocore", "httpx", "pydantic_settings"]
