@@ -13,15 +13,17 @@ Antes de decir que algo está terminado, demuéstralo corriendo los sensores.
    ```bash
    python3 "${CLAUDE_PLUGIN_ROOT}/skills/verify/scripts/verify.py" .
    ```
-   Solo corre lo que el repo tenga configurado. Busca cada herramienta primero en `.venv/bin` y después en el PATH.
+   Corre lo que el repo tenga configurado, empezando por `uv lock --check` (lo mismo que exige `uv sync --locked`
+   en CI). Busca cada herramienta primero en `.venv/bin` y después en el PATH. Una herramienta configurada que no
+   está instalada sale como "sin revisar" y el script sale con 1: corre `uv sync` y repite.
 
 2. Si algo dice `FALLA`, arréglalo y vuelve a correr el script. No desactives reglas, no agregues `# noqa` / `# type: ignore` ni borres pruebas para que pase. Si una regla es un falso positivo, dilo y explica por qué antes de silenciarla.
 
-3. Reporta el resultado tal cual: `N/M pasos OK` y, si quedó algo sin resolver, qué y por qué.
+3. Reporta el resultado tal cual: `N/M pasos OK, K sin revisar` y, si quedó algo sin resolver, qué y por qué.
 
 ## Si el repo no tiene herramientas configuradas
 
-El script dice "Nada que verificar". No lo reportes como éxito: di que el repo no tiene sensores y sugiere la plantilla de calidad del kit (`plantillas/` en el marketplace).
+El script dice "Nada que verificar" y sale con 1. No lo reportes como éxito: di que el repo no tiene sensores y sugiere la plantilla de calidad del kit (`plantillas/` en el marketplace).
 
 ## Relación con el resto del kit
 

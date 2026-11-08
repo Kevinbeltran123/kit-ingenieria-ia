@@ -33,8 +33,50 @@ def correr(raiz: Path):
 
 def test_sin_herramientas_no_lo_reporta_como_exito(raiz):
     r = correr(raiz)
-    assert r.returncode == 0
+    assert r.returncode == 1
     assert "Nada que verificar" in r.stdout
+
+
+def sin_revisar(salida: str) -> list[str]:
+    linea = next(l for l in salida.splitlines() if l.startswith("No instalados"))
+    return linea.split(": ", 1)[1].split(". ")[0].split(", ")
+
+
+def test_lock_desactualizado_falla_como_en_ci(raiz):
+    """CI corre `uv sync --locked`: un uv.lock que no corresponde al pyproject lo rompe."""
+    (raiz / "uv.lock").write_text("")
+    falsa(raiz, "uv", 1, "The lockfile at uv.lock needs to be updated")
+    falsa(raiz, "ruff", 0)
+    r = correr(raiz)
+    assert r.returncode == 1
+    assert "FALLA uv lock --check" in r.stdout and "needs to be updated" in r.stdout
+
+
+def test_lock_sin_uv_no_se_revisa(raiz):
+    (raiz / "uv.lock").write_text("")
+    falsa(raiz, "ruff", 0)
+    r = correr(raiz)
+    assert r.returncode == 1
+    assert "uv" in sin_revisar(r.stdout)
+
+
+def test_herramienta_configurada_sin_instalar_no_da_ok(raiz):
+    """Con tests/ y sin pytest en el .venv decía "2/2 pasos OK" sin haber corrido una prueba."""
+    (raiz / "pyproject.toml").write_text("[tool.ty]\n[tool.importlinter]\n[tool.deptry]\n")
+    (raiz / "tests").mkdir()
+    falsa(raiz, "ruff", 0)
+    r = correr(raiz)
+    assert r.returncode == 1
+    assert sorted(sin_revisar(r.stdout)) == ["deptry", "lint-imports", "pytest", "ty"]
+    assert "2/2 pasos OK, 4 sin revisar" in r.stdout
+
+
+def test_herramienta_no_configurada_ni_instalada_no_se_pide(raiz):
+    (raiz / "pyproject.toml").write_text("[project]\nname = 'x'\n")
+    falsa(raiz, "ruff", 0)
+    r = correr(raiz)
+    assert r.returncode == 0, r.stdout
+    assert "No instalados" not in r.stdout
 
 
 def test_todo_ok(raiz):
@@ -74,8 +116,9 @@ def test_tipos_solo_el_configurado(raiz):
 
 def test_orden_de_los_pasos(raiz):
     (raiz / "pyproject.toml").write_text("[tool.ty]\n[tool.importlinter]\n")
-    for nombre in ["ruff", "ty", "lint-imports", "pytest", "deptry"]:
+    (raiz / "uv.lock").write_text("")
+    for nombre in ["uv", "ruff", "ty", "lint-imports", "pytest", "deptry"]:
         falsa(raiz, nombre, 0)
     (raiz / "tests").mkdir()
     lineas = [l.split()[1] for l in correr(raiz).stdout.splitlines() if l.startswith("OK")]
-    assert lineas == ["ruff", "ruff", "ty", "import-linter", "pytest", "deptry"]
+    assert lineas == ["uv", "ruff", "ruff", "ty", "import-linter", "pytest", "deptry"]
