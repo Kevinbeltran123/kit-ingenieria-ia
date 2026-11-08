@@ -5,18 +5,27 @@ Ajusta nombres de buckets, roles y versiones. Fija versiones exactas de contened
 ## 1. Entrenamiento en SageMaker con spot
 
 ```python
-from sagemaker.pytorch import PyTorch
+# SageMaker Python SDK v3 (sagemaker>=3): `sagemaker.pytorch.PyTorch` ya no existe.
+from sagemaker.core import image_uris
+from sagemaker.train import ModelTrainer
+from sagemaker.train.configs import CheckpointConfig, Compute, InputData, SourceCode, StoppingCondition
 
-estimator = PyTorch(
-    entry_point="train.py", source_dir="src",
-    role=ROL_SAGEMAKER, instance_type="ml.g5.xlarge", instance_count=1,
-    framework_version="<versión de PyTorch ≥ 2.10 soportada>", py_version="py312",
-    use_spot_instances=True, max_run=4 * 3600, max_wait=8 * 3600,
-    checkpoint_s3_uri=f"s3://{BUCKET}/checkpoints/{EXPERIMENTO}/",
+imagen = image_uris.retrieve(framework="pytorch", region=REGION, version="2.10.0", py_version="py313",
+                             instance_type="ml.g5.xlarge", image_scope="training")
+entrenador = ModelTrainer(
+    training_image=imagen, role=ROL_SAGEMAKER,
+    source_code=SourceCode(source_dir="src", entry_script="train.py"),
+    compute=Compute(instance_type="ml.g5.xlarge", instance_count=1, enable_managed_spot_training=True),
+    stopping_condition=StoppingCondition(max_runtime_in_seconds=4 * 3600, max_wait_time_in_seconds=8 * 3600),
+    checkpoint_config=CheckpointConfig(s3_uri=f"s3://{BUCKET}/checkpoints/{EXPERIMENTO}/"),
     environment={"MLFLOW_TRACKING_URI": MLFLOW_ARN, "GIT_SHA": GIT_SHA},
 )
-estimator.fit({"train": f"s3://{BUCKET}/datasets/{HASH_DVC}/"})
+entrenador.train(input_data_config=[
+    InputData(channel_name="train", data_source=f"s3://{BUCKET}/datasets/{HASH_DVC}/"),
+])
 ```
+- La imagen de PyTorch 2.10.0 solo viene con Python 3.13 (`py313`; SDK 3.28.0). Para otra versión, mira las que
+  trae `image_uris` en el SDK instalado.
 - `train.py` debe reanudar desde `/opt/ml/checkpoints` (spot puede interrumpir).
 - Registra en MLflow: `GIT_SHA`, `HASH_DVC`, semilla, `uv.lock` como artefacto.
 
