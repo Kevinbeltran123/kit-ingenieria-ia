@@ -28,11 +28,19 @@ def carpeta_codigo(raiz: Path) -> str:
     return "src" if (raiz / "src").is_dir() else "."
 
 
+def configura_vulture(raiz: Path) -> bool:
+    pyproject = raiz / "pyproject.toml"
+    return pyproject.is_file() and "[tool.vulture]" in pyproject.read_text()
+
+
 def detectores(raiz: Path) -> list[tuple[str, str, list[str] | None]]:
     """(titulo, herramienta, comando o None si no está instalada)."""
     codigo = carpeta_codigo(raiz)
+    # Con [tool.vulture] se corre sin argumentos: los de la línea de comandos reemplazan la config (y su lista
+    # blanca). Sin config, 60: es la confianza que vulture da a funciones, clases y variables sin usar.
+    vulture = [] if configura_vulture(raiz) else [codigo, "--min-confidence", "60"]
     especificacion = [
-        ("Código muerto", "vulture", [codigo, "--min-confidence", "80"]),
+        ("Código muerto", "vulture", vulture),
         ("Dependencias", "deptry", ["."]),
         ("Complejidad cognitiva", "complexipy", [codigo, "--max-complexity-allowed", "15", "--failed"]),
         ("Código duplicado", "jscpd", ["--min-lines", "8", "--reporters", "console", codigo]),
@@ -53,7 +61,7 @@ def informe(raiz: Path) -> str:
             continue
         r = subprocess.run(cmd, cwd=raiz, capture_output=True, text=True)
         salida = (r.stdout + r.stderr).strip().splitlines()
-        estado = "sin hallazgos" if r.returncode == 0 and not salida else f"{len(salida)} líneas de salida"
+        estado = "sin hallazgos" if r.returncode == 0 else f"{len(salida)} líneas de salida"
         partes += [f"## {titulo} ({nombre}) — {estado}", ""]
         if salida:
             recorte = salida[:MAX_LINEAS]

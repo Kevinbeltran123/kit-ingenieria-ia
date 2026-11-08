@@ -21,18 +21,21 @@ Ordena los hallazgos así y trabaja de arriba hacia abajo:
 
 1. **Dependencias declaradas y no usadas** (deptry DEP002): borrarlas reduce superficie de ataque y tiempo de instalación. Riesgo casi nulo.
 2. **Dependencias usadas y no declaradas** (DEP001/DEP003): son bugs latentes; decláralas.
-3. **Código muerto con confianza ≥ 90 %** (vulture): imports, variables, funciones privadas sin referencias.
+3. **Código muerto** (vulture). Su confianza depende del tipo: 100 % argumentos sin usar y código inalcanzable,
+   90 % imports, 60 % funciones, clases, métodos, variables y atributos. Lo de 90–100 % casi siempre se borra; lo de
+   60 % pide revisar usos dinámicos (sección 3) antes de borrar.
 4. **Funciones con complejidad > 15** que además cambian seguido (`git log --format= --name-only | sort | uniq -c | sort -rn | head`): ahí la deuda cuesta de verdad.
 5. **Duplicados** de más de 8 líneas en código de producción.
 
-Deja para después: complejidad en código que nadie toca, duplicados en pruebas, hallazgos de vulture con confianza 60-80 %.
+Deja para después: complejidad en código que nadie toca y duplicados en pruebas.
 
 ## 3. Antes de borrar algo
 
 - Busca usos dinámicos que vulture no ve: `getattr`, strings en configuración, entrypoints en `pyproject.toml`, rutas de FastAPI registradas por decorador, handlers de Lambda referenciados en IaC, fixtures de pytest, `__all__`.
 - `git grep -n "<nombre>"` en todo el repo, incluidos YAML, Terraform/CDK y Dockerfiles.
 - Si es API pública de una librería usada por otros repos, no lo borres: márcalo como deprecado.
-- Falsos positivos confirmados van a `vulture_whitelist.py` con un comentario de por qué.
+- Falsos positivos confirmados van a `vulture_whitelist.py` con un comentario de por qué, y ese archivo se agrega a
+  `paths` en `[tool.vulture]`; `deuda.py` corre vulture sin argumentos cuando esa sección existe, para respetarla.
 
 ## 4. Borrar en PRs pequeños
 

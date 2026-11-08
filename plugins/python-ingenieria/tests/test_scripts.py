@@ -49,6 +49,27 @@ def test_deuda_informa_hallazgos_y_faltantes(raiz):
     assert vulture.read_text().startswith("src ")  # usa src/ si existe
 
 
+def test_vulture_sin_config_muestra_funciones_y_clases(raiz):
+    """vulture da 60 % de confianza a funciones, clases y variables: con 80 nunca salían."""
+    vulture = falsa(raiz, "vulture", 0)
+    correr(DEUDA, raiz)
+    assert "--min-confidence 60" in vulture.read_text()
+
+
+def test_vulture_respeta_la_config_del_repo(raiz):
+    """Pasar rutas o umbral por línea de comandos reemplaza [tool.vulture], incluida la lista blanca."""
+    (raiz / "pyproject.toml").write_text('[tool.vulture]\npaths = ["src", "vulture_whitelist.py"]\nmin_confidence = 60\n')
+    vulture = falsa(raiz, "vulture", 0)
+    correr(DEUDA, raiz)
+    assert vulture.read_text().strip() == ""
+
+
+def test_herramienta_que_pasa_aunque_imprima_algo_queda_sin_hallazgos(raiz):
+    falsa(raiz, "deptry", 0, "Success! No dependency issues found.")
+    r = correr(DEUDA, raiz)
+    assert "Dependencias (deptry) — sin hallazgos" in r.stdout
+
+
 def test_deuda_escribe_archivo(raiz):
     falsa(raiz, "deptry", 0)
     salida = raiz / "informe.md"

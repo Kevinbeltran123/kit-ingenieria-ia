@@ -89,8 +89,10 @@ paths = ["src"]
 max-complexity-allowed = 15
 
 [tool.vulture]
+# 60 es la confianza que vulture da a funciones, clases y variables sin usar: con 80 nunca salen.
+# Si creas vulture_whitelist.py para falsos positivos, agrégalo a paths (si está en paths y no existe, vulture falla).
 paths = ["src"]
-min_confidence = 80
+min_confidence = 60
 
 [tool.deptry]
 known_first_party = ["app"]
