@@ -9,7 +9,8 @@
     "calidad-python@kit-ingenieria-ia": true,
     "barreras@kit-ingenieria-ia": true,
     "flujo@kit-ingenieria-ia": true,
-    "python-ingenieria@kit-ingenieria-ia": true
+    "python-ingenieria@kit-ingenieria-ia": true,
+    "explicador@kit-ingenieria-ia": true
   },
   "attribution": {
     "commit": "",

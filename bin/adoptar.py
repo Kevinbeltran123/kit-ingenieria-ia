@@ -23,9 +23,9 @@ PLANTILLAS = KIT / "plantillas"
 MARKETPLACE = "kit-ingenieria-ia"
 
 PLUGINS = {
-    "base": ["calidad-python", "barreras", "flujo", "python-ingenieria"],
-    "datos": ["calidad-python", "barreras", "flujo", "python-ingenieria", "datos-optimizacion", "devops-aws"],
-    "ml": ["calidad-python", "barreras", "flujo", "python-ingenieria", "ml-vision", "devops-aws"],
+    "base": ["calidad-python", "barreras", "flujo", "python-ingenieria", "explicador"],
+    "datos": ["calidad-python", "barreras", "flujo", "python-ingenieria", "explicador", "datos-optimizacion", "devops-aws"],
+    "ml": ["calidad-python", "barreras", "flujo", "python-ingenieria", "explicador", "ml-vision", "devops-aws"],
 }
 
 COPIAS = [

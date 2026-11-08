@@ -16,6 +16,7 @@ Se instala **por repo**, nunca global.
 | `devops-aws` | Acceso seguro del agente a AWS, GitHub Actions seguras, Dockerfile con uv, IaC sin apply, observabilidad | base (opcional) |
 | `datos-optimizacion` | Formular modelos de optimización con verificador, ingesta idempotente, contratos de datos, migraciones Alembic | datos |
 | `ml-vision` | División sin fuga (con verificador), receta de entrenamiento, carga segura, licencias, fichas, despliegue en AWS; hooks de evaluador bloqueado y licencias | ml |
+| `explicador` | Explica cada cambio línea por línea en un HTML local (código y terminal lado a lado); el hook lo exige antes de `gh pr create` | base |
 
 ### Terceros (fijados por SHA, auditados en `terceros/AUDITORIA.md`)
 aws-core, pr-review-toolkit, commit-commands, security-guidance, plugin-dev, skill-creator, pyright-lsp,

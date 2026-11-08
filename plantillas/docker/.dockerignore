@@ -10,3 +10,4 @@ __pycache__/
 .coverage
 htmlcov/
 .claude/settings.local.json
+.explicaciones/

@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITULO__</title>
+<style>
+/*__FUENTES__*/
+/* Vista B: el código a la izquierda y una terminal que lo explica a la derecha. Una sola familia
+   (IBM Plex Mono, incrustada). Oscuro primero; claro si el sistema lo pide. Nada se carga de internet. */
+:root{
+  --bg:#0f1114;--win:#15181c;--win2:#1a1e23;--line:#2a3038;--fg:#e1e5ea;--muted:#959eaa;--dim:#646d79;
+  --accent:#8fb3ff;--accent-bg:rgba(143,179,255,.11);--accent-bg2:rgba(143,179,255,.24);--accent-fg:#0f1114;
+  --add:#78d394;--add-bg:rgba(120,211,148,.08);--del:#ff9188;--del-bg:rgba(255,145,136,.09);
+  --warn:#eabf66;--warn-bg:rgba(234,191,102,.11);--ok:#78d394;--ok-bg:rgba(120,211,148,.09);
+  --kw:#cfaaf6;--str:#e9c785;--com:#78818d;--fn:#8fb3ff;--num:#f3a582;--bi:#82cfca;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){:root{
+  --bg:#eceef1;--win:#ffffff;--win2:#f5f6f8;--line:#d8dce2;--fg:#1a1f26;--muted:#535d69;--dim:#7d8691;
+  --accent:#2c5bd0;--accent-bg:rgba(44,91,208,.08);--accent-bg2:rgba(44,91,208,.18);--accent-fg:#ffffff;
+  --add:#1c7a3b;--add-bg:rgba(28,122,59,.08);--del:#b42318;--del-bg:rgba(180,35,24,.07);
+  --warn:#8a5800;--warn-bg:rgba(201,140,20,.14);--ok:#1c7a3b;--ok-bg:rgba(28,122,59,.09);
+  --kw:#7a3db8;--str:#8a5800;--com:#737c87;--fn:#2c5bd0;--num:#b5461a;--bi:#0d726d;
+  color-scheme:light}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:13px/1.6 var(--mono);font-variant-ligatures:none}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+.app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+
+.barra{display:flex;align-items:center;gap:14px;min-width:0;padding:8px max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px));
+  padding-top:max(8px,env(safe-area-inset-top,0px));background:var(--win2);border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.barra .que{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.barra .que b{color:var(--fg);font-weight:500}
+.prog{display:flex;align-items:center;gap:3px;flex:1 1 260px;min-width:90px;max-width:560px}
+.seg{flex:1;height:24px;padding:0;border:0;background:none;cursor:pointer;display:grid;align-items:center;min-width:3px}
+.seg::before{content:"";height:5px;border-radius:2px;background:var(--line)}
+.seg.hecho::before{background:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.seg.actual::before{height:8px;background:var(--accent)}
+.seg.con-alerta::before{box-shadow:0 0 0 1px var(--warn)}
+.seg:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
+.cuenta{margin-left:auto;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--fg)}
+
+.cuerpo{display:grid;grid-template-columns:minmax(150px,210px) minmax(0,1fr) minmax(320px,38%);min-height:0}
+.archivos{display:grid;align-content:start;gap:2px;padding:8px;border-right:1px solid var(--line);overflow:auto;background:var(--win)}
+.archivo{display:grid;gap:1px;text-align:left;font-size:12px;color:var(--muted);background:none;border:0;border-radius:6px;padding:6px 8px;cursor:pointer;min-width:0}
+.archivo .nombre{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit}
+.archivo .dir{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dim);font-size:11px}
+.archivo:hover{color:var(--fg)}
+.archivo[aria-current="true"]{background:var(--accent-bg);color:var(--fg)}
+.archivo:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.mas{color:var(--add)}.menos{color:var(--del)}.cifras{font-variant-numeric:tabular-nums;white-space:nowrap}
+.estado{color:var(--warn)}
+
+.codigo{position:relative;overflow:auto;min-width:0;background:var(--win);overscroll-behavior:contain}
+.filas{padding:6px 0 40px}
+.fila{display:grid;grid-template-columns:20px 44px minmax(0,1fr);line-height:20px;min-height:20px;padding-right:14px}
+.fila .m{text-align:center;color:var(--dim);user-select:none}
+.fila .num{text-align:right;padding-right:12px;color:var(--dim);font-variant-numeric:tabular-nums;user-select:none}
+.fila .cod{white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.fila.add{background:var(--add-bg)}.fila.add .m{color:var(--add)}
+.fila.del{background:var(--del-bg)}.fila.del .m{color:var(--del)}.fila.del .cod{opacity:.82}
+.fila[data-p]{cursor:pointer}
+.fila[data-p]:hover .num{color:var(--fg)}
+.fila.en-paso{box-shadow:inset 2px 0 0 var(--accent);background-image:linear-gradient(var(--accent-bg),var(--accent-bg))}
+.fila.en-paso .num{color:var(--fg)}
+.fila.con-nota .num::before{content:"\2022\00a0";color:var(--accent)}
+.fila.actual{box-shadow:inset 4px 0 0 var(--accent);background-image:linear-gradient(var(--accent-bg2),var(--accent-bg2))}
+.fila.resaltada{background-image:linear-gradient(var(--warn-bg),var(--warn-bg))}
+.k{color:var(--kw)}.s{color:var(--str)}.c{color:var(--com);font-style:italic}.f{color:var(--fn)}.n{color:var(--num)}.b{color:var(--bi)}
+
+.terminal{position:relative;display:flex;flex-direction:column;gap:20px;padding:14px 16px 48px;border-left:1px solid var(--line);
+  overflow:auto;min-width:0;background:var(--win);overscroll-behavior:contain}
+.bloque{display:grid;gap:8px;flex:none}
+.bloque.pasado{opacity:.5}
+.cab{color:var(--dim);font-size:12px}
+.p{color:var(--accent)}
+.t{font-weight:600}
+.explica{max-width:76ch;text-wrap:pretty}
+.ctx{color:var(--muted)}
+.notas{display:grid;gap:2px;margin:0;padding:0;list-style:none}
+.nota{display:grid;grid-template-columns:7ch minmax(0,1fr);gap:8px;width:100%;text-align:left;color:var(--muted);background:none;border:0;
+  border-radius:4px;padding:3px 6px;cursor:pointer}
+.nota .ln{color:var(--accent);text-align:right;font-variant-numeric:tabular-nums}
+.nota:hover{color:var(--fg);background:var(--accent-bg)}
+.nota.actual{color:var(--fg);background:var(--accent-bg2)}
+.nota:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.cuantas{color:var(--dim);font-size:12px}
+.alerta{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:8px 10px;border-radius:6px;background:var(--warn-bg);max-width:80ch}
+.alerta .tipo{color:var(--warn);font-weight:600;white-space:nowrap}
+.alerta.bug{background:var(--del-bg)}.alerta.bug .tipo{color:var(--del)}
+.alerta.resuelta,.alerta.descartada{background:var(--ok-bg)}.alerta.resuelta .tipo,.alerta.descartada .tipo{color:var(--ok)}
+.alerta .motivo{grid-column:2;color:var(--muted)}
+.datos{display:grid;gap:4px;margin:0}
+.datos div{display:grid;grid-template-columns:11ch minmax(0,1fr);gap:12px}
+.datos dt{color:var(--dim)}.datos dd{margin:0;max-width:80ch;white-space:pre-line}
+.lista{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.ir{display:inline;padding:0;border:0;background:none;color:var(--accent);cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}
+.ir:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pista{margin:0;color:var(--muted)}
+kbd{font:inherit;font-size:11px;padding:0 5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;color:var(--muted)}
+
+.pie{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px max(14px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));
+  background:var(--win2);border-top:1px solid var(--line)}
+.boton{font-size:12px;line-height:1.4;background:transparent;border:1px solid var(--line);border-radius:6px;padding:6px 10px;min-height:32px;cursor:pointer}
+.boton:hover:not(:disabled){background:var(--accent-bg)}
+.boton:disabled{opacity:.4;cursor:default}
+.boton.primario{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:500}
+.boton.primario:hover:not(:disabled){background:var(--accent);filter:brightness(1.08)}
+.boton:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.atajos{margin-left:auto;color:var(--dim);font-size:12px}
+
+@media (max-width:900px){
+  .cuerpo{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) minmax(0,46%)}
+  .archivos{grid-auto-flow:column;grid-auto-columns:max-content;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:6px 8px}
+  .archivo .dir{display:none}
+  .terminal{border-left:0;border-top:1px solid var(--line)}
+  .barra .que,.atajos{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="barra">
+    <span class="que" data-que></span>
+    <div class="prog" data-prog role="group" aria-label="Pasos del cambio"></div>
+    <span class="cuenta" data-cuenta></span>
+  </header>
+  <main class="cuerpo">
+    <nav class="archivos" data-archivos aria-label="Archivos del cambio"></nav>
+    <section class="codigo" data-codigo aria-label="Código del cambio"></section>
+    <section class="terminal" data-terminal aria-live="polite" aria-label="Explicación"></section>
+  </main>
+  <footer class="pie">
+    <button class="boton" type="button" data-accion="resumen">Resumen</button>
+    <button class="boton" type="button" data-accion="paso-ant">← Paso</button>
+    <button class="boton" type="button" data-accion="linea-ant">↑ Línea</button>
+    <button class="boton primario" type="button" data-accion="linea-sig">↓ Línea</button>
+    <button class="boton" type="button" data-accion="paso-sig">Paso →</button>
+    <span class="atajos"><kbd>↑</kbd> <kbd>↓</kbd> línea · <kbd>←</kbd> <kbd>→</kbd> paso · <kbd>r</kbd> resumen</span>
+  </footer>
+</div>
+<script type="application/json" id="datos">__DATOS__</script>
+<script>
+(() => {
+  'use strict';
+  const D = JSON.parse(document.getElementById('datos').textContent);
+  const A = D.archivos, P = D.pasos, N = P.length;
+  const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = s => document.querySelector(s);
+  const lista = $('[data-archivos]'), codigo = $('[data-codigo]'), term = $('[data-terminal]');
+  const prog = $('[data-prog]'), cuenta = $('[data-cuenta]'), que = $('[data-que]');
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const nombreDe = ruta => ruta.split('/').pop();
+  const totalMas = A.reduce((s, a) => s + a.mas, 0), totalMenos = A.reduce((s, a) => s + a.menos, 0);
+
+  // ---------- Resaltado de sintaxis (sin librerías) ----------
+  const KW = new Set('False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield match case'.split(' '));
+  const BI = new Set('print len int str float bool bytes sorted set list dict tuple any all open range enumerate zip map filter isinstance super self cls'.split(' '));
+  const TOK = /(#.*$)|([rRbBfFuU]{0,2}"""[\s\S]*?(?:"""|$)|[rRbBfFuU]{0,2}'''[\s\S]*?(?:'''|$))|([rRbBfFuU]{0,2}"(?:\\.|[^"\\])*"|[rRbBfFuU]{0,2}'(?:\\.|[^'\\])*')|(\b\d[\d_]*(?:\.\d+)?\b)|(@[\w.]+)|([A-Za-z_]\w*)/g;
+  function resaltarPython(texto, abierta) {
+    let html = '', desde = 0;
+    if (abierta) {
+      const fin = texto.indexOf(abierta);
+      if (fin < 0) return { html: `<span class="s">${esc(texto)}</span>`, abierta };
+      html = `<span class="s">${esc(texto.slice(0, fin + 3))}</span>`;
+      desde = fin + 3;
+      abierta = null;
+    }
+    TOK.lastIndex = desde;
+    let m, previo = '';
+    while ((m = TOK.exec(texto))) {
+      if (m[0] === '') { TOK.lastIndex++; continue; }
+      html += esc(texto.slice(desde, m.index));
+      const [, com, doc, str, num, deco, id] = m;
+      if (com) html += `<span class="c">${esc(com)}</span>`;
+      else if (doc) {
+        html += `<span class="s">${esc(doc)}</span>`;
+        const cuerpo = doc.replace(/^[rRbBfFuU]{0,2}/, ''), comillas = cuerpo.slice(0, 3);
+        if (!(cuerpo.length >= 6 && cuerpo.endsWith(comillas))) abierta = comillas;
+      } else if (str) html += `<span class="s">${esc(str)}</span>`;
+      else if (num) html += `<span class="n">${num}</span>`;
+      else if (deco) html += `<span class="f">${esc(deco)}</span>`;
+      else {
+        if (KW.has(id)) html += `<span class="k">${id}</span>`;
+        else if (previo === 'def' || previo === 'class') html += `<span class="f">${id}</span>`;
+        else if (BI.has(id)) html += `<span class="b">${id}</span>`;
+        else html += id;
+        previo = id;
+      }
+      desde = TOK.lastIndex;
+    }
+    return { html: html + esc(texto.slice(desde)), abierta };
+  }
+  function resaltarGenerico(texto, ruta) {
+    const ext = ((ruta.match(/\.([A-Za-z0-9]+)$/) || [])[1] || '').toLowerCase();
+    if (/^(md|txt|rst|csv)$/.test(ext)) return esc(texto);
+    const conAlmohadilla = /^(ya?ml|toml|sh|bash|zsh|ini|cfg|conf|tf|tfvars|r|properties|env)$/.test(ext) || /(^|\/)(Dockerfile|Makefile|\.gitignore|\.dockerignore)[^/]*$/.test(ruta);
+    const conBarras = /^(js|mjs|cjs|ts|tsx|jsx|java|go|rs|c|h|cc|cpp|hpp|cs|swift|kt|scss|less|css|jsonc)$/.test(ext);
+    const re = conAlmohadilla ? /(#.*$)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(\b\d[\d_]*(?:\.\d+)?\b)/g
+      : conBarras ? /(\/\/.*$)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|(\b\d[\d_]*(?:\.\d+)?\b)/g
+      : /(\u0000)|("(?:\\.|[^"\\])*")|(\b\d[\d_]*(?:\.\d+)?\b)/g;
+    let html = '', desde = 0, m;
+    while ((m = re.exec(texto))) {
+      if (m[0] === '') { re.lastIndex++; continue; }
+      html += esc(texto.slice(desde, m.index));
+      html += m[1] ? `<span class="c">${esc(m[1])}</span>` : m[2] ? `<span class="s">${esc(m[2])}</span>` : `<span class="n">${esc(m[3])}</span>`;
+      desde = re.lastIndex;
+    }
+    return html + esc(texto.slice(desde));
+  }
+  A.forEach(a => {
+    const python = /\.pyi?$/.test(a.ruta);
+    let abierta = null;
+    a.lineas.forEach(l => {
+      if (python) { const r = resaltarPython(l.c, abierta); l.html = r.html; abierta = r.abierta; }
+      else l.html = resaltarGenerico(l.c, a.ruta);
+      if (!l.html) l.html = ' ';
+    });
+  });
+
+  // ---------- Índices: fila → paso, fila → notas, y el recorrido línea por línea ----------
+  const pasoDeFila = A.map(() => new Map());
+  const primerPasoDe = A.map(() => -1);
+  P.forEach((p, k) => {
+    for (let i = p.i0; i <= p.i1; i++) pasoDeFila[p.archivo].set(i, k);
+    if (primerPasoDe[p.archivo] < 0) primerPasoDe[p.archivo] = k;
+    p.notasDeFila = new Map();
+    p.notas.forEach((nota, j) => nota.filas.forEach(f => {
+      if (!p.notasDeFila.has(f)) p.notasDeFila.set(f, []);
+      p.notasDeFila.get(f).push(j);
+    }));
+    p.recorrido = [...p.notasDeFila.keys()].sort((x, y) => x - y);
+  });
+  const rango = p => p.desde != null ? (p.desde === p.hasta ? `línea ${p.desde}` : `líneas ${p.desde}–${p.hasta}`)
+    : p.borradas ? `borradas ${p.borradas[0]}–${p.borradas[1]}` : '';
+  const etiqueta = a => a.tipo === 'bug' ? (a.estado === 'abierta' ? '\u2715 posible error' : a.estado === 'resuelta' ? '\u2713 error corregido' : '\u2713 descartado')
+    : a.tipo === 'riesgo' ? '\u26A0\uFE0E riesgo' : '? duda';
+  const alertaHTML = a => a ? `<div class="alerta ${esc(a.tipo)} ${esc(a.estado)}"><span class="tipo">${etiqueta(a)}</span><span>${esc(a.texto)}</span>${a.motivo ? `<span class="motivo">motivo: ${esc(a.motivo)}</span>` : ''}</div>` : '';
+
+  // ---------- Pintar ----------
+  let paso = -2, fila = null, visible = -1, escritor = null;
+  lista.innerHTML = A.map((a, j) => {
+    const partes = a.ruta.split('/'), dir = partes.slice(0, -1).join('/');
+    const estado = { A: 'nuevo', D: 'borrado', R: 'renombrado', C: 'copiado' }[a.estado] || '';
+    return `<button class="archivo" type="button" data-a="${j}" aria-current="false" title="${esc(a.ruta)}">
+      <span class="nombre">${esc(partes[partes.length - 1])}</span>${dir ? `<span class="dir">${esc(dir)}</span>` : ''}
+      <span class="cifras"><span class="mas">+${a.mas}</span> <span class="menos">−${a.menos}</span>${estado ? ` <span class="estado">${estado}</span>` : ''}</span></button>`;
+  }).join('');
+  prog.innerHTML = P.map((p, k) => `<button class="seg${p.alerta && p.alerta.estado === 'abierta' ? ' con-alerta' : ''}" type="button" data-k="${k}" aria-label="Paso ${k + 1}: ${esc(p.titulo)}"></button>`).join('');
+  que.innerHTML = `<b>${esc(D.titulo)}</b> · ${esc(D.repo)} · ${esc(D.rama)}`;
+
+  function filaHTML(l, i, k) {
+    const tipo = l.t === '+' ? ' add' : l.t === '-' ? ' del' : '';
+    const marca = l.t === '+' ? '+' : l.t === '-' ? '\u2212' : '';
+    return `<div class="fila${tipo}" data-i="${i}"${k != null ? ` data-p="${k}"` : ''}><span class="m">${marca}</span><span class="num">${l.t === '-' ? '' : l.n}</span><span class="cod">${l.html}</span></div>`;
+  }
+  const filaEl = i => codigo.querySelector(`.fila[data-i="${i}"]`);
+  function pintarArchivo(j) {
+    visible = j;
+    codigo.innerHTML = `<div class="filas">${A[j].lineas.map((l, i) => filaHTML(l, i, pasoDeFila[j].get(i))).join('')}</div>`;
+    lista.querySelectorAll('.archivo').forEach(b => b.setAttribute('aria-current', String(Number(b.dataset.a) === j)));
+  }
+  function marcarPaso(k) {
+    codigo.querySelectorAll('.en-paso,.con-nota,.actual').forEach(f => f.classList.remove('en-paso', 'con-nota', 'actual'));
+    if (k < 0) return;
+    const p = P[k];
+    for (let i = p.i0; i <= p.i1; i++) {
+      const f = filaEl(i);
+      if (!f) continue;
+      f.classList.add('en-paso');
+      if (p.notasDeFila.has(i)) f.classList.add('con-nota');
+    }
+  }
+  function resumenHTML(pasado) {
+    const r = D.resumen || {};
+    const base = `${D.base.ref} (${D.base.sha.slice(0, 7)}) → ${D.hasta ? D.hasta.slice(0, 7) : 'cambios sin commit'}`;
+    const filas = [['cambio', esc(D.titulo)], ['base', esc(base)], ['generado', esc(D.generado)],
+      ['archivos', `${A.length} · <span class="mas">+${totalMas}</span> <span class="menos">−${totalMenos}</span> · ${N} pasos`],
+      ['problema', esc(r.problema || '')], ['solución', esc(r.solucion || '')], ['probado', esc(r.como_se_probo || '')],
+      ['decisiones', esc(r.decisiones || '')], ['pendiente', esc(r.pendiente || '')]].filter(([, v]) => v);
+    const alertas = P.map((p, k) => p.alerta ? `<li><button class="ir" type="button" data-ir="${k}">paso ${k + 1} · ${esc(nombreDe(A[p.archivo].ruta))}</button>${alertaHTML(p.alerta)}</li>` : '').join('');
+    const omitidos = (D.omitidos || []).map(o => `<li>${esc(o.ruta)} <span class="ctx">— ${esc(o.motivo)}</span></li>`).join('');
+    return `<section class="bloque${pasado ? ' pasado' : ''}" data-k="-1">
+      <div class="cab"><span class="p">$</span> explicar · ${esc(D.repo)} · ${esc(D.rama)}</div>
+      <dl class="datos">${filas.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
+      ${alertas ? `<div class="cab">alertas</div><ul class="lista">${alertas}</ul>` : ''}
+      ${omitidos ? `<div class="cab">sin explicar</div><ul class="lista">${omitidos}</ul>` : ''}
+      ${pasado ? '' : '<p class="pista">Pulsa <kbd>↓</kbd> para empezar línea por línea.</p>'}</section>`;
+  }
+  function pasoHTML(k, pasado) {
+    const p = P[k], a = A[p.archivo];
+    const notas = pasado ? (p.notas.length ? `<div class="cuantas">${p.notas.length} notas</div>` : '')
+      : p.notas.length ? `<ul class="notas">${p.notas.map((nota, j) => `<li><button class="nota" type="button" data-j="${j}"><span class="ln">${esc(nota.etiqueta)}</span><span>${esc(nota.texto)}</span></button></li>`).join('')}</ul>` : '';
+    return `<section class="bloque${pasado ? ' pasado' : ''}" data-k="${k}">
+      <div class="cab"><span class="p">$</span> paso ${k + 1}/${N} · ${esc(nombreDe(a.ruta))} · ${rango(p)}${p.contexto ? ` · <span class="ctx">${esc(p.contexto)}</span>` : ''}</div>
+      <div class="t">${esc(p.titulo)}</div>
+      <div class="explica"${pasado ? '' : ' data-texto'}>${pasado ? esc(p.explicacion) : ''}</div>
+      ${notas}${alertaHTML(p.alerta)}</section>`;
+  }
+  function escribir(el, texto, alTerminar) {
+    if (reducido) { el.textContent = texto; alTerminar(); return null; }
+    let i = 0, id = 0, vivo = true;
+    const avanzar = () => {
+      i = Math.min(texto.length, i + 8);
+      el.textContent = texto.slice(0, i);
+      if (i < texto.length) id = requestAnimationFrame(avanzar); else { vivo = false; alTerminar(); }
+    };
+    id = requestAnimationFrame(avanzar);
+    return { get vivo() { return vivo; }, terminar() { if (!vivo) return; cancelAnimationFrame(id); el.textContent = texto; vivo = false; alTerminar(); } };
+  }
+  function asegurarVisible(caja, el) {
+    const arriba = el.offsetTop, alto = el.offsetHeight, vista = caja.clientHeight, s = caja.scrollTop;
+    if (arriba < s + vista * 0.12 || arriba + alto > s + vista * 0.88)
+      caja.scrollTo({ top: Math.max(0, arriba - vista * 0.35), behavior: reducido ? 'auto' : 'smooth' });
+  }
+  function pintarTerminal(k) {
+    term.innerHTML = resumenHTML(k >= 0) + P.slice(0, k + 1).map((_, j) => pasoHTML(j, j < k)).join('');
+    const ultimo = term.lastElementChild;
+    term.scrollTop = Math.max(0, ultimo.offsetTop - 12);
+    const texto = ultimo.querySelector('[data-texto]');
+    if (texto) escritor = escribir(texto, P[k].explicacion, () => { if (fila != null) marcarNotas(); });
+  }
+
+  // ---------- Navegación ----------
+  function terminarEscritura() { if (escritor && escritor.vivo) escritor.terminar(); }
+  function irPaso(k, cual = 'primera') {
+    terminarEscritura();
+    k = Math.max(-1, Math.min(N - 1, k));
+    const cambia = k !== paso;
+    paso = k;
+    if (k === -1) {
+      if (visible < 0) pintarArchivo(0);
+      marcarPaso(-1);
+      fila = null;
+      pintarTerminal(-1);
+      actualizar();
+      history.replaceState(null, '', location.pathname + location.search);
+      return;
+    }
+    const p = P[k];
+    if (p.archivo !== visible) pintarArchivo(p.archivo);
+    if (cambia) { marcarPaso(k); fila = null; pintarTerminal(k); }
+    const rec = p.recorrido;
+    irFila(typeof cual === 'number' ? cual : rec.length ? (cual === 'ultima' ? rec[rec.length - 1] : rec[0]) : p.i0);
+    history.replaceState(null, '', `#paso-${k + 1}`);
+  }
+  function marcarNotas() {
+    term.querySelectorAll('.nota.actual').forEach(b => b.classList.remove('actual'));
+    if (paso < 0 || fila == null) return;
+    const js = P[paso].notasDeFila.get(fila) || [];
+    const bloque = term.lastElementChild;
+    js.forEach(j => { const b = bloque.querySelector(`.nota[data-j="${j}"]`); if (b) b.classList.add('actual'); });
+    const primera = js.length ? bloque.querySelector(`.nota[data-j="${js[0]}"]`) : null;
+    if (primera) asegurarVisible(term, primera);
+  }
+  function irFila(i) {
+    fila = i;
+    codigo.querySelectorAll('.fila.actual').forEach(f => f.classList.remove('actual'));
+    const f = filaEl(i);
+    if (f) { f.classList.add('actual'); asegurarVisible(codigo, f); }
+    marcarNotas();
+    actualizar();
+  }
+  function lineaSiguiente() {
+    terminarEscritura();
+    if (paso < 0) { if (N) irPaso(0); return; }
+    const sig = P[paso].recorrido.find(r => fila == null || r > fila);
+    if (sig != null) irFila(sig); else if (paso < N - 1) irPaso(paso + 1, 'primera');
+  }
+  function lineaAnterior() {
+    terminarEscritura();
+    if (paso < 0) return;
+    const ant = [...P[paso].recorrido].reverse().find(r => fila != null && r < fila);
+    if (ant != null) irFila(ant); else if (paso > 0) irPaso(paso - 1, 'ultima'); else irPaso(-1);
+  }
+  function actualizar() {
+    let texto = 'resumen';
+    if (paso >= 0) {
+      texto = `paso ${paso + 1} de ${N}`;
+      const l = fila != null ? A[visible].lineas[fila] : null;
+      if (l) texto += l.t === '-' ? ` · línea borrada ${l.o}` : ` · línea ${l.n}`;
+    }
+    cuenta.textContent = texto;
+    prog.querySelectorAll('.seg').forEach((s, j) => {
+      s.classList.toggle('hecho', j < paso);
+      s.classList.toggle('actual', j === paso);
+      s.setAttribute('aria-current', j === paso ? 'step' : 'false');
+    });
+    const ultimaDelUltimo = paso === N - 1 && fila === P[N - 1].recorrido[P[N - 1].recorrido.length - 1];
+    document.querySelector('[data-accion="paso-ant"]').disabled = paso < 0;
+    document.querySelector('[data-accion="linea-ant"]').disabled = paso < 0;
+    document.querySelector('[data-accion="paso-sig"]').disabled = paso >= N - 1;
+    document.querySelector('[data-accion="linea-sig"]').disabled = paso >= 0 && ultimaDelUltimo;
+  }
+
+  // ---------- Eventos ----------
+  const acciones = {
+    resumen: () => irPaso(-1), 'paso-ant': () => irPaso(paso - 1), 'paso-sig': () => irPaso(paso + 1),
+    'linea-ant': lineaAnterior, 'linea-sig': lineaSiguiente,
+  };
+  document.querySelector('.pie').addEventListener('click', e => { const b = e.target.closest('[data-accion]'); if (b) acciones[b.dataset.accion](); });
+  lista.addEventListener('click', e => {
+    const b = e.target.closest('.archivo');
+    if (b) { const k = primerPasoDe[Number(b.dataset.a)]; if (k >= 0) irPaso(k); }
+  });
+  prog.addEventListener('click', e => { const s = e.target.closest('.seg'); if (s) irPaso(Number(s.dataset.k)); });
+  codigo.addEventListener('click', e => {
+    const f = e.target.closest('.fila[data-p]');
+    if (!f) return;
+    const k = Number(f.dataset.p), i = Number(f.dataset.i);
+    if (k !== paso) irPaso(k, i); else irFila(i);
+  });
+  term.addEventListener('click', e => {
+    const ir = e.target.closest('[data-ir]');
+    if (ir) { irPaso(Number(ir.dataset.ir)); return; }
+    const b = e.target.closest('.nota');
+    if (b && paso >= 0) { const nota = P[paso].notas[Number(b.dataset.j)]; if (nota.filas.length) irFila(nota.filas[0]); }
+  });
+  const resaltar = (b, si) => {
+    if (!b || paso < 0) return;
+    P[paso].notas[Number(b.dataset.j)].filas.forEach(i => { const f = filaEl(i); if (f) f.classList.toggle('resaltada', si); });
+  };
+  term.addEventListener('mouseover', e => resaltar(e.target.closest('.nota'), true));
+  term.addEventListener('mouseout', e => resaltar(e.target.closest('.nota'), false));
+  addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target.closest && e.target.closest('button') && (e.key === 'Enter' || e.key === ' ')) return;
+    const teclas = {
+      ArrowDown: lineaSiguiente, j: lineaSiguiente, Enter: lineaSiguiente, ' ': lineaSiguiente,
+      ArrowUp: lineaAnterior, k: lineaAnterior, ArrowRight: () => irPaso(paso + 1), n: () => irPaso(paso + 1),
+      ArrowLeft: () => irPaso(paso - 1), p: () => irPaso(paso - 1), r: () => irPaso(-1), Home: () => irPaso(-1),
+    };
+    const f = teclas[e.key];
+    if (f) { e.preventDefault(); f(); }
+  });
+
+  const inicial = /^#paso-(\d+)$/.exec(location.hash);
+  if (inicial && N) irPaso(Math.min(N, Number(inicial[1])) - 1);
+  else irPaso(-1);
+})();
+</script>
+</body>
+</html>

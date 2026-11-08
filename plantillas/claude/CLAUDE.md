@@ -36,6 +36,7 @@
 1. `uv run pytest -q` pasa.
 2. `uv run ty check` y `uv run lint-imports` sin errores.
 3. Si tocaste infraestructura: solo `plan`/`diff`; el `apply` se hace desde CI.
+4. Antes de abrir el PR: la skill `explicar-cambios`, con una nota por cada línea cambiada (el hook la exige).
 
 ## No hacer
 - No leer `.env`, `secrets/` ni credenciales de AWS.
