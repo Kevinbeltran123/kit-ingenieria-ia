@@ -18,19 +18,37 @@ Meta: ante un error en producción, poder ir de una alerta a la traza y de la tr
 import logging, sys, structlog
 
 def configurar_logs(nivel: str = "INFO") -> None:
-    procesadores = [
+    compartidos = [
         structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
+        structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
     ]
-    render = structlog.dev.ConsoleRenderer() if sys.stderr.isatty() else structlog.processors.JSONRenderer()
+    if sys.stderr.isatty():
+        render = [structlog.dev.ConsoleRenderer()]  # formatea las excepciones él mismo
+    else:
+        render = [structlog.processors.dict_tracebacks, structlog.processors.JSONRenderer()]
     structlog.configure(
-        processors=[*procesadores, render],
-        wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(nivel)),
+        processors=[*compartidos, structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
     )
+    # Los logs de la librería estándar (uvicorn, boto3) pasan por los mismos procesadores.
+    manejador = logging.StreamHandler()
+    manejador.setFormatter(structlog.stdlib.ProcessorFormatter(
+        foreign_pre_chain=compartidos,
+        processors=[structlog.stdlib.ProcessorFormatter.remove_processors_meta, *render],
+    ))
+    raiz = logging.getLogger()
+    raiz.handlers = [manejador]
+    raiz.setLevel(nivel)
 ```
+- Comprobado con structlog 26.1: los logs propios, los de `logging` y las excepciones salen como JSON, con el
+  `request_id` de contextvars también en los de la librería estándar.
+- Con uvicorn, arráncalo con `log_config=None` (`uvicorn.run(app, log_config=None)`): su configuración por defecto
+  les pone handler propio a `uvicorn` y `uvicorn.access` con `propagate=False`, y sus logs no pasarían por aquí. El
+  access log sobra si ya está la línea canónica (`--no-access-log`).
 
 ## 2. Trazas con OpenTelemetry
 - Paquetes: `opentelemetry-distro`, `opentelemetry-exporter-otlp` e instrumentaciones (`fastapi`, `httpx`, `sqlalchemy`, `botocore`, `logging`).
