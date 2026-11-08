@@ -14,7 +14,7 @@ Se aplican con `bin/adoptar.py`, que **nunca sobrescribe** archivos existentes:
 | `python/.pre-commit-config.yaml` | `.pre-commit-config.yaml` | Para `prek` (`uvx prek install`) o pre-commit |
 | `claude/settings.json` | `.claude/settings.json` | Marketplace del kit, plugins por perfil, reglas deny, sandbox, sin co-autoría de Claude. Si ya existe, se fusiona agregando sin borrar |
 | `claude/CLAUDE.md` | `CLAUDE.md` | < 80 líneas, con huecos `<...>` |
-| `github/workflows/ci.yml` | `.github/workflows/ci.yml` | Acciones fijadas por SHA, permisos mínimos, zizmor y pip-audit |
+| `github/workflows/ci.yml` | `.github/workflows/ci.yml` | Acciones fijadas por SHA, permisos mínimos, zizmor y pip-audit. Vuelve a correr los hooks de pre-commit (`--no-verify` los salta en local) y gitleaks sobre toda la historia |
 | `github/workflows/claude-review.yml` | `.github/workflows/claude-review.yml` | Revisión de PR con `pr-review-toolkit`; necesita el secreto `ANTHROPIC_API_KEY` |
 | `github/dependabot.yml` | `.github/dependabot.yml` | uv, Actions y Docker con cooldown de 7 días |
 | `github/CODEOWNERS.ml` | `.github/CODEOWNERS` (solo perfil ml) | Dueños de `eval/`, `splits/`, la config del hook y `LICENSES.md`. No se crea si el repo ya tiene CODEOWNERS en la raíz o en `docs/` |

@@ -26,6 +26,13 @@ jobs:
           enable-cache: true
       - name: Instalar
         run: uv sync --locked
+      - name: Hooks de pre-commit sin paso propio (complexipy, uv-lock y los que se agreguen)
+        # `git commit --no-verify` salta los hooks locales; aquí se vuelven a correr. Se saltan los que
+        # ya tienen paso en este job, y gitleaks, que tiene su propio job: su hook solo mira lo que está
+        # en stage y en CI no hay nada en stage.
+        run: >-
+          uvx prek@0.5.9 run --all-files --show-diff-on-failure
+          --skip ruff-check --skip ruff-format --skip ty --skip import-linter --skip deptry --skip gitleaks
       - name: Lint y formato
         run: |
           uv run ruff check .
@@ -42,6 +49,21 @@ jobs:
         run: uv run pip-audit
       - name: Código muerto (reporte, no bloquea)
         run: uv run vulture || true
+
+  secretos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # toda la historia: un secreto borrado en un commit posterior sigue filtrado
+      - name: Secretos en la historia (gitleaks 8.30.1, la misma versión del hook de pre-commit)
+        run: |
+          curl -sSfL -o gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          ./gitleaks git --no-banner --redact .
 
   workflows:
     runs-on: ubuntu-latest
