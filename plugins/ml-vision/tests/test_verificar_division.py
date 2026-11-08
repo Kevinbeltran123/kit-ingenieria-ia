@@ -177,6 +177,22 @@ def test_imagenes_ausentes_se_avisan(tmp_path):
     assert r.returncode == 0 and "AVISO [hash] 3 imagen(es)" in r.stdout
 
 
+def test_ninguna_imagen_encontrada_es_error_de_uso(tmp_path):
+    """Sin imágenes (por ejemplo en CI, donde DVC no las baja) el chequeo por hash no corre: no puede decir OK."""
+    (tmp_path / "imgs").mkdir()
+    r = correr(manifiesto(tmp_path, division_limpia()), "--imagenes", tmp_path / "imgs")
+    assert r.returncode == 2
+    assert "no se encontró ninguna imagen" in r.stdout
+
+
+def test_columna_sha256_detecta_duplicados_sin_las_imagenes(tmp_path):
+    filas = division_limpia()
+    for f, h in zip(filas, ["h1", "h2", "h3", "h1"]):
+        f["sha256"] = h
+    r = correr(manifiesto(tmp_path, filas, columnas=COLUMNAS + ["sha256"]), "--grupos", "palma_id,lote,finca,sha256")
+    assert r.returncode == 1 and "FALLA [sha256]" in r.stdout
+
+
 def test_reporte_limita_ejemplos(tmp_path):
     filas = [fila(f"t{i}.jpg", "train", f"P{i}", f"L{i}", "F1") for i in range(15)]
     filas += [fila(f"x{i}.jpg", "test", f"P{i}", f"M{i}", "F2") for i in range(15)]

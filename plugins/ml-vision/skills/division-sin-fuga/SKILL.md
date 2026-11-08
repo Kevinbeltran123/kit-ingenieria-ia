@@ -51,11 +51,15 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/division-sin-fuga/scripts/verificar_divisi
 ```
 
 - Sale con **1** si una imagen, palma, lote o finca aparece en más de un split, si hay archivos idénticos en splits distintos, o (con `--temporal`) si el test no es posterior.
-- Sale con **2** si falta una columna o una fecha es ilegible.
+- Sale con **2** si falta una columna, una fecha es ilegible o `--imagenes` no encuentra ninguna imagen.
+- Guarda en el manifiesto una columna `sha256` (el hash de cada imagen, calculado al crearlo) e inclúyela en
+  `--grupos`: así los duplicados se detectan aunque las imágenes no estén, como en CI.
 - Columnas con otros nombres: `--col-imagen`, `--col-split`, `--grupos`, `--split-prueba`.
 - Quita `finca` de `--grupos` solo si el uso previsto es dentro de las mismas fincas, y dilo en el reporte.
 
-Agrega este comando a la CI del repo para que ningún cambio rompa la división.
+Para que ningún cambio rompa la división, llévalo a la CI del repo: copia el script al repo (por ejemplo
+`tools/verificar_division.py`), porque `${CLAUDE_PLUGIN_ROOT}` solo existe en tu máquina, y en CI usa la columna
+`sha256` en `--grupos` en vez de `--imagenes`.
 
 ## 4. Checklist de fuga (Kapoor & Narayanan 2023)
 

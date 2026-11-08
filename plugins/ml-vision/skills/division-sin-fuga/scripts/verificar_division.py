@@ -5,7 +5,8 @@ Lee un manifiesto CSV (una fila por imagen) y falla con código 1 si:
 - (con --imagenes) dos archivos idénticos (mismo SHA-256) quedan en splits distintos;
 - (con --temporal) el split de prueba tiene fechas iguales o anteriores a las de otro split.
 
-Código 2 = error de uso (columna inexistente, fecha ilegible, CSV vacío).
+Código 2 = error de uso (columna inexistente, fecha ilegible, CSV vacío, --imagenes sin ninguna imagen).
+Sin las imágenes a mano (por ejemplo en CI), agrega una columna sha256 al manifiesto y pásala en --grupos.
 
 Ejemplo:
     python3 verificar_division.py splits/manifest.csv \
@@ -118,6 +119,11 @@ def main(argv=None) -> int:
                 ausentes += 1
                 continue
             por_hash[sha256(ruta)].add(fila[args.col_split])
+        if filas and ausentes == len(filas):
+            print(f"ERROR [hash] no se encontró ninguna imagen en {args.imagenes}: el chequeo por hash no corrió. "
+                  "Revisa la ruta. Donde no estén las imágenes (por ejemplo en CI), agrega al manifiesto una "
+                  "columna sha256 y pásala en --grupos.")
+            return 2
         dup = {h[:12]: s for h, s in por_hash.items() if len(s) > 1}
         if dup:
             fallas += 1
