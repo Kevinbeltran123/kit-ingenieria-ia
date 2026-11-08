@@ -4,7 +4,8 @@
 Revisión completa del kit en `investigacion/09-revision-2026-11-08.md` (~60 hallazgos agrupados en 48, con
 evidencia y arreglo). Están hechos todos los arreglos NECESARIOS que no dependen de GitHub, un commit por arreglo:
 los de código con pruebas que fallaban antes, los de contenido verificados contra la fuente (docs oficiales o
-corriendo la librería). `main` los tiene (fast-forward desde la rama `revision-2026-11-08`). Las explicaciones de
+corriendo la librería). `main` los tiene (fast-forward desde la rama `revision-2026-11-08`) y está en GitHub, en
+el repo privado https://github.com/Kevinbeltran123/kit-ingenieria-ia (subido el 2026-11-08). Las explicaciones de
 los primeros arreglos están en `.explicaciones/commits/` (fuera de git). Hecho:
 - Seguridad: A1 Python 3.9 y `onFailure`, A2 SCP, A3 regla `local` en barreras (borrados, `--no-verify`),
   A4 `Read(**/.env)`, A5–A6 sesión de AWS solo con el rol de lectura, A7 aws-core no se activa (proxy 1.7.0),
@@ -29,7 +30,8 @@ Verificación: 493 pruebas pasan (14 se saltan sin OR-Tools; con OR-Tools 9.15 t
 todas las suites por sí solo, los hooks y scripts corren con Python 3.9, y `claude plugin validate .` pasa.
 
 ## Siguiente
-1. Al subir el kit a GitHub: A10 (revisión en CI con plugin fijado), E1 (CI del kit) y B6 (versiones).
+1. Con el kit ya en GitHub: E1 (CI del kit: pruebas por plugin, `claude plugin validate`, prueba de humo de las
+   plantillas y hooks con Python 3.9) y A10 (revisión en CI con el plugin fijado).
 2. Hallazgos nuevos de esta tanda:
    - Hecho (Kevin dijo «dale»): `evaluador_bloqueado` protege su propia configuración `.claude/ml-vision.json`
      (antes el agente podía vaciar `rutas_protegidas` y después escribir en `eval/`). Límite documentado: no ve
@@ -37,8 +39,8 @@ todas las suites por sí solo, los hooks y scripts corren con Python 3.9, y `cla
    - **EXTRA, para decidir:** `licencias.py` no revisa Dockerfiles (`RUN pip install ultralytics`).
 
 ## Pendiente que decide Kevin
-1. Subir el kit a un repo privado de GitHub. Al hacerlo: CI propio (E1) y decidir versiones (B6: subir `version`
-   en cada cambio o quitarla para que Claude Code use el SHA).
+1. B6, versiones: con el kit en GitHub, quien ya instaló un plugin no recibe cambios mientras `version` no cambie.
+   Opciones: subir `version` en cada cambio, o quitarla para que Claude Code use el SHA del commit.
 2. Limpieza de lo instalado en global (`~/.claude`): quitar/reemplazar software-architecture, write-concisely,
    code-simplifier, review-local-changes, commit, create-pr, playwright-skill, ui-ux-pro-max, antislop;
    security-guidance de global a proyecto; context7 en modo CLI y versión parcheada (CVE-2026-75130).
