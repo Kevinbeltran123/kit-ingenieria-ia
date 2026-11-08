@@ -49,20 +49,44 @@ En el servicio, carga el ONNX con onnxruntime; no uses `mlflow.pytorch.load_mode
 
 ```python
 # tests/test_paridad_onnx.py
-import numpy as np, onnxruntime as ort, torch
+from pathlib import Path
 
-def test_paridad_onnx(modelo_pytorch, lote_real):  # lote_real: imágenes reales del test, no ruido
+import numpy as np, onnxruntime as ort, torch
+from PIL import Image
+
+from entrenamiento.transformaciones import transformacion_eval  # la de validación y test
+from servicio.preprocesar import preprocesar                     # la misma función que llama la Lambda
+
+
+def test_paridad_onnx(modelo_pytorch, rutas_test, tmp_path):  # rutas_test: JPEG reales del test, no ruido
     modelo_pytorch.eval()
-    torch.onnx.export(modelo_pytorch, lote_real, "model.onnx", dynamo=True,
-                      input_names=["x"], output_names=["y"], dynamic_shapes={"x": {0: "batch"}})
-    sesion = ort.InferenceSession("model.onnx", providers=["CPUExecutionProvider"])
+    lote = torch.stack([transformacion_eval(Image.open(r).convert("RGB")) for r in rutas_test])
+    # dynamic_shapes por posición: en un dict, las claves son los argumentos de forward
+    # (pixel_values en transformers), no los input_names del ONNX.
+    torch.onnx.export(modelo_pytorch, (lote,), tmp_path / "model.onnx", dynamo=True,
+                      input_names=["x"], output_names=["y"], dynamic_shapes=({0: "batch"},))
+    sesion = ort.InferenceSession(str(tmp_path / "model.onnx"), providers=["CPUExecutionProvider"])
     with torch.no_grad():
-        esperado = modelo_pytorch(lote_real).numpy()
-    obtenido = sesion.run(None, {"x": lote_real.numpy()})[0]
+        esperado = modelo_pytorch(lote).numpy()
+    obtenido = sesion.run(None, {"x": lote.numpy()})[0]
     np.testing.assert_allclose(obtenido, esperado, rtol=1e-3, atol=1e-4)
     assert (obtenido.argmax(1) == esperado.argmax(1)).all()
+
+
+def test_preprocesamiento_del_servicio_igual_al_de_entrenamiento(rutas_test):
+    # La Lambda decodifica, redimensiona y normaliza con su propio código: si difiere del de
+    # entrenamiento (interpolación, RGB/BGR, media y desviación), en producción el modelo ve otra cosa.
+    for r in rutas_test:
+        servicio = preprocesar(Path(r).read_bytes())  # bytes → array, como en la Lambda
+        entrenamiento = transformacion_eval(Image.open(r).convert("RGB")).numpy()
+        assert servicio.shape == entrenamiento.shape and servicio.dtype == np.float32
+        np.testing.assert_allclose(servicio, entrenamiento, atol=2e-2)  # ≈ 1 nivel de gris normalizado
 ```
-Para INT8, compara también métricas (recall de enfermas) entre FP32 e INT8 sobre el test: la tolerancia numérica no basta.
+- La primera prueba solo compara la exportación: si la Lambda entrega BGR, pasa igual. Por eso la segunda
+  compara el preprocesamiento desde el JPEG crudo (comprobado con torch 2.15: el error de BGR solo lo atrapa ella).
+- Si `preprocesar` no se puede importar en las pruebas, el preprocesamiento está duplicado: muévelo a un módulo
+  que usen la Lambda y estas pruebas.
+- Para INT8, compara también métricas (recall de enfermas) entre FP32 e INT8 sobre el test: la tolerancia numérica no basta.
 
 ## 4. Inferencia por lotes (ortomosaicos)
 

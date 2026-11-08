@@ -27,13 +27,13 @@ Límites a recordar: Serverless Inference no tiene GPU, Model Monitor ni data ca
 
 1. El entrenamiento se lanza desde código versionado en git; el job registra commit, hash del dataset y semilla en MLflow.
 2. Solo se despliega un modelo registrado con ficha (`ficha-modelo`) y evaluado con el test intacto.
-3. Exporta a ONNX y prueba **paridad numérica** PyTorch vs. ONNX en CI antes de desplegar.
+3. Exporta a ONNX y prueba en CI, antes de desplegar, la **paridad numérica** PyTorch vs. ONNX y que el **preprocesamiento de la Lambda** sea el mismo del entrenamiento.
 4. Pesos en safetensors u ONNX (`carga-segura-modelos`).
 5. El agente no despliega: los cambios de infraestructura van por PR y se aplican desde CI.
 
 ## Verificación
 
-- Prueba de paridad ONNX pasa en CI (`references/pasos.md`, sección 3).
+- Las dos pruebas de paridad (modelo y preprocesamiento) pasan en CI (`references/pasos.md`, sección 3).
 - Latencia medida en el destino real (Lambda, celular) con imágenes del tamaño de producción.
 - El job de drift tiene una línea base guardada y una alarma en CloudWatch.
 - El run de MLflow del modelo desplegado tiene ficha, métricas por finca y reporte de paridad.
