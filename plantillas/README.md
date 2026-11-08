@@ -28,14 +28,14 @@ JSON no admite comentarios, así que la variante se elige al adoptar:
 El marketplace del repo solo se registra después de aceptar el diálogo de confianza de la carpeta. Las reglas `deny` aplican de inmediato.
 
 ## Decisiones que conviene conocer
-- **Versiones y cooldown:** `exclude-newer = "7 days"` hace que uv ignore lo publicado hace menos de 7 días. Por eso el fragmento usa rangos (`uv.lock` fija las exactas) y ty, que está en beta y se fija exacto, va en una versión con más de 7 días. Para un parche de seguridad urgente: `exclude-newer-package = { paquete = false }`. Requiere uv reciente (probado con 0.13.7; en tu máquina hay 0.10.7).
+- **Versiones y cooldown:** `exclude-newer = "7 days"` hace que uv ignore lo publicado hace menos de 7 días. Por eso el fragmento usa rangos (`uv.lock` fija las exactas) y ty, que está en beta y se fija exacto, va en una versión con más de 7 días. Para un parche de seguridad urgente: `exclude-newer-package = { paquete = false }`. Requiere uv reciente (probado con 0.13.6; en tu máquina hay 0.10.7).
 - **Sandbox:** activo, con red limitada a PyPI y GitHub y `~/.aws/credentials` oculto. Si un comando necesita otro dominio, Claude Code pregunta. Para desactivarlo en un repo: `"sandbox": {"enabled": false}` en `.claude/settings.local.json`. `~/.ssh` no se bloquea en el sandbox para no romper `git push` por SSH; sí se bloquea su lectura con la herramienta Read.
 - **`attribution`:** `commit` y `pr` vacíos y `sessionUrl: false` (no `false` a secas, que versiones anteriores a 2.1.281 rechazan).
 - **Revisión con Claude en CI:** no corre en PRs de forks ni usa `pull_request_target`; solo herramientas de lectura y comentarios.
 
-## Verificado el 2026-11-07
+## Verificado el 2026-11-08
 - `settings.json` contra el esquema oficial (schemastore): 0 errores.
-- zizmor 1.32.0 sobre los workflows adoptados: sin hallazgos.
-- `uv lock` (uv 0.13.7) con el fragmento: resuelve con ruff 0.17.3, ty 0.0.95 e import-linter 2.15.
-- Imágenes Docker: `ghcr.io/astral-sh/uv:0.13.7-python3.12-trixie-slim` y `python:3.12-slim-trixie` existen.
+- zizmor 1.31.1 sobre los workflows adoptados: sin hallazgos.
+- `uv lock` (uv 0.13.6) con el fragmento: resuelve con ruff 0.17.3, ty 0.0.95 e import-linter 2.15.
+- Imágenes Docker: `ghcr.io/astral-sh/uv:0.13.6-python3.12-trixie-slim` y `python:3.12-slim-trixie` existen.
 - Pruebas de `adoptar.py`: `python3 -m pytest bin/tests -q`.

@@ -44,7 +44,7 @@ todas las suites por sí solo, los hooks y scripts corren con Python 3.9, y `cla
 2. Limpieza de lo instalado en global (`~/.claude`): quitar/reemplazar software-architecture, write-concisely,
    code-simplifier, review-local-changes, commit, create-pr, playwright-skill, ui-ux-pro-max, antislop;
    security-guidance de global a proyecto; context7 en modo CLI y versión parcheada (CVE-2026-75130).
-3. uv local: 0.10.7 acepta `exclude-newer = "7 days"`; subir a 0.13.7 lo alinea con el CI y el pre-commit de la
+3. uv local: 0.10.7 acepta `exclude-newer = "7 days"`; subir a 0.13.6 (la que fija la plantilla) lo alinea con el CI y el pre-commit de la
    plantilla, y sirve para `uv audit`.
 4. Datos de la empresa: orquestador de datos, Terraform vs CDK, monitoreo, gestor de tareas, framework web.
 5. Skills no construidas aún: `geo-raster-agro`, CLAUDE.md del equipo de datos, observabilidad de ML (drift).

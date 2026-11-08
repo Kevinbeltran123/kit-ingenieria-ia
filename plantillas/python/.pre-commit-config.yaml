@@ -3,7 +3,7 @@
 # las actualiza en un solo lugar. Los argumentos y tipos de archivo son los de sus hooks oficiales.
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.13.7
+    rev: 0.13.6
     hooks:
       - id: uv-lock
   - repo: https://github.com/gitleaks/gitleaks

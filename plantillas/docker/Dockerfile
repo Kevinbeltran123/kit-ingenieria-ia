@@ -2,7 +2,7 @@
 # Fija la imagen base por digest en producción (Dependabot la actualiza).
 ARG PYTHON_VERSION=3.12
 
-FROM ghcr.io/astral-sh/uv:0.13.7-python${PYTHON_VERSION}-trixie-slim AS builder
+FROM ghcr.io/astral-sh/uv:0.13.6-python${PYTHON_VERSION}-trixie-slim AS builder
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=0
 WORKDIR /app
 # Primero solo dependencias: se cachean mientras no cambie el lockfile.
