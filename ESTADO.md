@@ -27,7 +27,7 @@ los primeros arreglos están en `.explicaciones/commits/` (fuera de git). Hecho:
 - Nuevo: plugin `explicador` (vista B, línea por línea, exigido antes de `gh pr create`; `--commit` para un
   commit puntual). Es para el código de la empresa; en el kit no se generan explicaciones.
 
-Verificación: 548 pruebas pasan, en Python 3.9 y 3.12 (con OR-Tools 9.15 también las 14 de optimización), cada
+Verificación: 577 pruebas pasan, en Python 3.9 y 3.12 (con OR-Tools 9.15 también las 14 de optimización), cada
 commit pasa todas las suites por sí solo, la prueba de humo de las plantillas pasa (8/8 pasos) y
 `claude plugin validate .` pasa (con un aviso por plugin, que sugiere `version`: ver B6).
 
@@ -46,19 +46,28 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
    - Hecho (Kevin dijo «dale»): `evaluador_bloqueado` protege su propia configuración `.claude/ml-vision.json`
      (antes el agente podía vaciar `rutas_protegidas` y después escribir en `eval/`). Límite documentado: no ve
      comandos sobre la carpeta entera (`mv .claude otra`); eso lo frena el CODEOWNERS en el PR.
-   - **EXTRA, para decidir:** `licencias.py` no revisa Dockerfiles (`RUN pip install ultralytics`).
+   - Hecho (2026-11-08, ver abajo): `licencias.py` revisa Dockerfiles y Containerfiles, sus `RUN` y la imagen de
+     `FROM` (718fe4f).
 2. Ideas de gentle-factory y pstack (revisadas el 2026-11-08; Kevin aprobó las 3 primeras con «si, dale»):
    - Hecho: el hook de Stop no da por revisado lo que no pudo correr (ae8b00e). `no_silenciar.py`: solo la persona
      agrega `# noqa`, `# type: ignore`, `# pragma: no cover` y similares, y Claude no corre `ruff --add-noqa` ni
      `ty --add-ignore` (42ff91f; probado con Claude Code 2.1.319 real). Plantillas con FBT001/FBT002,
      `acyclic_siblings` y el anti-patrón "fijar una constante" (015b345; probado al derecho y al revés).
-   - **Para decidir:** 4) copiar 4 skills de pstack fijadas por SHA 6b03002 (MIT, Lauren Tan) como se hizo con
-     `flujo`: create- y maintain-verification-skill, correct y blast-radius; benchmark-checklist dentro de
-     `rendimiento-python`, y 3 principios para skills que ya existen (las dos ediciones, las 3 preguntas de
-     idempotencia, el estado legítimo). 5) Checklist de revisión con fuentes (los 107 de gentle-factory: SWE at
-     Google, eng-practices, ASVS 5.0, CWE). 6) Gate que juzga solo lo nuevo de un PR (huellas de los hallazgos en
-     base y en head).
-   - **EXTRA posible:** que `no_silenciar` bloquee también `@pytest.mark.skip`/`xfail` nuevos (hoy no lo hace).
+   - Decidido el 2026-11-08 (Kevin: «Escoge las mejores alternativas desde un punto de vista objetivo»), con la
+     evidencia de cada una:
+     - 4) De pstack: `/correct` y la pregunta del estado legítimo en `flujo` (f8d63a3), y las 7 preguntas de
+       benchmark en `rendimiento-python` (512d88e). No: create- y maintain-verification-skill (Claude Code 2.1.319 ya
+       trae `/run-skill-generator` y `/run`), blast-radius (lo cubre `differential-review` y depende de 4 skills de
+       pstack) y las otras dos ideas (ya estaban en `calidad-pruebas` e `ingesta-idempotente`).
+     - 5) Checklist de revisión: no por ahora. *Software Engineering at Google* es CC BY-NC-ND (58 de las 107
+       preguntas no se pueden publicar ni usar en un kit de empresa), la automatización de gentle-factory es de
+       ESLint y nadie midió el efecto. Se retoma si la revisión en PRs reales de la empresa sale ruidosa: "citar o
+       marcar como opinión" con un catálogo cerrado de eng-practices (CC BY 3.0) y ASVS (CC BY-SA 4.0).
+     - 6) Gate solo de lo nuevo: no se construye. Cada herramienta trae su línea base; el README («Si el repo ya
+       tiene código») las explica, probadas con ruff 0.17.3, ty 0.0.95 y complexipy 8.3.0 (eef1007).
+     - Extra: Claude tampoco salta pruebas (skip, xfail, `SkipTest`, salir en verde); un `skipif` nuevo se le
+       pregunta a la persona (0812aa2, probado con Claude Code real).
+     - `.impeccable/config.json` versionado, como pide impeccable (e749b61).
 
 ## Pendiente que decide Kevin
 1. Resuelto el 2026-11-08: el repo pasó a público, así Actions corre gratis (Kevin no va a pagar más). Si vuelve a
@@ -73,6 +82,8 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
 5. Skills no construidas aún: `geo-raster-agro`, CLAUDE.md del equipo de datos, observabilidad de ML (drift).
 6. EXTRA de la revisión sin hacer: D5 (aws-core cuesta ~4.900 tokens fijos), D6 (solapes entre skills), F2 (skills
    según el stack de la empresa).
+7. Al subir ty (fijado en 0.0.95; la última es 0.0.99): 0.0.97 renombró `unresolved-import` a `import-not-found`
+   (changelog de ty). Revisar los `# ty: ignore[...]` y regenerar las líneas base con `--update-baseline`.
 
 ## Decisiones
 - Stack empresa: casi todo Python, GitHub, AWS. Sin política de IA.
@@ -91,3 +102,6 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
 - Las excepciones a las reglas (`# noqa` y similares) solo las agrega la persona: Claude explica el falso positivo
   y dice cuál y dónde (hook `no_silenciar`). Para una línea base en un repo viejo, `CALIDAD_PYTHON_PERMITIR_SILENCIAR=1`.
 - FBT003 fuera de la plantilla: marca APIs de terceros (`model.train(False)`), y FBT001 ya cubre el código propio.
+- De otros proyectos se toma solo lo que el kit y Claude Code no traen ya (pstack: `/correct`, el estado legítimo,
+  las preguntas de benchmark). Repos con código viejo: la línea base de cada herramienta, no un gate propio.
+  Nada de *Software Engineering at Google* en el kit (CC BY-NC-ND).
