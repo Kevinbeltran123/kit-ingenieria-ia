@@ -30,8 +30,10 @@ def herramienta_falsa(raiz: Path, nombre: str, codigo: int, salida: str = "") ->
     return registro
 
 
-def correr(hook: str, datos: dict, raiz: Path, temporal: Path, path_extra: str = ""):
+def correr(hook: str, datos: dict, raiz: Path, temporal: Path, path_extra: str = "", path_minimo: bool = False):
     env = {**os.environ, "CLAUDE_PROJECT_DIR": str(raiz), "TMPDIR": str(temporal)}
+    if path_minimo:  # sin las herramientas de la máquina (un pytest global, por ejemplo)
+        env["PATH"] = "/usr/bin:/bin"
     if path_extra:
         env["PATH"] = path_extra + os.pathsep + env["PATH"]
     return subprocess.run(
@@ -192,6 +194,34 @@ def test_import_linter_solo_si_esta_configurado(proyecto):
     editar(raiz, temporal, sesion="s2")
     r = correr("revisar_al_terminar.py", {"session_id": "s2"}, raiz, temporal)
     assert r.returncode == 2 and "import-linter falló" in r.stderr
+
+
+def test_herramienta_configurada_sin_instalar_no_pasa_en_silencio(proyecto):
+    """Con [tool.ty] y tests/ pero sin ty ni pytest en el .venv, salía con 0 sin revisar nada."""
+    raiz, temporal = proyecto
+    (raiz / "pyproject.toml").write_text("[tool.ty]\n")
+    (raiz / "tests").mkdir()
+    herramienta_falsa(raiz, "ruff", 0)
+    editar(raiz, temporal)
+    r = correr("revisar_al_terminar.py", {"session_id": "s1"}, raiz, temporal, path_minimo=True)
+    assert r.returncode == 2
+    assert "ty: está configurado pero no instalado" in r.stderr
+    assert "pytest: está configurado pero no instalado" in r.stderr
+    assert "uv sync" in r.stderr
+
+
+def test_sin_herramientas_tras_dos_intentos_avisa_que_no_se_reviso(proyecto):
+    raiz, temporal = proyecto
+    (raiz / "tests").mkdir()
+    herramienta_falsa(raiz, "ruff", 0)
+    editar(raiz, temporal)
+    continuar = {"session_id": "s1", "stop_hook_active": True}
+    assert correr("revisar_al_terminar.py", {"session_id": "s1"}, raiz, temporal, path_minimo=True).returncode == 2
+    assert correr("revisar_al_terminar.py", continuar, raiz, temporal, path_minimo=True).returncode == 2
+    r = correr("revisar_al_terminar.py", continuar, raiz, temporal, path_minimo=True)
+    assert r.returncode == 0
+    aviso = json.loads(r.stdout)["systemMessage"]
+    assert "pytest" in aviso and "sin poder revisarse" in aviso
 
 
 # --- notificar.py ---

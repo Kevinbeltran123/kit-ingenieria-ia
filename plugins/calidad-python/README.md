@@ -5,7 +5,7 @@ Hooks de calidad para repos Python. Sin dependencias: solo `python3` de la bibli
 | Momento | Qué hace |
 |---|---|
 | Al editar un `.py` (PostToolUse) | `ruff check --fix` + `ruff format` sobre ese archivo. Si quedan errores, Claude los ve y los corrige. |
-| Al terminar el turno (Stop) | Si se editaron `.py` en la sesión: verificador de tipos, import-linter y pytest. Si algo falla, Claude no puede terminar hasta corregirlo, y se vuelve a revisar después de cada corrección. Si tras 2 intentos sigue fallando, termina y te avisa. |
+| Al terminar el turno (Stop) | Si se editaron `.py` en la sesión: verificador de tipos, import-linter y pytest. Si algo falla, Claude no puede terminar hasta corregirlo, y se vuelve a revisar después de cada corrección. Una herramienta configurada pero no instalada cuenta como sin revisar, no como aprobada: pide instalarla (`uv sync`). Si tras 2 intentos sigue fallando, termina y te avisa. |
 | Cuando Claude te necesita (Notification) | Aviso de macOS. |
 
 Skill `verify`: corre todos los sensores sobre el repo completo (ruff, formato, tipos, import-linter, pytest, deptry) antes de un commit o PR.
