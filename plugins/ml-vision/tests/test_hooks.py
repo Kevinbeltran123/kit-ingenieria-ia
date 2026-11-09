@@ -445,5 +445,36 @@ def test_bash_que_lee_aprobaciones_se_permite(repo):
     assert lic(repo, "Bash", command="grep APROBADO LICENSES.md").returncode == 0
 
 
+@pytest.mark.parametrize("nombre, contenido", [
+    ("Dockerfile", "FROM python:3.12-slim\nRUN pip install ultralytics\n"),
+    ("Dockerfile.gpu", "FROM python:3.12\nRUN --mount=type=cache,target=/root/.cache/uv \\\n"
+                       "    uv pip install --system ultralytics\n"),
+    ("api.Dockerfile", 'FROM python:3.12\nRUN ["pip", "install", "rfdetr[plus]"]\n'),
+    ("Containerfile", "FROM python:3.12\nRUN <<EOF\npip install ultralytics\nEOF\n"),
+    ("Dockerfile", "FROM ultralytics/ultralytics:8.3.0\nCOPY . /app\n"),
+])
+def test_dockerfile_que_trae_un_paquete_restringido_se_bloquea(repo, nombre, contenido):
+    r = lic(repo, "Write", file_path=str(repo / nombre), content=contenido)
+    assert r.returncode == 2 and "aprobación de licencia" in r.stderr
+
+
+def test_dockerfile_sin_paquetes_restringidos_se_permite(repo):
+    contenido = ("# syntax=docker/dockerfile:1\n# no instalamos ultralytics: es AGPL\nFROM python:3.12-slim\n"
+                 'RUN uv sync --locked\nLABEL nota="pip install ultralytics"\n')
+    assert lic(repo, "Write", file_path=str(repo / "Dockerfile"), content=contenido).returncode == 0
+
+
+def test_dockerfile_que_ya_lo_tenia_se_puede_editar(repo):
+    (repo / "Dockerfile").write_text("FROM python:3.12\nRUN pip install ultralytics\nRUN echo hola\n")
+    r = lic(repo, "Edit", file_path=str(repo / "Dockerfile"), old_string="RUN echo hola", new_string="RUN echo chao")
+    assert r.returncode == 0
+
+
+def test_dockerfile_aprobado_en_licenses_se_permite(repo):
+    (repo / "LICENSES.md").write_text("APROBADO: ultralytics — licencia Enterprise n.º 1, legal (2026-11-08)\n")
+    r = lic(repo, "Write", file_path=str(repo / "Dockerfile"), content="FROM python:3.12\nRUN pip install ultralytics\n")
+    assert r.returncode == 0
+
+
 def test_licencias_json_invalido_no_bloquea(repo):
     assert hook("licencias.py", None, repo, crudo="basura").returncode == 0

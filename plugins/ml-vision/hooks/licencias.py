@@ -7,7 +7,8 @@ proyecto tiene una línea como:
     APROBADO: ultralytics — licencia Enterprise n.º 123, legal (2026-11-07)
 
 Revisa Edit/Write/MultiEdit en archivos de dependencias (también `requirements/*.txt`
-y el bloque PEP 723 `# /// script` de un .py) y, en Bash, los comandos que instalan
+y el bloque PEP 723 `# /// script` de un .py), en los Dockerfile y Containerfile (lo que
+instalan sus RUN, también en forma exec o con heredoc, y la imagen de FROM) y, en Bash, los comandos que instalan
 o ejecutan paquetes (pip, uv, uvx, `uv run --with`, pipx, poetry, conda, pixi), también
 dentro de `bash -c` o `ssh`. Las comillas se respetan: un mensaje de commit o un grep
 que menciona una instalación no es una instalación. Las líneas APROBADO: solo las
@@ -32,6 +33,9 @@ ARCHIVOS_DEPENDENCIAS = re.compile(
     r"^(pyproject\.toml|setup\.cfg|setup\.py|environment\.ya?ml|pixi\.toml|requirements[\w.-]*\.(txt|in))$"
 )
 PEP723 = re.compile(r"^# /// script\s*$(.*?)^# ///\s*$", re.MULTILINE | re.DOTALL)
+DOCKERFILE = re.compile(r"^(?:dockerfile|containerfile)(?:[.-][\w.-]+)?$|\.(?:dockerfile|containerfile)$", re.IGNORECASE)
+FORMA_EXEC = re.compile(r"^(\s*(?:RUN|CMD|ENTRYPOINT)\s+)(\[.*\])\s*$", re.IGNORECASE | re.MULTILINE)
+IMAGEN = re.compile(r"^\s*FROM\s+(?:--\S+\s+)*(\S+)", re.IGNORECASE | re.MULTILINE)
 INSTALADORES = {"pip", "pip3", "uv", "uvx", "poetry", "conda", "mamba", "micromamba", "pixi", "pipx"}
 SHELLS = {"bash", "sh", "zsh", "dash"}
 PUNTUACION = "();<>|&`\n"
@@ -132,6 +136,21 @@ def restringidos_en_bash(comando: str) -> list[str]:
     return encontrados
 
 
+def restringidos_en_dockerfile(texto: str) -> list[str]:
+    """Paquetes restringidos que traen los RUN (y CMD/ENTRYPOINT con `uv run --with`) y las imágenes de FROM."""
+    def a_shell(m: re.Match) -> str:  # RUN ["pip", "install", "x"] -> RUN pip install x
+        try:
+            return m.group(1) + " ".join(shlex.quote(str(p)) for p in json.loads(m.group(2)))
+        except (ValueError, TypeError):
+            return m.group(0)
+    texto = FORMA_EXEC.sub(a_shell, texto)
+    # Las líneas que no son RUN no instalan nada, y las continuaciones y heredocs ya los lee segmentos().
+    encontrados = restringidos_en_bash(texto)
+    for imagen in IMAGEN.findall(texto):
+        encontrados += [n for n, rx in PAQUETES.items() if rx.search(imagen)]
+    return encontrados
+
+
 APROBACION = re.compile(r"^\s*[-*]?\s*APROBADO:", re.IGNORECASE | re.MULTILINE)
 ESCRIBE = re.compile(r">|\btee\b|\bsed\s+(?:-\w+\s+)*-i|\bperl\s+-\w*i")
 SOLO_LA_PERSONA = ("Bloqueado: solo la persona registra aprobaciones de licencia en LICENSES.md. "
@@ -175,7 +194,10 @@ def main() -> int:
 
     if herramienta in {"Edit", "Write", "MultiEdit"}:
         ruta = entrada.get("file_path", "")
-        if Path(ruta).suffix == ".py" and not ARCHIVOS_DEPENDENCIAS.match(Path(ruta).name):
+        if DOCKERFILE.search(Path(ruta).name):
+            antes, despues = (restringidos_en_dockerfile(t) for t in archivo_antes_y_despues(herramienta, entrada))
+            nuevos = [n for n in set(despues) if despues.count(n) > antes.count(n)]
+        elif Path(ruta).suffix == ".py" and not ARCHIVOS_DEPENDENCIAS.match(Path(ruta).name):
             # Dependencias del bloque PEP 723, que `uv run script.py` instala.
             antes, despues = archivo_antes_y_despues(herramienta, entrada)
             nuevos = agregados("\n".join(PEP723.findall(antes)), "\n".join(PEP723.findall(despues)))
