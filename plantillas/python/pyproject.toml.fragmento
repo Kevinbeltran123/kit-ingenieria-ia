@@ -39,6 +39,10 @@ select = [
   "SIM", "RET", "PIE",  # simplificación: lo que la IA infla
   "C4", "PERF",
   "ARG",                # argumentos sin uso
+  # Bool posicional al definir: exportar("x", True) no se lee (Fowler, FlagArgument). Se arregla con `*`
+  # antes del bool, también en endpoints de FastAPI. FBT003 (el bool al llamar) no: marca APIs de terceros
+  # como model.train(False), y en el código propio ya lo cubre FBT001.
+  "FBT001", "FBT002",
   "ERA",                # código comentado
   "T20",                # print() olvidados
   "S",                  # bandit (seguridad básica)
@@ -54,7 +58,7 @@ select = [
 ignore = ["D100", "D104", "D105", "D107"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "D", "PLR2004", "ARG"]
+"tests/**" = ["S101", "D", "PLR2004", "ARG", "FBT"]  # FBT: los bool de @pytest.mark.parametrize
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -123,3 +127,11 @@ name = "Dominio y aplicación sin frameworks ni AWS"
 type = "forbidden"
 source_modules = ["app.domain", "app.application"]
 forbidden_modules = ["fastapi", "sqlalchemy", "boto3", "botocore", "httpx", "pydantic_settings"]
+
+# Sin ciclos entre módulos hermanos en todos los niveles del paquete (hasta 10 de profundidad):
+# app.domain.lote ↔ app.domain.cosecha o app.adapters.s3 ↔ app.adapters.db. El contrato de capas no
+# los ve, porque son de la misma capa.
+[[tool.importlinter.contracts]]
+name = "Sin ciclos entre módulos hermanos"
+type = "acyclic_siblings"
+ancestors = ["app"]

@@ -26,6 +26,7 @@ Una prueba vale si **falla cuando el código está mal**. La evidencia de 2026 m
 | `boto3` mockeado a mano | `MagicMock()` para S3 | `moto` (`@mock_aws`): S3, SQS y DynamoDB en memoria, sin Docker ni cuenta |
 | Capturar todo | `with pytest.raises(Exception)` | el error de dominio específico + `match=` |
 | Borrar o saltar una prueba que falla | `@pytest.mark.skip` sin issue | arreglar el código, o explicar y enlazar issue |
+| Fijar una constante | `assert TARIFA == 0.02`: no falla aunque cambie el código que la usa | probar lo que hace el código con ella (`assert cobro(100) == 2`); fijar el valor solo vale si es un contrato público (una variable de entorno, la versión de un protocolo) |
 | Snapshot de todo | comparar JSON gigante generado | asserts sobre los campos que importan |
 
 ## Herramientas según el tipo de prueba
