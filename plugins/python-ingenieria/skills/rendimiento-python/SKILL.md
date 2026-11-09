@@ -1,6 +1,6 @@
 ---
 name: rendimiento-python
-description: Optimización de rendimiento en Python con medición primero - perfilado con py-spy y scalene, benchmarks con pytest-benchmark, y patrones comunes (consultas N+1, I/O async, Polars vs pandas, vectorización). Úsala cuando algo esté lento, haya timeouts, alto uso de CPU o memoria, costos altos de cómputo, o pidan "optimizar", "performance", "profiling", "es lento", "acelerar".
+description: Optimización de rendimiento en Python con medición primero - perfilado con py-spy y scalene, benchmarks con pytest-benchmark, y patrones comunes (consultas N+1, I/O async, Polars vs pandas, vectorización). Úsala cuando algo esté lento, haya timeouts, alto uso de CPU o memoria, costos altos de cómputo, al reportar una mejora o regresión medida, o pidan "optimizar", "performance", "profiling", "benchmark", "es lento", "acelerar".
 ---
 
 # Rendimiento Python
@@ -44,20 +44,35 @@ Optimizaciones de micro-nivel (cambiar `+` por `join`, etc.) casi nunca son el c
 - Si la mejora es < 10 % y el código queda más complejo, revierte.
 - Las pruebas existentes deben seguir pasando (skill `verify`); si no había, escribe una que fije el resultado antes de optimizar.
 
-## 5. Reportar
+## 5. Antes de reportar un número: 7 preguntas
 
-En el PR:
+Adaptadas de `benchmark-checklist` de pstack (ver `LICENSE-pstack` del plugin). Respóndelas con evidencia de una corrida, no mirando el código. Si piden solo un número aproximado, basta una corrida: igual responde la 4 y la 7, y di que es una sola. Elegir entre opciones nunca es un número aproximado.
+
+1. **¿Por qué no es el doble de rápido?** Nombra el límite: un núcleo de CPU, I/O, red, el GIL, la base de datos, el generador de carga. Perfila en una corrida aparte, porque el perfilador frena. Si el cambio no movió el número, el límite explica por qué.
+2. **¿Los dos lados estaban afinados igual?** Configuración de producción en ambos: variables de entorno, pool de conexiones, tamaño de lote, cachés frías o calientes como en producción, mismas versiones y datos. Si un lado corre con valores por defecto (un commit por fila, un índice que falta), comparaste configuraciones, no implementaciones: afínalo y vuelve a medir.
+3. **¿Rompe un límite físico?** Haz la cuenta: bytes por segundo contra el disco o la red, operaciones por segundo contra los núcleos. Quitar una parte que toma el 10 % del total acelera como mucho un 11 %. Un resultado imposible midió otra cosa: una caché, algo que no hizo nada o un bug.
+4. **¿Hubo errores?** Cuenta los fallos y las respuestas que no son 2xx, y revisa que la salida sea correcta, no solo que exista. Un rechazo es rápido; un timeout con reintentos, lento.
+5. **¿Se repite?** Al menos 5 corridas por lado, alternadas (A, B, A, B…), para que el calentamiento y las cachés no favorezcan a ninguno. Reporta mediana y rango: una diferencia menor que la variación entre corridas no es una diferencia.
+6. **¿Importa?** Mide también el camino completo que espera el usuario, con datos y concurrencia reales, y reporta la mejora como parte del total: acelerar algo que toma el 1 % de una petición la mejora como mucho un 1 %.
+7. **¿El trabajo pasó?** Confirma que corrió dentro de lo que mediste. Un `LazyFrame` de Polars sin `.collect()`, un generador que nadie recorre, una corrutina sin `await` o un kernel de CUDA sin `torch.cuda.synchronize()` antes de parar el reloj dan tiempos de un trabajo que no ocurrió (`torch.utils.benchmark.Timer` sincroniza solo).
+
+El veredicto es "no concluyente" si no puedes nombrar el límite, si un lado no estaba afinado o si no pudiste responder la 4 o la 7.
+
+## 6. Reportar
+
+En el PR, el veredicto primero (más rápido, más lento, sin diferencia medible o no concluyente) y un solo número principal:
 
 ```
 Operación: procesar ortomosaico 2 GB (ml.g5.xlarge)
-Antes: 14 min 10 s (mediana de 3 corridas)
-Después: 4 min 35 s
-Causa: decodificación JPEG en el hilo principal; ahora en DataLoader con 8 workers
+Antes: 14 min 10 s (mediana de 5 corridas alternadas, rango 13 min 52 s a 14 min 31 s)
+Después: 4 min 35 s (rango 4 min 28 s a 4 min 44 s)
+Límite antes: decodificación JPEG en el hilo principal; ahora en DataLoader con 8 workers
+Límite después: lectura desde S3
 Perfil: perfil-antes.svg / perfil-despues.svg
 ```
 
 ## Verificación
 
-- Hay una medición antes y otra después, con los mismos datos y hardware.
-- La mejora se explica por una causa vista en el perfil.
+- Hay una medición antes y otra después, con los mismos datos y hardware, de al menos 5 corridas alternadas por lado.
+- La mejora se explica por el límite visto en el perfil, y las 7 preguntas tienen respuesta (o el veredicto dice "no concluyente" y por qué).
 - `verify` pasa.

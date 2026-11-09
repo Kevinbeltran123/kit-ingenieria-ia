@@ -70,6 +70,7 @@ python3 bin/humo_plantillas.py   # repo nuevo con las plantillas y los pasos de 
 ## Licencia
 MIT (ver `LICENSE`). Lo que viene de otros conserva su licencia: `plugins/flujo` es una copia editada de
 obra/superpowers (MIT, © Jesse Vincent, ver `plugins/flujo/LICENSE`) con una skill y un punto de pstack (MIT,
-© Lauren Tan, ver `plugins/flujo/LICENSE-pstack`) y las fuentes IBM Plex Mono del explicador son
+© Lauren Tan, ver `plugins/flujo/LICENSE-pstack`), las 7 preguntas de benchmark de `rendimiento-python` también
+vienen de pstack (ver `plugins/python-ingenieria/LICENSE-pstack`) y las fuentes IBM Plex Mono del explicador son
 OFL 1.1 (ver su `OFL.txt`). Los plugins de terceros del marketplace no están copiados aquí: se instalan desde sus
 repos, con sus licencias.
