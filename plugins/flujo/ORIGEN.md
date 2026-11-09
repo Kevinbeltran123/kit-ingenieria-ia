@@ -25,8 +25,25 @@
 - writing-plans/SKILL.md: sin la línea de worktrees; planes en `docs/planes/`; cabecera del plan y "Execution Handoff" reescritos para ejecutar en la misma sesión con TDD + verificación.
 - brainstorming/SKILL.md: `description` sin "You MUST… any creative work" (se activaba en casi cualquier pedido); `superpowers:writing-plans` → `flujo:writing-plans`; specs en `docs/specs/`; quitado el companion visual (se dibuja en texto o Mermaid).
 
+## Segunda fuente: pstack
+- Repo: https://github.com/cursor/plugins, carpeta `harness/pstack/claude-code` (licencia MIT, ver `LICENSE-pstack`,
+  autora Lauren Tan)
+- Commit: `6b0300214a09fd6029cfb7077043125758cd1fd2` (pstack 0.15.36)
+- Copiado: 2026-11-08
+- Copiado: `correct/SKILL.md`, sin cambios salvo una nota `<!-- kit: -->` (la excepción la escribe la persona).
+- Tomado: en systematic-debugging/SKILL.md, el punto del estado legítimo de `principle-fix-root-causes`, marcado
+  con `<!-- kit: -->`.
+- No copiado, con el motivo:
+  - `create-verification-skill` y `maintain-verification-skill`: Claude Code ya trae `/run-skill-generator`, que
+    escribe la skill del proyecto para levantar y manejar la app, y `/run`, que la usa (comprobado en 2.1.319).
+  - `blast-radius`: `differential-review` (Trail of Bits, ya en el marketplace) cubre el mismo pedido ("qué más
+    rompe este cambio"), y la de pstack depende de 4 skills suyas no copiadas (`how`, `why`, `arena`, `unslop`).
+  - `benchmark-checklist`: sus 7 preguntas están adaptadas en `python-ingenieria/rendimiento-python`.
+  - `poteto-mode` y el resto: otro flujo de trabajo, con acciones externas sin preguntar.
+
 ## Revisión de seguridad
 Solo Markdown, un `.ts` de ejemplo (no se ejecuta) y `find-polluter.sh` (bisección local que corre `npm test` por archivo; sin red ni lecturas fuera del repo). Sin hooks, MCP ni binarios.
 
 ## Actualizar
-Ver `terceros/README.md`: comparar `git diff <SHA viejo> <SHA nuevo> -- skills/<skill>` de las 5 skills, reaplicar los cambios de arriba. El plugin no lleva `version`: el commit nuevo ya es la versión nueva.
+Ver `terceros/README.md`: comparar `git diff <SHA viejo> <SHA nuevo> -- skills/<skill>` de las 5 skills, reaplicar los cambios de arriba.
+Para pstack, lo mismo con `harness/pstack/claude-code/skills/correct` y `principle-fix-root-causes` en cursor/plugins. El plugin no lleva `version`: el commit nuevo ya es la versión nueva.

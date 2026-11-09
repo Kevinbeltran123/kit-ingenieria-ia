@@ -116,6 +116,8 @@ You MUST complete each phase before proceeding to the next.
    - What called this with bad value?
    - Keep tracing up until you find the source
    - Fix at source, not at symptom
+   <!-- kit: de pstack, principle-fix-root-causes (ver ORIGEN.md) -->
+   - Ask whether the state that triggered the symptom is legitimate. If the system may be in that state, the code that broke on it is the root cause, and handling the state there is the fix. If the state should never exist, a check where it broke hides the bug: find what produced the state. Guards, retries, swallowed errors, clamped values and discarded state are the usual ways to hide one.
 
 ### Phase 2: Pattern Analysis
 

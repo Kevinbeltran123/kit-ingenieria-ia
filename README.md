@@ -11,7 +11,7 @@ Se instala **por repo**, nunca global.
 |---|---|---|
 | `calidad-python` | Hooks: solo tú silencias reglas (`# noqa`, `# type: ignore`…); ruff al editar; tipos, import-linter y pytest antes de terminar; aviso de macOS. Skill `verify` | base |
 | `barreras` | Bloquea apply/deploy/destroy, SQL destructivo en producción, edición de `.env`/lockfiles/migraciones aplicadas, lectura de secretos | base |
-| `flujo` | Superpowers v7.0.2 (5 skills, fijado por SHA): brainstorming, planes, TDD, depuración, verificar antes de terminar | base |
+| `flujo` | Superpowers v7.0.2 (5 skills, fijado por SHA): brainstorming, planes, TDD, depuración, verificar antes de terminar; y `/correct` de pstack, que convierte una corrección repetida en una regla que se cumple sola | base |
 | `python-ingenieria` | Arquitectura hexagonal pragmática, deuda técnica, documentación, rendimiento, calidad de pruebas (mutmut), cadena de suministro | base |
 | `devops-aws` | Acceso seguro del agente a AWS, GitHub Actions seguras, Dockerfile con uv, IaC sin apply, observabilidad | base (opcional) |
 | `datos-optimizacion` | Formular modelos de optimización con verificador, ingesta idempotente, contratos de datos, migraciones Alembic | datos |
@@ -69,6 +69,7 @@ python3 bin/humo_plantillas.py   # repo nuevo con las plantillas y los pasos de 
 
 ## Licencia
 MIT (ver `LICENSE`). Lo que viene de otros conserva su licencia: `plugins/flujo` es una copia editada de
-obra/superpowers (MIT, © Jesse Vincent, ver `plugins/flujo/LICENSE`) y las fuentes IBM Plex Mono del explicador son
+obra/superpowers (MIT, © Jesse Vincent, ver `plugins/flujo/LICENSE`) con una skill y un punto de pstack (MIT,
+© Lauren Tan, ver `plugins/flujo/LICENSE-pstack`) y las fuentes IBM Plex Mono del explicador son
 OFL 1.1 (ver su `OFL.txt`). Los plugins de terceros del marketplace no están copiados aquí: se instalan desde sus
 repos, con sus licencias.

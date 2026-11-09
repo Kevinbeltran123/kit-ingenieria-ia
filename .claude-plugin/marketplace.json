@@ -18,7 +18,7 @@
     {
       "name": "flujo",
       "source": "./plugins/flujo",
-      "description": "Flujo de trabajo: brainstorming, planes, TDD, depuración sistemática y verificación antes de terminar (selección de obra/superpowers v7.0.2, sin hooks)"
+      "description": "Flujo de trabajo: brainstorming, planes, TDD, depuración sistemática y verificación antes de terminar (selección de obra/superpowers v7.0.2, sin hooks), y convertir correcciones repetidas en reglas (correct, de pstack)"
     },
     {
       "name": "python-ingenieria",
