@@ -9,7 +9,7 @@ Se instala **por repo**, nunca global.
 ### Plugins propios
 | Plugin | Qué hace | Perfil |
 |---|---|---|
-| `calidad-python` | Hooks: solo tú silencias reglas (`# noqa`, `# type: ignore`…); ruff al editar; tipos, import-linter y pytest antes de terminar; aviso de macOS. Skill `verify` | base |
+| `calidad-python` | Hooks: solo tú silencias reglas o saltas pruebas (`# noqa`, `# type: ignore`, `skip`…); ruff al editar; tipos, import-linter y pytest antes de terminar; aviso de macOS. Skill `verify` | base |
 | `barreras` | Bloquea apply/deploy/destroy, SQL destructivo en producción, edición de `.env`/lockfiles/migraciones aplicadas, lectura de secretos | base |
 | `flujo` | Superpowers v7.0.2 (5 skills, fijado por SHA): brainstorming, planes, TDD, depuración, verificar antes de terminar; y `/correct` de pstack, que convierte una corrección repetida en una regla que se cumple sola | base |
 | `python-ingenieria` | Arquitectura hexagonal pragmática, deuda técnica, documentación, rendimiento, calidad de pruebas (mutmut), cadena de suministro | base |

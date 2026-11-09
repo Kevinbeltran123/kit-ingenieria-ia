@@ -343,6 +343,67 @@ def test_por_terminal_deja_buscar_y_mencionar_excepciones(proyecto, comando):
     assert silenciar("Bash", {"command": comando}, raiz, temporal).returncode == 0
 
 
+def prueba_con(raiz: Path, contenido: str) -> dict:
+    return {"file_path": str(raiz / "tests" / "test_x.py"), "content": contenido}
+
+
+@pytest.mark.parametrize("linea", [
+    '@pytest.mark.skip(reason="falla en CI")',
+    "@pytest.mark.xfail(strict=True)",
+    "pytestmark = pytest.mark.skip",
+    "@mark.xfail",
+    '@pytest.mark.skipif(True, reason="x")',
+    '    pytest.skip("todavía no")',
+    '    pytest.xfail("se arregla después")',
+    '@unittest.skip("lento")',
+    "@unittest.expectedFailure",
+    '    raise unittest.SkipTest("sin datos")',
+    '        self.skipTest("sin datos")',
+    '    pytest.exit("listo", returncode=0)',
+    "    os._exit(0)",
+    '    reporte.outcome = "passed"',
+])
+def test_claude_no_puede_saltar_pruebas(proyecto, linea):
+    raiz, temporal = proyecto
+    r = silenciar("Write", prueba_con(raiz, f"{linea}\ndef test_x():\n    pass\n"), raiz, temporal)
+    assert bloqueado(r)
+
+
+@pytest.mark.parametrize("linea", [
+    '@pytest.mark.skipif(not torch.cuda.is_available(), reason="requiere GPU")',
+    '@unittest.skipIf(sys.platform == "win32", "solo Unix")',
+])
+def test_saltar_segun_el_entorno_lo_confirma_la_persona(proyecto, linea):
+    raiz, temporal = proyecto
+    r = silenciar("Write", prueba_con(raiz, f"{linea}\ndef test_x():\n    pass\n"), raiz, temporal)
+    assert r.returncode == 0
+    salida = json.loads(r.stdout)["hookSpecificOutput"]
+    assert salida["permissionDecision"] == "ask" and "skip" in salida["permissionDecisionReason"]
+
+
+@pytest.mark.parametrize("contenido", [
+    'torch = pytest.importorskip("torch")\n',
+    "@saltar_sin_gpu\ndef test_x():\n    pass\n",
+    "def test_skip_de_lineas_vacias():\n    assert recortar('') == ''\n",
+])
+def test_deja_lo_que_no_salta_pruebas(proyecto, contenido):
+    raiz, temporal = proyecto
+    r = silenciar("Write", prueba_con(raiz, contenido), raiz, temporal)
+    assert r.returncode == 0 and r.stdout == ""
+
+
+def test_una_prueba_ya_saltada_se_puede_editar(proyecto):
+    raiz, temporal = proyecto
+    (raiz / "app.py").write_text('@pytest.mark.skip(reason="x")\ndef test_x():\n    assert 1\n')
+    assert editar_codigo(raiz, temporal, "assert 1", "assert 2").returncode == 0
+
+
+def test_por_terminal_tampoco_se_saltan_pruebas(proyecto):
+    raiz, temporal = proyecto
+    comando = "sed -i '' 's/^def test_x/@pytest.mark.skip\\ndef test_x/' tests/test_a.py"
+    assert bloqueado(silenciar("Bash", {"command": comando}, raiz, temporal))
+
+
 def test_la_persona_puede_permitirlo_en_una_sesion(proyecto, monkeypatch):
     raiz, temporal = proyecto
     monkeypatch.setenv("CALIDAD_PYTHON_PERMITIR_SILENCIAR", "1")

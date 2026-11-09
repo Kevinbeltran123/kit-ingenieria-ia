@@ -1,5 +1,5 @@
 {
-  "description": "Calidad Python: solo la persona silencia reglas, ruff al editar, revisión al terminar, aviso de macOS",
+  "description": "Calidad Python: solo la persona silencia reglas o salta pruebas, ruff al editar, revisión al terminar, aviso de macOS",
   "hooks": {
     "PreToolUse": [
       {
