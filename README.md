@@ -63,12 +63,12 @@ Comprobado con ruff 0.17.3, ty 0.0.95 y complexipy 8.3.0: lo viejo pasa y lo nue
 Los plugins propios no llevan `version`: Claude Code usa el commit como versión, así que ningún cambio se queda
 sin llegar por olvidar subirla. Las entregas para el equipo son tags (`v0.2.0`, `v0.3.0`…) y cada repo fija la suya:
 ```sh
-python3 bin/adoptar.py /ruta/al/repo --marketplace-github Kevinbeltran123/kit-ingenieria-ia --ref v0.2.0
+python3 bin/adoptar.py /ruta/al/repo --marketplace-github Kevinbeltran123/kit-ingenieria-ia --ref v0.3.0
 ```
 Para pasar un repo a una entrega nueva, se vuelve a correr con el tag nuevo (cambia la fuente en
 `.claude/settings.json`) y después `claude plugin marketplace update kit-ingenieria-ia`. Sin `--ref`, el repo
 sigue la cabeza de `main`. Sin adoptar.py, el marketplace en una entrega se agrega con
-`claude plugin marketplace add Kevinbeltran123/kit-ingenieria-ia#v0.2.0` (comprobado: el plugin instalado queda
+`claude plugin marketplace add Kevinbeltran123/kit-ingenieria-ia#v0.3.0` (comprobado: el plugin instalado queda
 con el commit del tag como versión). Los plugins de terceros que declaran `version` en su propio `plugin.json` solo se
 actualizan cuando su autor la sube (ver `terceros/README.md`).
 

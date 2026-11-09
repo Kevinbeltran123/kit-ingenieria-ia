@@ -38,7 +38,7 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
   y 3.12 (más las 19 de OR-Tools) y la prueba de humo 8/8 en el runner nuevo (Ubuntu con Python 3.14).
 - A10: la revisión en CI instala `pr-review-toolkit` desde el commit auditado, con un marketplace propio que
   arma el workflow (una copia local del oficial no sirve: Claude Code reserva su nombre).
-- B6: los plugins propios no llevan `version`; las entregas son tags (`v0.2.0` es la primera).
+- B6: los plugins propios no llevan `version`; las entregas son tags (`v0.2.0` es la primera; `v0.3.0`, del 2026-11-08, trae lo de gentle-factory y pstack).
 - Pins con menos de 7 días corregidos: uv 0.13.6 y zizmor 1.31.1.
 
 ## Siguiente
@@ -76,8 +76,8 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
 2. Limpieza de lo instalado en global (`~/.claude`): quitar/reemplazar software-architecture, write-concisely,
    code-simplifier, review-local-changes, commit, create-pr, playwright-skill, ui-ux-pro-max, antislop;
    security-guidance de global a proyecto; context7 en modo CLI y versión parcheada (CVE-2026-75130).
-3. uv local: 0.10.7 acepta `exclude-newer = "7 days"`; subir a 0.13.6 (la que fija la plantilla) lo alinea con el CI y el pre-commit de la
-   plantilla, y sirve para `uv audit`.
+3. Resuelto el 2026-11-08: uv local en 0.13.6, la misma del CI y de la plantilla (es el de miniconda, instalado con
+   pip y primero en el PATH; el de Homebrew, 0.13.7, queda detrás). Con él pasa la prueba de humo (8/8).
 4. Datos de la empresa: orquestador de datos, Terraform vs CDK, monitoreo, gestor de tareas, framework web.
 5. Skills no construidas aún: `geo-raster-agro`, CLAUDE.md del equipo de datos, observabilidad de ML (drift).
 6. EXTRA de la revisión sin hacer: D5 (aws-core cuesta ~4.900 tokens fijos), D6 (solapes entre skills), F2 (skills
