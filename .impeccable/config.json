@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "plugins/explicador/skills/explicar-cambios/scripts/plantilla.html"
+        ],
+        "createdAt": "2026-11-08T23:43:13.920Z",
+        "reason": "Agent: .fila.actual is the code viewer's current-line marker in the explicador's line-by-line view (design B, which Kevin chose); a left gutter mark on the active line is the code-editor and diff-viewer convention, not a card accent"
+      }
+    ]
+  }
+}
