@@ -37,6 +37,28 @@ Luego, en el repo: abrir Claude Code, aceptar la confianza de la carpeta e insta
 
 Para probar un plugin sin instalarlo: `claude --plugin-dir ~/Desarrollo/kit-ingenieria-ia/plugins/<plugin>`.
 
+### Si el repo ya tiene código
+Las reglas aplican a todo el código, también al viejo. Para no arreglarlo todo de una vez ni tapar error por error,
+cada herramienta guarda su propia línea base y solo falla lo nuevo. La crea la persona, una sola vez: a Claude se
+lo impide `no_silenciar` (para hacerlo con Claude, arranca esa sesión con `CALIDAD_PYTHON_PERMITIR_SILENCIAR=1`).
+
+1. **Formato y arreglos seguros**, en un commit aparte: `uv run ruff check . --fix` y `uv run ruff format .`. Pon
+   el SHA de ese commit en `.git-blame-ignore-revs` (GitHub lo respeta en blame; en local:
+   `git config blame.ignoreRevsFile .git-blame-ignore-revs`). Sin esto, el hook de edición reformatea cada archivo
+   entero la primera vez que Claude lo toca, y el cambio real se pierde en el diff.
+2. **ruff**: `uv run ruff check . --add-noqa="línea base"`. Cuando el código se arregla, RUF100 marca el `noqa` que
+   sobra y el `--fix` del hook de edición lo quita: la línea base solo baja.
+3. **ty**: `baseline = "ty-baseline.json"` en `[tool.ty]` y `uv run ty check --update-baseline`. Un error viejo que
+   se mueve de línea sigue cubierto; uno nuevo falla, también en el hook de Stop. Está en preview: si al subir ty no
+   lee el archivo, se regenera con el mismo comando.
+4. **complexipy**: `uv run complexipy . --snapshot-create` (guarda `complexipy-snapshot.json`).
+5. **import-linter**: los imports que hoy rompen un contrato van en su `ignore_imports`. Una entrada que deja de
+   existir da error, así que la lista solo baja.
+6. **vulture y deptry**: `uv run vulture --make-whitelist > vulture_whitelist.py` (y agrégalo a `paths`), y
+   `per_rule_ignores` en `[tool.deptry]`.
+
+Comprobado con ruff 0.17.3, ty 0.0.95 y complexipy 8.3.0: lo viejo pasa y lo nuevo falla.
+
 ## Entregas y versiones
 Los plugins propios no llevan `version`: Claude Code usa el commit como versión, así que ningún cambio se queda
 sin llegar por olvidar subirla. Las entregas para el equipo son tags (`v0.2.0`, `v0.3.0`…) y cada repo fija la suya:
