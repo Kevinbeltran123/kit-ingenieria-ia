@@ -27,7 +27,7 @@ los primeros arreglos están en `.explicaciones/commits/` (fuera de git). Hecho:
 - Nuevo: plugin `explicador` (vista B, línea por línea, exigido antes de `gh pr create`; `--commit` para un
   commit puntual). Es para el código de la empresa; en el kit no se generan explicaciones.
 
-Verificación: 496 pruebas pasan, en Python 3.9 y 3.12 (con OR-Tools 9.15 también las 14 de optimización), cada
+Verificación: 548 pruebas pasan, en Python 3.9 y 3.12 (con OR-Tools 9.15 también las 14 de optimización), cada
 commit pasa todas las suites por sí solo, la prueba de humo de las plantillas pasa (8/8 pasos) y
 `claude plugin validate .` pasa (con un aviso por plugin, que sugiere `version`: ver B6).
 
@@ -47,6 +47,18 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
      (antes el agente podía vaciar `rutas_protegidas` y después escribir en `eval/`). Límite documentado: no ve
      comandos sobre la carpeta entera (`mv .claude otra`); eso lo frena el CODEOWNERS en el PR.
    - **EXTRA, para decidir:** `licencias.py` no revisa Dockerfiles (`RUN pip install ultralytics`).
+2. Ideas de gentle-factory y pstack (revisadas el 2026-11-08; Kevin aprobó las 3 primeras con «si, dale»):
+   - Hecho: el hook de Stop no da por revisado lo que no pudo correr (ae8b00e). `no_silenciar.py`: solo la persona
+     agrega `# noqa`, `# type: ignore`, `# pragma: no cover` y similares, y Claude no corre `ruff --add-noqa` ni
+     `ty --add-ignore` (42ff91f; probado con Claude Code 2.1.319 real). Plantillas con FBT001/FBT002,
+     `acyclic_siblings` y el anti-patrón "fijar una constante" (015b345; probado al derecho y al revés).
+   - **Para decidir:** 4) copiar 4 skills de pstack fijadas por SHA 6b03002 (MIT, Lauren Tan) como se hizo con
+     `flujo`: create- y maintain-verification-skill, correct y blast-radius; benchmark-checklist dentro de
+     `rendimiento-python`, y 3 principios para skills que ya existen (las dos ediciones, las 3 preguntas de
+     idempotencia, el estado legítimo). 5) Checklist de revisión con fuentes (los 107 de gentle-factory: SWE at
+     Google, eng-practices, ASVS 5.0, CWE). 6) Gate que juzga solo lo nuevo de un PR (huellas de los hallazgos en
+     base y en head).
+   - **EXTRA posible:** que `no_silenciar` bloquee también `@pytest.mark.skip`/`xfail` nuevos (hoy no lo hace).
 
 ## Pendiente que decide Kevin
 1. Resuelto el 2026-11-08: el repo pasó a público, así Actions corre gratis (Kevin no va a pagar más). Si vuelve a
@@ -75,3 +87,7 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
   adoptan el kit.
 - Lo no revisado no cuenta como OK: los scripts de verificación (`suministro.py`, `verify.py`,
   `verificar_division.py`) salen con un código distinto de 0 si una herramienta falta o no hubo nada que revisar.
+  El hook de Stop, igual: una herramienta configurada que no está instalada bloquea como sin revisar.
+- Las excepciones a las reglas (`# noqa` y similares) solo las agrega la persona: Claude explica el falso positivo
+  y dice cuál y dónde (hook `no_silenciar`). Para una línea base en un repo viejo, `CALIDAD_PYTHON_PERMITIR_SILENCIAR=1`.
+- FBT003 fuera de la plantilla: marca APIs de terceros (`model.train(False)`), y FBT001 ya cubre el código propio.
