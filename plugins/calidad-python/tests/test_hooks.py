@@ -224,6 +224,141 @@ def test_sin_herramientas_tras_dos_intentos_avisa_que_no_se_reviso(proyecto):
     assert "pytest" in aviso and "sin poder revisarse" in aviso
 
 
+# --- no_silenciar.py ---
+
+def silenciar(herramienta: str, entrada: dict, raiz: Path, temporal: Path):
+    return correr("no_silenciar.py", {"tool_name": herramienta, "tool_input": entrada}, raiz, temporal)
+
+
+def editar_codigo(raiz: Path, temporal: Path, viejo: str, nuevo: str):
+    entrada = {"file_path": str(raiz / "app.py"), "old_string": viejo, "new_string": nuevo}
+    return silenciar("Edit", entrada, raiz, temporal)
+
+
+def bloqueado(r) -> bool:
+    return r.returncode == 2 and "solo la persona" in r.stderr
+
+
+def test_esta_conectado_antes_de_editar_y_de_correr_comandos():
+    entradas = json.loads((HOOKS / "hooks.json").read_text())["hooks"]["PreToolUse"]
+    entrada = next(e for e in entradas if any("no_silenciar.py" in h["command"] for h in e["hooks"]))
+    assert set(entrada["matcher"].split("|")) >= {"Edit", "Write", "MultiEdit", "Bash"}
+
+
+def test_claude_no_puede_agregar_un_noqa(proyecto):
+    raiz, temporal = proyecto
+    r = editar_codigo(raiz, temporal, "x = 1", "x = 1  # noqa: F841")
+    assert bloqueado(r)
+    assert "# noqa: F841" in r.stderr
+
+
+@pytest.mark.parametrize("comentario", [
+    "# noqa", "#noqa:E501", "# NOQA", "# noqa: complexipy", "# ruff: noqa: F401", "# flake8: noqa",
+    "# ruff: disable[F401]", "# type: ignore", "# type: ignore[attr-defined]",
+    "# ty: ignore[invalid-assignment]", "# pyright: ignore[reportAttributeAccessIssue]", "# pyright: basic",
+    "# mypy: ignore-errors", '# mypy: disable-error-code="attr-defined"', "# pragma: no cover",
+    "# pragma: no branch", "# pragma: no mutate", "# nosec B101", "# nosemgrep",
+    "# pylint: disable=unused-import",
+])
+def test_reconoce_los_comentarios_que_silencian(proyecto, comentario):
+    raiz, temporal = proyecto
+    entrada = {"file_path": str(raiz / "nuevo.py"), "content": f"x = 1  {comentario}\n"}
+    assert bloqueado(silenciar("Write", entrada, raiz, temporal))
+
+
+@pytest.mark.parametrize("comentario", ["# fmt: off", "# isort: skip", "# pyright: strict", "# no hace falta"])
+def test_deja_los_comentarios_que_no_silencian(proyecto, comentario):
+    raiz, temporal = proyecto
+    entrada = {"file_path": str(raiz / "nuevo.py"), "content": f"x = 1  {comentario}\n"}
+    assert silenciar("Write", entrada, raiz, temporal).returncode == 0
+
+
+def test_solo_mira_archivos_de_python(proyecto):
+    raiz, temporal = proyecto
+    notas = {"file_path": str(raiz / "notas.md"), "content": "Usa `# noqa` lo menos posible.\n"}
+    assert silenciar("Write", notas, raiz, temporal).returncode == 0
+    stub = {"file_path": str(raiz / "app.pyi"), "content": "x: int  # type: ignore\n"}
+    assert bloqueado(silenciar("Write", stub, raiz, temporal))
+
+
+def test_quitar_o_conservar_una_excepcion_si_se_puede(proyecto):
+    raiz, temporal = proyecto
+    (raiz / "app.py").write_text("import os  # noqa: F401\nx = 1\n")
+    assert editar_codigo(raiz, temporal, "x = 1", "x = 2").returncode == 0
+    assert editar_codigo(raiz, temporal, "import os  # noqa: F401", "import os, sys  # noqa: F401").returncode == 0
+    assert editar_codigo(raiz, temporal, "import os  # noqa: F401\n", "").returncode == 0
+    movido = {"file_path": str(raiz / "app.py"), "content": "x = 2\nimport os  # noqa: F401\n"}
+    assert silenciar("Write", movido, raiz, temporal).returncode == 0
+
+
+def test_ampliar_una_excepcion_cuenta_como_agregarla(proyecto):
+    raiz, temporal = proyecto
+    (raiz / "app.py").write_text("import os  # noqa: F401\n")
+    assert bloqueado(editar_codigo(raiz, temporal, "# noqa: F401", "# noqa: F401, E501"))
+    assert bloqueado(editar_codigo(raiz, temporal, "# noqa: F401", "# noqa"))
+
+
+def test_multiedit_se_revisa_entero(proyecto):
+    raiz, temporal = proyecto
+    (raiz / "app.py").write_text("x = 1\ny = 2\n")
+    edits = [{"old_string": "x = 1", "new_string": "x = 3"},
+             {"old_string": "y = 2", "new_string": "y = 2  # type: ignore"}]
+    assert bloqueado(silenciar("MultiEdit", {"file_path": str(raiz / "app.py"), "edits": edits}, raiz, temporal))
+
+
+@pytest.mark.parametrize("comando", [
+    "ruff check . --add-noqa",
+    "uv run ruff check --add-noqa='código heredado'",
+    "uv run ty check --add-ignore",
+    "ty check --update-baseline",
+    "uv run complexipy . --snapshot-create",
+    "vulture src --make-whitelist > lista_blanca.py",
+])
+def test_por_terminal_bloquea_lo_que_silencia_en_bloque(proyecto, comando):
+    raiz, temporal = proyecto
+    assert bloqueado(silenciar("Bash", {"command": comando}, raiz, temporal))
+
+
+@pytest.mark.parametrize("comando", [
+    "sed -i '' 's/$/  # noqa/' app.py",
+    "perl -pi -e 's/$/  # type: ignore/' app.py",
+    "echo 'y = 2  # type: ignore' >> app.py",
+    "printf '# ruff: noqa\\n' | tee -a app.py",
+    "cat > nuevo.py <<'EOF'\nx = 1  # pragma: no cover\nEOF",
+])
+def test_por_terminal_bloquea_escribir_una_excepcion_en_un_py(proyecto, comando):
+    raiz, temporal = proyecto
+    assert bloqueado(silenciar("Bash", {"command": comando}, raiz, temporal))
+
+
+@pytest.mark.parametrize("comando", [
+    "grep -rn '# noqa' . 2>&1 | head",
+    "rg 'type: ignore' -g '*.py' > lista.txt",
+    "git commit -m 'no usar --add-noqa ni # noqa'",
+    "ruff check --fix app.py",
+    "sed -i '' 's/viejo/nuevo/' app.py",
+])
+def test_por_terminal_deja_buscar_y_mencionar_excepciones(proyecto, comando):
+    raiz, temporal = proyecto
+    assert silenciar("Bash", {"command": comando}, raiz, temporal).returncode == 0
+
+
+def test_la_persona_puede_permitirlo_en_una_sesion(proyecto, monkeypatch):
+    raiz, temporal = proyecto
+    monkeypatch.setenv("CALIDAD_PYTHON_PERMITIR_SILENCIAR", "1")
+    assert editar_codigo(raiz, temporal, "x = 1", "x = 1  # noqa: F841").returncode == 0
+    assert silenciar("Bash", {"command": "ruff check --add-noqa"}, raiz, temporal).returncode == 0
+
+
+def test_entrada_rara_no_bloquea(proyecto):
+    raiz, temporal = proyecto
+    assert correr("no_silenciar.py", {}, raiz, temporal).returncode == 0
+    assert correr("no_silenciar.py", {"tool_name": "Edit", "tool_input": None}, raiz, temporal).returncode == 0
+    r = subprocess.run([sys.executable, "-I", str(HOOKS / "no_silenciar.py")], input="no es json",
+                       capture_output=True, text=True)
+    assert r.returncode == 0
+
+
 # --- notificar.py ---
 
 def test_notificacion_pasa_el_texto_como_argumento(proyecto, tmp_path):

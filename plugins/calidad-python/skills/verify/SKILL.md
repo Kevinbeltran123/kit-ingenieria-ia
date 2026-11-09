@@ -17,7 +17,7 @@ Antes de decir que algo está terminado, demuéstralo corriendo los sensores.
    en CI). Busca cada herramienta primero en `.venv/bin` y después en el PATH. Una herramienta configurada que no
    está instalada sale como "sin revisar" y el script sale con 1: corre `uv sync` y repite.
 
-2. Si algo dice `FALLA`, arréglalo y vuelve a correr el script. No desactives reglas, no agregues `# noqa` / `# type: ignore` ni borres pruebas para que pase. Si una regla es un falso positivo, dilo y explica por qué antes de silenciarla.
+2. Si algo dice `FALLA`, arréglalo y vuelve a correr el script. No desactives reglas, no agregues `# noqa` / `# type: ignore` ni borres pruebas para que pase. Si una regla es un falso positivo, explica por qué y dile a la persona qué comentario agregar y en qué línea: la excepción la agrega ella (el hook `no_silenciar.py` no te deja).
 
 3. Reporta el resultado tal cual: `N/M pasos OK, K sin revisar` y, si quedó algo sin resolver, qué y por qué.
 

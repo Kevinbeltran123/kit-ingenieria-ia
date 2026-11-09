@@ -58,7 +58,7 @@ uv run mutmut results          # lista sobrevivientes
 uv run mutmut show <mutante>   # muestra el cambio
 ```
 
-Por cada sobreviviente: escribe una prueba que lo mate, o justifica por escrito que es **equivalente** (el cambio no altera el comportamiento observable) y márcalo con `# pragma: no mutate` en esa línea.
+Por cada sobreviviente: escribe una prueba que lo mate, o justifica por escrito que es **equivalente** (el cambio no altera el comportamiento observable) y pide a la persona que marque esa línea con `# pragma: no mutate`. La excepción la pone ella: con `calidad-python`, un hook bloquea que Claude la agregue.
 
 Umbral recomendado en código nuevo de `domain`/`application`: **≥ 80 % de mutantes muertos y cero sobrevivientes sin justificar**. En adaptadores y entrypoints, informativo. En CI completo, nocturno o semanal; en el PR, solo el diff.
 
