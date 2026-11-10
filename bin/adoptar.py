@@ -143,7 +143,7 @@ Pasos manuales siguientes:
   1. Copia del fragmento las secciones que falten en pyproject.toml:
        {fragmento}
      Cambia "app" por el paquete real y ajusta las capas de import-linter.
-  2. uv sync && uvx prek install
+  2. uv sync && uvx prek@0.5.9 install
   3. Rellena los huecos <...> de CLAUDE.md.
   4. Abre Claude Code en el repo, acepta la confianza de la carpeta e instala los plugins:
        claude plugin install <plugin>@kit-ingenieria-ia --scope project

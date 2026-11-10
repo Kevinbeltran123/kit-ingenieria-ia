@@ -8,7 +8,7 @@
 - Lint y formato: `uv run ruff check --fix . && uv run ruff format .`
 - Tipos: `uv run ty check`
 - Arquitectura: `uv run lint-imports`
-- Todo junto antes de commit: `uvx prek run --all-files`
+- Todo junto antes de commit: `uvx prek@0.5.9 run --all-files`
 - Correr local: `<comando>`
 
 ## Arquitectura

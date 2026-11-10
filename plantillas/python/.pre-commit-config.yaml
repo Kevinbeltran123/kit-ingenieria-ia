@@ -1,4 +1,4 @@
-# Se ejecuta con prek (`uvx prek install`) o pre-commit. Revs verificados el 2026-11-07.
+# Se ejecuta con prek (`uvx prek@0.5.9 install`) o pre-commit. Revs verificados el 2026-11-07.
 # ruff y complexipy corren con `uv run`: usan la versión de uv.lock, la misma de CI, y Dependabot
 # las actualiza en un solo lugar. Los argumentos y tipos de archivo son los de sus hooks oficiales.
 repos:
