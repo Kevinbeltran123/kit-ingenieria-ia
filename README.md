@@ -75,7 +75,7 @@ actualizan cuando su autor la sube (ver `terceros/README.md`).
 ## Carpetas
 - `investigacion/` — 8 informes con evidencia y fuentes + `00-resumen.md`
 - `plugins/` — plugins propios, cada uno con README y pruebas
-- `terceros/` — entradas fijadas, auditoría y cómo actualizar un SHA
+- `terceros/` — auditoría de los plugins de terceros y cómo actualizar un SHA
 - `plantillas/`, `bin/adoptar.py` — configuración base para repos
 - `CONVENCIONES.md` — reglas para agregar skills, hooks y plugins
 - `ESTADO.md` — dónde quedamos
