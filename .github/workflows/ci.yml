@@ -1,6 +1,7 @@
 # CI del kit: pruebas de cada plugin con Python 3.9 y 3.12, validación del marketplace, prueba de
-# humo de las plantillas y zizmor sobre los workflows. Acciones fijadas por SHA (las mismas de
-# plantillas/github/workflows) y herramientas con más de 7 días de publicadas.
+# humo de las plantillas (con la imagen Docker), ruff sobre el código del propio kit y zizmor sobre los
+# workflows. Acciones fijadas por SHA (las mismas de plantillas/github/workflows) y herramientas con más
+# de 7 días de publicadas.
 name: CI
 
 on:
@@ -75,6 +76,21 @@ jobs:
           version: "0.13.6"
       - name: Prueba de humo (repo nuevo con las plantillas y los pasos de su CI)
         run: python3 bin/humo_plantillas.py
+
+  estilo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.6"
+      - name: ruff sobre hooks, scripts y pruebas del kit (configuración en pyproject.toml)
+        run: |
+          uvx ruff@0.17.3 check .
+          uvx ruff@0.17.3 format --check .
 
   workflows:
     runs-on: ubuntu-latest

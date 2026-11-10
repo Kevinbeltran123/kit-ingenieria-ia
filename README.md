@@ -82,13 +82,15 @@ actualizan cuando su autor la sube (ver `terceros/README.md`).
 
 ## Verificar el kit
 El CI (`.github/workflows/ci.yml`) lo hace en cada push: las pruebas de cada plugin con Python 3.9 y 3.12,
-`claude plugin validate`, la prueba de humo de las plantillas y zizmor. En local:
+`claude plugin validate`, la prueba de humo de las plantillas, ruff sobre el código del kit y zizmor. En local:
 ```sh
 claude plugin validate .
 for t in plugins/*/tests bin/tests; do python3 -m pytest "$t" -q; done
+uvx ruff@0.17.3 check . && uvx ruff@0.17.3 format --check .   # el kit se aplica sus reglas (pyproject.toml)
 python3 bin/humo_plantillas.py   # repo nuevo con las plantillas, los pasos de su CI y su imagen Docker (necesita red y Docker;
                                  # --sin-docker para saltar la imagen a propósito: sin Docker y sin la opción, sale con 1)
 ```
+Los commits de solo formato van en `.git-blame-ignore-revs`; en local, `git config blame.ignoreRevsFile .git-blame-ignore-revs`.
 
 ## Licencia
 MIT (ver `LICENSE`). Lo que viene de otros conserva su licencia: `plugins/flujo` es una copia editada de

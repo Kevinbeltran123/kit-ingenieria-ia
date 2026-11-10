@@ -81,3 +81,13 @@ def test_terceros_fijados_por_sha_de_40():
     assert terceros
     for p in terceros:
         assert re.fullmatch(r"[0-9a-f]{40}", p["source"]["sha"]), p["name"]
+
+
+def test_ruff_del_kit_una_sola_version():
+    """El CI del kit, el comentario de pyproject.toml y el README corren ruff con la misma versión fijada."""
+    versiones = set()
+    for ruta in (".github/workflows/ci.yml", "pyproject.toml", "README.md", "CONVENCIONES.md"):
+        encontradas = re.findall(r"ruff@([\d.]+)", texto(ruta))
+        assert encontradas, ruta
+        versiones |= set(encontradas)
+    assert len(versiones) == 1, versiones

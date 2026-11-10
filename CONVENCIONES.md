@@ -38,8 +38,13 @@ Ejemplo de referencia: `plugins/calidad-python/`.
 1. `python3 -m pytest plugins/<nombre>/tests -q` pasa, también con Python 3.9: las pruebas y los scripts no usan
    sintaxis de 3.10 o más sin `from __future__ import annotations`.
 2. `claude plugin validate .` pasa desde la raíz del kit.
-3. Si cambian las plantillas: `python3 bin/humo_plantillas.py` pasa. El CI del kit corre los tres en cada push.
-4. Nada instalado globalmente, nada fuera de la carpeta del kit, sin operaciones de git.
+3. `uvx ruff@0.17.3 check .` y `uvx ruff@0.17.3 format --check .` pasan: el kit se aplica las reglas que exige a los
+   repos (la configuración está en `pyproject.toml`; las excepciones se deciden ahí, no con `# noqa`).
+4. Si cambian las plantillas: `python3 bin/humo_plantillas.py` pasa (con Docker; `--sin-docker` para saltar la imagen a
+   propósito). El CI del kit corre los cuatro en cada push.
+5. Una versión que aparece en varios sitios (uv, prek, gitleaks, ruff, los SHA de las acciones) se cambia en todos:
+   `bin/tests/test_versiones.py` lo exige.
+6. Nada instalado globalmente, nada fuera de la carpeta del kit, sin operaciones de git.
 
 ## Terceros
 - Siempre fijados por `sha` de 40 caracteres en `marketplace.json`. Si cambia el de `pr-review-toolkit`, cambia
