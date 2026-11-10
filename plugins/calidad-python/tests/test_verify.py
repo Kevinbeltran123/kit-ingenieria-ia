@@ -122,3 +122,21 @@ def test_orden_de_los_pasos(raiz):
     (raiz / "tests").mkdir()
     lineas = [l.split()[1] for l in correr(raiz).stdout.splitlines() if l.startswith("OK")]
     assert lineas == ["uv", "ruff", "ruff", "ty", "import-linter", "pytest", "deptry"]
+
+
+def test_tool_typos_no_cuenta_como_ty(raiz):
+    """`[tool.typos]` empieza igual que `[tool.ty`: pedía instalar ty en un repo que solo usa el corrector typos."""
+    (raiz / "pyproject.toml").write_text("[tool.typos]\ndefault.extend-words = {}\n")
+    falsa(raiz, "ruff", 0)
+    r = correr(raiz)
+    assert r.returncode == 0, r.stdout
+    assert "No instalados" not in r.stdout
+
+
+def test_una_subtabla_de_ty_cuenta_como_configurado(raiz):
+    """El fragmento de la plantilla solo trae `[tool.ty.environment]`, sin `[tool.ty]` a secas."""
+    (raiz / "pyproject.toml").write_text("[tool.ty.environment]\npython-version = '3.12'\n")
+    falsa(raiz, "ruff", 0)
+    r = correr(raiz)
+    assert r.returncode == 1
+    assert "ty" in sin_revisar(r.stdout)

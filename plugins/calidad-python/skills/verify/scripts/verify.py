@@ -8,6 +8,7 @@ Uso: python3 verify.py [raiz]
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
@@ -22,8 +23,9 @@ def buscar_herramienta(raiz: Path, nombre: str) -> str | None:
 
 
 def configurado(raiz: Path, seccion: str, *archivos: str) -> bool:
+    """`seccion` es `tool.ty`: cuenta `[tool.ty]` y `[tool.ty.environment]`, no `[tool.typos]`."""
     pyproject = raiz / "pyproject.toml"
-    if pyproject.exists() and f"[{seccion}" in pyproject.read_text():
+    if pyproject.exists() and re.search(rf"(?m)^\s*\[\[?{re.escape(seccion)}[\].]", pyproject.read_text()):
         return True
     return any((raiz / a).exists() for a in archivos)
 

@@ -224,6 +224,26 @@ def test_sin_herramientas_tras_dos_intentos_avisa_que_no_se_reviso(proyecto):
     assert "pytest" in aviso and "sin poder revisarse" in aviso
 
 
+def test_tool_typos_no_cuenta_como_ty(proyecto):
+    """`[tool.typos]` empieza igual que `[tool.ty`: el hook bloqueaba pidiendo instalar ty en un repo sin ty."""
+    raiz, temporal = proyecto
+    (raiz / "pyproject.toml").write_text("[tool.typos]\n")
+    herramienta_falsa(raiz, "ruff", 0)
+    editar(raiz, temporal)
+    r = correr("revisar_al_terminar.py", {"session_id": "s1"}, raiz, temporal, path_minimo=True)
+    assert r.returncode == 0, r.stderr
+
+
+def test_una_subtabla_de_ty_cuenta_como_configurado(proyecto):
+    raiz, temporal = proyecto
+    (raiz / "pyproject.toml").write_text("[tool.ty.environment]\npython-version = '3.12'\n")
+    herramienta_falsa(raiz, "ruff", 0)
+    editar(raiz, temporal)
+    r = correr("revisar_al_terminar.py", {"session_id": "s1"}, raiz, temporal, path_minimo=True)
+    assert r.returncode == 2
+    assert "ty: está configurado pero no instalado" in r.stderr
+
+
 # --- no_silenciar.py ---
 
 def silenciar(herramienta: str, entrada: dict, raiz: Path, temporal: Path):
