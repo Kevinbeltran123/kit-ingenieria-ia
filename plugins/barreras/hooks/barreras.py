@@ -237,7 +237,16 @@ def regla_secretos(seg: list[str]) -> str | None:
 
 RM_SEGURO = ("/tmp/", "/private/tmp/", "/private/var/folders/")
 RM_PARTES_SEGURAS = ("__pycache__", "node_modules/.cache", ".pytest_cache", ".ruff_cache", ".mypy_cache")
+# Se regeneran con un comando (uv sync, uv build, pytest --cov, tox): borrarlas no pierde trabajo.
+RM_REGENERABLES = {".venv", "dist", "build", "htmlcov", ".tox", ".nox", ".coverage"}
 ARCHIVO_DB = re.compile(r"\.(sqlite3?|db)$")
+
+
+def rm_seguro(objetivo: str) -> bool:
+    nombre = Path(objetivo).name
+    return (os.path.expanduser(objetivo).startswith(RM_SEGURO)
+            or any(p in objetivo for p in RM_PARTES_SEGURAS)
+            or nombre in RM_REGENERABLES or nombre.endswith(".egg-info"))
 
 
 def banderas_cortas(args: list[str]) -> str:
@@ -255,8 +264,7 @@ def regla_local(seg: list[str]) -> str | None:
         recursivo = "r" in banderas or "R" in banderas or "--recursive" in args
         forzado = "f" in banderas or "--force" in args
         if nombre == "rm" and recursivo and forzado:
-            inseguros = [o for o in objetivos if not os.path.expanduser(o).startswith(RM_SEGURO)
-                         and not any(p in o for p in RM_PARTES_SEGURAS)]
+            inseguros = [o for o in objetivos if not rm_seguro(o)]
             if inseguros or not objetivos:
                 return f"rm -rf sobre {', '.join(inseguros) or 'nada explícito'}"
     elif nombre == "find":
