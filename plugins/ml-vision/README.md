@@ -1,5 +1,7 @@
 # ml-vision
 
+Instalar en un repo: `/plugin install ml-vision --marketplace Kevinbeltran123/kit-ingenieria-ia` (registra el marketplace si hace falta; con `bin/adoptar.py` ya queda en `.claude/settings.json`).
+
 Visión por computador y MLOps para el proyecto de enfermedades en palma (y similares), con foco en que las métricas sean creíbles.
 
 ## Skills

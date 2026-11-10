@@ -1,5 +1,7 @@
 # devops-aws
 
+Instalar en un repo: `/plugin install devops-aws --marketplace Kevinbeltran123/kit-ingenieria-ia` (registra el marketplace si hace falta; con `bin/adoptar.py` ya queda en `.claude/settings.json`).
+
 Skills de DevOps para Python + GitHub + AWS. Solo prompts y un script de revisión; no trae hooks ni MCP.
 
 | Skill | Cuándo |

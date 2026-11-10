@@ -1,5 +1,7 @@
 # explicador
 
+Instalar en un repo: `/plugin install explicador --marketplace Kevinbeltran123/kit-ingenieria-ia` (registra el marketplace si hace falta; con `bin/adoptar.py` ya queda en `.claude/settings.json`).
+
 Cada cambio queda explicado línea por línea en una página local: el código a la izquierda y una
 terminal que lo explica a la derecha. Sirve para entender lo que escribió la IA y para encontrar
 errores antes del PR.

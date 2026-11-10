@@ -1,5 +1,7 @@
 # calidad-python
 
+Instalar en un repo: `/plugin install calidad-python --marketplace Kevinbeltran123/kit-ingenieria-ia` (registra el marketplace si hace falta; con `bin/adoptar.py` ya queda en `.claude/settings.json`).
+
 Hooks de calidad para repos Python. Sin dependencias: solo `python3` de la biblioteca estándar.
 
 | Momento | Qué hace |

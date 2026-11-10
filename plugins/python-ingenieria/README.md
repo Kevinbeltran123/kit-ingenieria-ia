@@ -1,5 +1,7 @@
 # python-ingenieria
 
+Instalar en un repo: `/plugin install python-ingenieria --marketplace Kevinbeltran123/kit-ingenieria-ia` (registra el marketplace si hace falta; con `bin/adoptar.py` ya queda en `.claude/settings.json`).
+
 Skills de ingeniería para repos Python (backend, datos, ML). Sin hooks: solo instrucciones y scripts que Claude carga cuando la tarea lo pide.
 
 | Skill | Cuándo se usa | Script |

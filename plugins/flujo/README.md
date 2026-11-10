@@ -1,5 +1,7 @@
 # flujo
 
+Instalar en un repo: `/plugin install flujo --marketplace Kevinbeltran123/kit-ingenieria-ia` (registra el marketplace si hace falta; con `bin/adoptar.py` ya queda en `.claude/settings.json`).
+
 Selección de 5 skills de [obra/superpowers](https://github.com/obra/superpowers) v7.0.2, sin hooks ni comandos (decisión: solo skills sueltas, por costo de contexto y control), y `correct` de [pstack](https://github.com/cursor/plugins/tree/6b0300214a09fd6029cfb7077043125758cd1fd2/harness/pstack/claude-code).
 
 | Skill | Cuándo se activa |

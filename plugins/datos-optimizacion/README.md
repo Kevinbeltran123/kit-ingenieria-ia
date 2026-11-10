@@ -1,5 +1,7 @@
 # datos-optimizacion
 
+Instalar en un repo: `/plugin install datos-optimizacion --marketplace Kevinbeltran123/kit-ingenieria-ia` (registra el marketplace si hace falta; con `bin/adoptar.py` ya queda en `.claude/settings.json`).
+
 Skills de ingeniería de datos y optimización. Se cargan solo cuando la tarea las necesita.
 
 | Skill | Para qué |
