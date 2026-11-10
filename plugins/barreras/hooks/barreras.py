@@ -6,8 +6,8 @@ Reglas (se pueden desactivar por repo, salvo la autoprotección):
   archivos  editar .env, lockfiles, migraciones existentes o .git/
   secretos  leer credenciales de AWS, llaves SSH, .env, .envrc o volcar variables de entorno
   local     borrar trabajo: rm -rf fuera de /tmp y cachés, find -delete, git reset --hard,
-            push --force, clean -f, checkout/restore de todo, branch -D, worktree remove --force,
-            commit --no-verify y borrar archivos de base de datos
+            push --force, clean -f, checkout/restore de todo, stash drop/clear, branch -D,
+            worktree remove --force, commit --no-verify y borrar archivos de base de datos
 
 Falla cerrado: ante un error interno bloquea (exit 2).
 No es una barrera completa: la seguridad real son reglas deny, sandbox y permisos de solo lectura.
@@ -283,9 +283,10 @@ def regla_git(args: list[str]) -> str | None:
         return "git reset --hard"
     if sub == "clean" and ("f" in banderas or "--force" in resto) and "n" not in banderas and "--dry-run" not in resto:
         return "git clean -f"
-    if sub in ("checkout", "restore") and {".", ":/"} & set(resto) and ("--" in resto or sub == "restore") \
-            and "--staged" not in resto:
+    if sub in ("checkout", "restore") and {".", ":/"} & set(resto) and "--staged" not in resto:
         return f"git {sub} de todo el árbol"
+    if sub == "stash" and resto[:1] in (["drop"], ["clear"]):
+        return f"git stash {resto[0]}"
     if sub == "commit" and ("--no-verify" in resto or "n" in banderas):
         return "git commit --no-verify"
     if sub == "branch" and ("-D" in resto or ("--delete" in resto and "--force" in resto)):
