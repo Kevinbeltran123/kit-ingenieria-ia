@@ -2,9 +2,9 @@
 
 ## Dónde quedamos (2026-11-09)
 Segunda revisión del kit, de solo lectura, con 15 hallazgos; Kevin dijo «dale» a todos y están aplicados en `main`, un
-commit por arreglo (19 commits sobre v0.3.0, incluido este). **Sin push todavía**: el CI de GitHub es quien verifica la
-construcción de la imagen Docker de la prueba de humo, que en este Mac no se pudo (el cliente docker de Homebrew no
-trae buildx y el Dockerfile usa `--mount`). Hecho:
+commit por arreglo (19 commits sobre v0.3.0, más este). **En GitHub desde el 2026-11-09**, con el CI en verde: run
+42743919255, los 6 jobs, incluida la construcción de la imagen Docker de la prueba de humo, que en este Mac no se pudo
+(el cliente docker de Homebrew no trae buildx y el Dockerfile usa `--mount`). Hecho:
 - Errores confirmados: `[tool.typos]` ya no cuenta como ty configurado (verify.py y el hook de Stop comparan la
   cabecera de la tabla); barreras frena `git checkout .`, `git stash drop` y `git stash clear`; `claude-review.yml`
   comenta con el `GITHUB_TOKEN` del workflow (sin `github_token`, la acción cambiaba el OIDC por un token de la Claude
@@ -29,8 +29,8 @@ trae buildx y el Dockerfile usa `--mount`). Hecho:
 
 Verificación local: 623 pruebas pasan y 14 se saltan sin OR-Tools (con OR-Tools 9.15, las 19 de optimización
 también), `claude plugin validate .` pasa, `uvx ruff@0.17.3 check .` y `format --check .` limpios, zizmor sin
-hallazgos en los workflows del kit y de las plantillas, prueba de humo 8/8 con `--sin-docker`. Pendiente de ver en
-GitHub: el `docker build` del job `plantillas` y los jobs nuevos.
+hallazgos en los workflows del kit y de las plantillas, prueba de humo 8/8 con `--sin-docker`. En GitHub, el job
+`plantillas` construyó la imagen (9/9 pasos) y `estilo` pasó.
 
 ## Dónde quedamos (2026-11-08)
 Revisión completa del kit en `investigacion/09-revision-2026-11-08.md` (~60 hallazgos agrupados en 48, con
@@ -115,8 +115,8 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
 5. Skills no construidas aún: `geo-raster-agro`, CLAUDE.md del equipo de datos, observabilidad de ML (drift).
 6. EXTRA de la revisión sin hacer: D5 (aws-core cuesta ~4.900 tokens fijos), D6 (solapes entre skills), F2 (skills
    según el stack de la empresa).
-7. Push de los commits del 2026-11-09 y mirar el CI: es la primera vez que corre el `docker build` de la prueba de humo
-   y los jobs `estilo` y Dependabot.
+7. Resuelto el 2026-11-09: push hecho y CI en verde (run 42743919255), con el `docker build` de la prueba de humo y el
+   job `estilo`. Dependabot abrirá sus primeros PR cuando toque (semanal, cooldown 7 días).
 8. Al subir ty (fijado en 0.0.95; la última es 0.0.99): 0.0.97 renombró `unresolved-import` a `import-not-found`
    (changelog de ty). Revisar los `# ty: ignore[...]` y regenerar las líneas base con `--update-baseline`.
 
