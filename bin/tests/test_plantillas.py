@@ -83,3 +83,12 @@ def test_la_revision_usa_pr_review_toolkit_en_el_commit_auditado():
     assert [p["source"] for p in marketplace["plugins"]] == [auditada]  # mismo url, path, ref y sha
     assert re.search(r"plugin_marketplaces: \$\{\{ runner\.temp \}\}/marketplace-revision\n", flujo)
     assert f'plugins: "pr-review-toolkit@{marketplace["name"]}"' in flujo
+
+
+def test_la_revision_comenta_con_el_token_del_workflow():
+    """Sin github_token, la acción cambia el OIDC por un token de la Claude GitHub App en api.anthropic.com y
+    falla si la App no está instalada. Con GITHUB_TOKEN no depende de la App ni necesita id-token: write."""
+    flujo = (KIT / "plantillas" / "github" / "workflows" / "claude-review.yml").read_text()
+    assert "github_token: ${{ secrets.GITHUB_TOKEN }}" in flujo
+    assert not re.search(r"(?m)^\s+id-token:", flujo)  # el comentario sí lo menciona; el permiso no está
+    assert "pull-requests: write" in flujo

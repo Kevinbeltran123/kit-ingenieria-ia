@@ -15,7 +15,7 @@ Se aplican con `bin/adoptar.py`, que **nunca sobrescribe** archivos existentes:
 | `claude/settings.json` | `.claude/settings.json` | Marketplace del kit, plugins por perfil, reglas deny, sandbox, sin co-autoría de Claude. Si ya existe, se fusiona agregando sin borrar |
 | `claude/CLAUDE.md` | `CLAUDE.md` | < 80 líneas, con huecos `<...>` |
 | `github/workflows/ci.yml` | `.github/workflows/ci.yml` | Acciones fijadas por SHA, permisos mínimos, zizmor y pip-audit. Vuelve a correr los hooks de pre-commit (`--no-verify` los salta en local) y gitleaks sobre toda la historia |
-| `github/workflows/claude-review.yml` | `.github/workflows/claude-review.yml` | Revisión de PR con `pr-review-toolkit`, instalado desde el commit que auditó el kit (marketplace propio que arma el workflow); necesita el secreto `ANTHROPIC_API_KEY` |
+| `github/workflows/claude-review.yml` | `.github/workflows/claude-review.yml` | Revisión de PR con `pr-review-toolkit`, instalado desde el commit que auditó el kit (marketplace propio que arma el workflow); necesita el secreto `ANTHROPIC_API_KEY`. Comenta con el `GITHUB_TOKEN` del workflow: no hace falta instalar la Claude GitHub App |
 | `github/dependabot.yml` | `.github/dependabot.yml` | uv, Actions y Docker con cooldown de 7 días |
 | `github/CODEOWNERS.ml` | `.github/CODEOWNERS` (solo perfil ml) | Dueños de `eval/`, `splits/`, la config del hook y `LICENSES.md`. No se crea si el repo ya tiene CODEOWNERS en la raíz o en `docs/` |
 | `docker/Dockerfile`, `docker/.dockerignore` | raíz | Multi-stage con uv, usuario sin privilegios |
@@ -31,7 +31,7 @@ El marketplace del repo solo se registra después de aceptar el diálogo de conf
 - **Versiones y cooldown:** `exclude-newer = "7 days"` hace que uv ignore lo publicado hace menos de 7 días. Por eso el fragmento usa rangos (`uv.lock` fija las exactas) y ty, que está en beta y se fija exacto, va en una versión con más de 7 días. Para un parche de seguridad urgente: `exclude-newer-package = { paquete = false }`. Requiere uv reciente (probado con 0.13.6; en tu máquina hay 0.10.7).
 - **Sandbox:** activo, con red limitada a PyPI y GitHub y `~/.aws/credentials` oculto. Si un comando necesita otro dominio, Claude Code pregunta. Para desactivarlo en un repo: `"sandbox": {"enabled": false}` en `.claude/settings.local.json`. `~/.ssh` no se bloquea en el sandbox para no romper `git push` por SSH; sí se bloquea su lectura con la herramienta Read.
 - **`attribution`:** `commit` y `pr` vacíos y `sessionUrl: false` (no `false` a secas, que versiones anteriores a 2.1.281 rechazan).
-- **Revisión con Claude en CI:** no corre en PRs de forks ni usa `pull_request_target`; solo herramientas de lectura y comentarios.
+- **Revisión con Claude en CI:** no corre en PRs de forks ni usa `pull_request_target`; solo herramientas de lectura y comentarios. Comenta con el `GITHUB_TOKEN` del workflow: sin `github_token`, la acción cambia un token OIDC por uno de la Claude GitHub App en api.anthropic.com y falla si la App no está instalada en la organización. Para usar la App, quitar `github_token` y devolver `id-token: write` al job.
 
 ## Verificado el 2026-11-08
 - `settings.json` contra el esquema oficial (schemastore): 0 errores.

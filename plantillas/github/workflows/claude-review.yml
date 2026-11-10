@@ -1,6 +1,9 @@
 # Revisión de PR con Claude. Requiere el secreto ANTHROPIC_API_KEY.
 # Seguro por diseño: sin pull_request_target, permisos mínimos, solo herramientas de lectura,
 # acción fijada por SHA. No corre en PRs de forks (no tienen acceso al secreto).
+# Comenta con el GITHUB_TOKEN del workflow (github_token). Sin él, la acción cambia un token OIDC por
+# uno de la Claude GitHub App en api.anthropic.com y falla si la App no está instalada en la
+# organización. Para usar la App: quitar github_token y agregar id-token: write a los permisos del job.
 name: Revisión con Claude
 
 on:
@@ -18,7 +21,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -52,6 +54,7 @@ jobs:
       - uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1.0.269
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           plugin_marketplaces: ${{ runner.temp }}/marketplace-revision
           plugins: "pr-review-toolkit@revision-pr"
           prompt: |

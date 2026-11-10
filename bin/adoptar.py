@@ -147,6 +147,7 @@ Pasos manuales siguientes:
   4. Abre Claude Code en el repo, acepta la confianza de la carpeta e instala los plugins:
        claude plugin install <plugin>@kit-ingenieria-ia --scope project
   5. Para la revisión en CI: agrega el secreto ANTHROPIC_API_KEY al repo (o borra claude-review.yml).
+     Comenta con el GITHUB_TOKEN del workflow: no hace falta instalar la Claude GitHub App.
   6. Revisa el diff antes de commitear: git status && git diff
 """
 PASO_ML = """  7. Perfil ml: en .github/CODEOWNERS (o en el CODEOWNERS que ya tenía el repo) cambia @ORG/EQUIPO-ML
