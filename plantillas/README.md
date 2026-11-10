@@ -15,7 +15,7 @@ Se aplican con `bin/adoptar.py`, que **nunca sobrescribe** archivos existentes:
 | `claude/settings.json` | `.claude/settings.json` | Marketplace del kit, plugins por perfil, reglas deny, sandbox, sin co-autoría de Claude. Si ya existe, se fusiona agregando sin borrar |
 | `claude/CLAUDE.md` | `CLAUDE.md` | < 80 líneas, con huecos `<...>` |
 | `github/workflows/ci.yml` | `.github/workflows/ci.yml` | Acciones fijadas por SHA, permisos mínimos, zizmor y pip-audit. Vuelve a correr los hooks de pre-commit (`--no-verify` los salta en local) y gitleaks sobre toda la historia |
-| `github/workflows/claude-review.yml` | `.github/workflows/claude-review.yml` | Revisión de PR con `pr-review-toolkit`, instalado desde el commit que auditó el kit (marketplace propio que arma el workflow); necesita el secreto `ANTHROPIC_API_KEY`. Comenta con el `GITHUB_TOKEN` del workflow: no hace falta instalar la Claude GitHub App |
+| `github/workflows/claude-review.yml` | `.github/workflows/claude-review.yml` | Revisión de PR con `pr-review-toolkit`, instalado desde el commit que auditó el kit (marketplace propio que arma el workflow); necesita el secreto `ANTHROPIC_API_KEY`. Comenta con el `GITHUB_TOKEN` del workflow: no hace falta instalar la Claude GitHub App. Una revisión por PR a la vez: un push nuevo cancela la anterior |
 | `github/dependabot.yml` | `.github/dependabot.yml` | uv, Actions y Docker con cooldown de 7 días |
 | `github/CODEOWNERS.ml` | `.github/CODEOWNERS` (solo perfil ml) | Dueños de `eval/`, `splits/`, la config del hook y `LICENSES.md`. No se crea si el repo ya tiene CODEOWNERS en la raíz o en `docs/` |
 | `docker/Dockerfile`, `docker/.dockerignore` | raíz | Multi-stage con uv, usuario sin privilegios |

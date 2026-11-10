@@ -13,6 +13,11 @@ on:
 permissions:
   contents: read
 
+# Una revisión por PR a la vez: un push nuevo cancela la que siga corriendo sobre el commit anterior.
+concurrency:
+  group: revision-claude-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   revisar:
     if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository

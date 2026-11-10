@@ -92,3 +92,9 @@ def test_la_revision_comenta_con_el_token_del_workflow():
     assert "github_token: ${{ secrets.GITHUB_TOKEN }}" in flujo
     assert not re.search(r"(?m)^\s+id-token:", flujo)  # el comentario sí lo menciona; el permiso no está
     assert "pull-requests: write" in flujo
+
+
+def test_una_sola_revision_por_pr_a_la_vez():
+    """Cada push a un PR lanzaba otra revisión completa con la API key aunque la anterior siguiera corriendo."""
+    flujo = (KIT / "plantillas" / "github" / "workflows" / "claude-review.yml").read_text()
+    assert re.search(r"concurrency:\n  group: \S*\$\{\{ github\.event\.pull_request\.number \}\}\n  cancel-in-progress: true\n", flujo)
