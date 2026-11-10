@@ -10,6 +10,7 @@ Se aplican con `bin/adoptar.py`, que **nunca sobrescribe** archivos existentes:
 
 | Plantilla | Destino en el repo | Notas |
 |---|---|---|
+| `python/.python-version` | `.python-version` | Fija Python 3.12 para uv en local, en CI y en la prueba de humo: la misma versión del Dockerfile y de `[tool.ty.environment]`. Sin él, `uv sync` toma el Python del runner (3.14 en el primer run del CI) |
 | `python/pyproject.toml.fragmento` | (manual) `pyproject.toml` | ruff, ty, pytest, coverage, complexipy, deptry, vulture, import-linter, `exclude-newer = "7 days"` |
 | `python/.pre-commit-config.yaml` | `.pre-commit-config.yaml` | Para `prek` (`uvx prek install`) o pre-commit. ruff y complexipy corren con `uv run`, con la versión de `uv.lock` |
 | `claude/settings.json` | `.claude/settings.json` | Marketplace del kit, plugins por perfil, reglas deny, sandbox, sin co-autoría de Claude. Si ya existe, se fusiona agregando sin borrar |

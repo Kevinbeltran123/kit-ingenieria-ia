@@ -29,6 +29,7 @@ PLUGINS = {
 }
 
 COPIAS = [
+    ("python/.python-version", ".python-version"),
     ("python/.pre-commit-config.yaml", ".pre-commit-config.yaml"),
     ("claude/CLAUDE.md", "CLAUDE.md"),
     ("github/workflows/ci.yml", ".github/workflows/ci.yml"),

@@ -24,7 +24,7 @@ def correr(*args):
 def test_crea_todo_en_repo_vacio(tmp_path):
     r = correr(tmp_path)
     assert r.returncode == 0, r.stderr
-    for destino in [".pre-commit-config.yaml", "CLAUDE.md", ".github/workflows/ci.yml",
+    for destino in [".python-version", ".pre-commit-config.yaml", "CLAUDE.md", ".github/workflows/ci.yml",
                     ".github/workflows/claude-review.yml", ".github/dependabot.yml",
                     "Dockerfile", ".dockerignore", ".claude/settings.json"]:
         assert (tmp_path / destino).exists(), destino
@@ -33,6 +33,7 @@ def test_crea_todo_en_repo_vacio(tmp_path):
     assert fuente == {"source": "directory", "path": str(KIT)}
     assert set(settings["enabledPlugins"]) == {f"{p}@kit-ingenieria-ia" for p in adoptar.PLUGINS["base"]}
     assert "Pasos manuales" in r.stdout
+    assert (tmp_path / ".python-version").read_text().strip() == "3.12"  # la misma del Dockerfile y de ty
 
 
 def test_nunca_sobrescribe(tmp_path):
