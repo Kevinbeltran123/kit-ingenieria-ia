@@ -24,7 +24,15 @@ MARKETPLACE = "kit-ingenieria-ia"
 
 PLUGINS = {
     "base": ["calidad-python", "barreras", "flujo", "python-ingenieria", "explicador"],
-    "datos": ["calidad-python", "barreras", "flujo", "python-ingenieria", "explicador", "datos-optimizacion", "devops-aws"],
+    "datos": [
+        "calidad-python",
+        "barreras",
+        "flujo",
+        "python-ingenieria",
+        "explicador",
+        "datos-optimizacion",
+        "devops-aws",
+    ],
     "ml": ["calidad-python", "barreras", "flujo", "python-ingenieria", "explicador", "ml-vision", "devops-aws"],
 }
 
@@ -101,8 +109,7 @@ def fijar_fuente(existente: dict, nuevo: dict, pidio_github: bool) -> list[str]:
     return [f"cambiado: fuente del kit → {describir(pedida)} (antes: {describir(previa)})"]
 
 
-def adoptar(repo: Path, perfil: str, dry_run: bool, github: str | None, ref: str | None,
-            sin_docker: bool) -> list[str]:
+def adoptar(repo: Path, perfil: str, dry_run: bool, github: str | None, ref: str | None, sin_docker: bool) -> list[str]:
     informe: list[str] = []
     prefijo = "[dry-run] " if dry_run else ""
 
@@ -162,8 +169,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("repo", type=Path)
     p.add_argument("--perfil", choices=sorted(PLUGINS), default="base")
     p.add_argument("--dry-run", action="store_true")
-    p.add_argument("--marketplace-github", metavar="OWNER/REPO",
-                   help="usar el kit desde GitHub en vez de la ruta local")
+    p.add_argument(
+        "--marketplace-github", metavar="OWNER/REPO", help="usar el kit desde GitHub en vez de la ruta local"
+    )
     p.add_argument("--ref", help="rama o tag del kit en GitHub")
     p.add_argument("--sin-docker", action="store_true")
     args = p.parse_args(argv)
@@ -176,11 +184,12 @@ def main(argv: list[str] | None = None) -> int:
         print("--ref solo tiene sentido con --marketplace-github", file=sys.stderr)
         return 1
 
-    for linea in adoptar(repo, args.perfil, args.dry_run, args.marketplace_github, args.ref,
-                         args.sin_docker):
+    for linea in adoptar(repo, args.perfil, args.dry_run, args.marketplace_github, args.ref, args.sin_docker):
         print(linea)
-    print(PASOS.format(fragmento=PLANTILLAS / "python" / "pyproject.toml.fragmento")
-          + (PASO_ML if args.perfil == "ml" else ""))
+    print(
+        PASOS.format(fragmento=PLANTILLAS / "python" / "pyproject.toml.fragmento")
+        + (PASO_ML if args.perfil == "ml" else "")
+    )
     return 0
 
 

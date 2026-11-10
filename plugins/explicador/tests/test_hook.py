@@ -47,8 +47,15 @@ def test_error_abierto_bloquea_y_descartado_con_motivo_deja_pasar(repo):
     assert r.returncode == 2
     assert "divide por cero" in r.stderr
 
-    explicar(repo, alerta={"tipo": "bug", "estado": "descartada", "texto": "divide por cero",
-                           "motivo": "Kevin: b nunca es 0 aquí"})
+    explicar(
+        repo,
+        alerta={
+            "tipo": "bug",
+            "estado": "descartada",
+            "texto": "divide por cero",
+            "motivo": "Kevin: b nunca es 0 aquí",
+        },
+    )
     assert correr(HOOK, repo, entrada=entrada(repo, "gh pr create")).returncode == 0
 
 

@@ -79,9 +79,13 @@ def test_grupos_configurables_solo_palma(tmp_path):
 
 def test_columnas_con_otros_nombres(tmp_path):
     cols = ["path", "subset", "tree", "block"]
-    filas = [{"path": "a.jpg", "subset": "train", "tree": "T1", "block": "B1"},
-             {"path": "b.jpg", "subset": "test", "tree": "T1", "block": "B2"}]
-    r = correr(manifiesto(tmp_path, filas, cols), "--col-imagen", "path", "--col-split", "subset", "--grupos", "tree,block")
+    filas = [
+        {"path": "a.jpg", "subset": "train", "tree": "T1", "block": "B1"},
+        {"path": "b.jpg", "subset": "test", "tree": "T1", "block": "B2"},
+    ]
+    r = correr(
+        manifiesto(tmp_path, filas, cols), "--col-imagen", "path", "--col-split", "subset", "--grupos", "tree,block"
+    )
     assert r.returncode == 1 and "FALLA [tree]" in r.stdout
 
 

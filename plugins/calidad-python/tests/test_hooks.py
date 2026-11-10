@@ -38,7 +38,10 @@ def correr(hook: str, datos: dict, raiz: Path, temporal: Path, path_extra: str =
         env["PATH"] = path_extra + os.pathsep + env["PATH"]
     return subprocess.run(
         [sys.executable, "-I", str(HOOKS / hook)],
-        input=json.dumps(datos), capture_output=True, text=True, env=env,
+        input=json.dumps(datos),
+        capture_output=True,
+        text=True,
+        env=env,
     )
 
 
@@ -53,10 +56,13 @@ def editar(raiz, temporal, sesion="s1"):
 
 # --- ruff_al_editar.py ---
 
+
 def test_ignora_archivos_que_no_son_python(proyecto):
     raiz, temporal = proyecto
     (raiz / "notas.md").write_text("hola")
-    r = correr("ruff_al_editar.py", {"session_id": "s1", "tool_input": {"file_path": str(raiz / "notas.md")}}, raiz, temporal)
+    r = correr(
+        "ruff_al_editar.py", {"session_id": "s1", "tool_input": {"file_path": str(raiz / "notas.md")}}, raiz, temporal
+    )
     assert r.returncode == 0
     assert not marca(temporal, "s1").exists()
 
@@ -80,6 +86,7 @@ def test_ruff_limpio_pasa(proyecto):
 
 
 # --- revisar_al_terminar.py ---
+
 
 def test_sin_ediciones_de_python_no_revisa(proyecto):
     raiz, temporal = proyecto
@@ -246,6 +253,7 @@ def test_una_subtabla_de_ty_cuenta_como_configurado(proyecto):
 
 # --- no_silenciar.py ---
 
+
 def silenciar(herramienta: str, entrada: dict, raiz: Path, temporal: Path):
     return correr("no_silenciar.py", {"tool_name": herramienta, "tool_input": entrada}, raiz, temporal)
 
@@ -272,14 +280,31 @@ def test_claude_no_puede_agregar_un_noqa(proyecto):
     assert "# noqa: F841" in r.stderr
 
 
-@pytest.mark.parametrize("comentario", [
-    "# noqa", "#noqa:E501", "# NOQA", "# noqa: complexipy", "# ruff: noqa: F401", "# flake8: noqa",
-    "# ruff: disable[F401]", "# type: ignore", "# type: ignore[attr-defined]",
-    "# ty: ignore[invalid-assignment]", "# pyright: ignore[reportAttributeAccessIssue]", "# pyright: basic",
-    "# mypy: ignore-errors", '# mypy: disable-error-code="attr-defined"', "# pragma: no cover",
-    "# pragma: no branch", "# pragma: no mutate", "# nosec B101", "# nosemgrep",
-    "# pylint: disable=unused-import",
-])
+@pytest.mark.parametrize(
+    "comentario",
+    [
+        "# noqa",
+        "#noqa:E501",
+        "# NOQA",
+        "# noqa: complexipy",
+        "# ruff: noqa: F401",
+        "# flake8: noqa",
+        "# ruff: disable[F401]",
+        "# type: ignore",
+        "# type: ignore[attr-defined]",
+        "# ty: ignore[invalid-assignment]",
+        "# pyright: ignore[reportAttributeAccessIssue]",
+        "# pyright: basic",
+        "# mypy: ignore-errors",
+        '# mypy: disable-error-code="attr-defined"',
+        "# pragma: no cover",
+        "# pragma: no branch",
+        "# pragma: no mutate",
+        "# nosec B101",
+        "# nosemgrep",
+        "# pylint: disable=unused-import",
+    ],
+)
 def test_reconoce_los_comentarios_que_silencian(proyecto, comentario):
     raiz, temporal = proyecto
     entrada = {"file_path": str(raiz / "nuevo.py"), "content": f"x = 1  {comentario}\n"}
@@ -321,43 +346,54 @@ def test_ampliar_una_excepcion_cuenta_como_agregarla(proyecto):
 def test_multiedit_se_revisa_entero(proyecto):
     raiz, temporal = proyecto
     (raiz / "app.py").write_text("x = 1\ny = 2\n")
-    edits = [{"old_string": "x = 1", "new_string": "x = 3"},
-             {"old_string": "y = 2", "new_string": "y = 2  # type: ignore"}]
+    edits = [
+        {"old_string": "x = 1", "new_string": "x = 3"},
+        {"old_string": "y = 2", "new_string": "y = 2  # type: ignore"},
+    ]
     assert bloqueado(silenciar("MultiEdit", {"file_path": str(raiz / "app.py"), "edits": edits}, raiz, temporal))
 
 
-@pytest.mark.parametrize("comando", [
-    "ruff check . --add-noqa",
-    "uv run ruff check --add-noqa='código heredado'",
-    "uv run ty check --add-ignore",
-    "ty check --update-baseline",
-    "uv run complexipy . --snapshot-create",
-    "vulture src --make-whitelist > lista_blanca.py",
-])
+@pytest.mark.parametrize(
+    "comando",
+    [
+        "ruff check . --add-noqa",
+        "uv run ruff check --add-noqa='código heredado'",
+        "uv run ty check --add-ignore",
+        "ty check --update-baseline",
+        "uv run complexipy . --snapshot-create",
+        "vulture src --make-whitelist > lista_blanca.py",
+    ],
+)
 def test_por_terminal_bloquea_lo_que_silencia_en_bloque(proyecto, comando):
     raiz, temporal = proyecto
     assert bloqueado(silenciar("Bash", {"command": comando}, raiz, temporal))
 
 
-@pytest.mark.parametrize("comando", [
-    "sed -i '' 's/$/  # noqa/' app.py",
-    "perl -pi -e 's/$/  # type: ignore/' app.py",
-    "echo 'y = 2  # type: ignore' >> app.py",
-    "printf '# ruff: noqa\\n' | tee -a app.py",
-    "cat > nuevo.py <<'EOF'\nx = 1  # pragma: no cover\nEOF",
-])
+@pytest.mark.parametrize(
+    "comando",
+    [
+        "sed -i '' 's/$/  # noqa/' app.py",
+        "perl -pi -e 's/$/  # type: ignore/' app.py",
+        "echo 'y = 2  # type: ignore' >> app.py",
+        "printf '# ruff: noqa\\n' | tee -a app.py",
+        "cat > nuevo.py <<'EOF'\nx = 1  # pragma: no cover\nEOF",
+    ],
+)
 def test_por_terminal_bloquea_escribir_una_excepcion_en_un_py(proyecto, comando):
     raiz, temporal = proyecto
     assert bloqueado(silenciar("Bash", {"command": comando}, raiz, temporal))
 
 
-@pytest.mark.parametrize("comando", [
-    "grep -rn '# noqa' . 2>&1 | head",
-    "rg 'type: ignore' -g '*.py' > lista.txt",
-    "git commit -m 'no usar --add-noqa ni # noqa'",
-    "ruff check --fix app.py",
-    "sed -i '' 's/viejo/nuevo/' app.py",
-])
+@pytest.mark.parametrize(
+    "comando",
+    [
+        "grep -rn '# noqa' . 2>&1 | head",
+        "rg 'type: ignore' -g '*.py' > lista.txt",
+        "git commit -m 'no usar --add-noqa ni # noqa'",
+        "ruff check --fix app.py",
+        "sed -i '' 's/viejo/nuevo/' app.py",
+    ],
+)
 def test_por_terminal_deja_buscar_y_mencionar_excepciones(proyecto, comando):
     raiz, temporal = proyecto
     assert silenciar("Bash", {"command": comando}, raiz, temporal).returncode == 0
@@ -367,32 +403,38 @@ def prueba_con(raiz: Path, contenido: str) -> dict:
     return {"file_path": str(raiz / "tests" / "test_x.py"), "content": contenido}
 
 
-@pytest.mark.parametrize("linea", [
-    '@pytest.mark.skip(reason="falla en CI")',
-    "@pytest.mark.xfail(strict=True)",
-    "pytestmark = pytest.mark.skip",
-    "@mark.xfail",
-    '@pytest.mark.skipif(True, reason="x")',
-    '    pytest.skip("todavía no")',
-    '    pytest.xfail("se arregla después")',
-    '@unittest.skip("lento")',
-    "@unittest.expectedFailure",
-    '    raise unittest.SkipTest("sin datos")',
-    '        self.skipTest("sin datos")',
-    '    pytest.exit("listo", returncode=0)',
-    "    os._exit(0)",
-    '    reporte.outcome = "passed"',
-])
+@pytest.mark.parametrize(
+    "linea",
+    [
+        '@pytest.mark.skip(reason="falla en CI")',
+        "@pytest.mark.xfail(strict=True)",
+        "pytestmark = pytest.mark.skip",
+        "@mark.xfail",
+        '@pytest.mark.skipif(True, reason="x")',
+        '    pytest.skip("todavía no")',
+        '    pytest.xfail("se arregla después")',
+        '@unittest.skip("lento")',
+        "@unittest.expectedFailure",
+        '    raise unittest.SkipTest("sin datos")',
+        '        self.skipTest("sin datos")',
+        '    pytest.exit("listo", returncode=0)',
+        "    os._exit(0)",
+        '    reporte.outcome = "passed"',
+    ],
+)
 def test_claude_no_puede_saltar_pruebas(proyecto, linea):
     raiz, temporal = proyecto
     r = silenciar("Write", prueba_con(raiz, f"{linea}\ndef test_x():\n    pass\n"), raiz, temporal)
     assert bloqueado(r)
 
 
-@pytest.mark.parametrize("linea", [
-    '@pytest.mark.skipif(not torch.cuda.is_available(), reason="requiere GPU")',
-    '@unittest.skipIf(sys.platform == "win32", "solo Unix")',
-])
+@pytest.mark.parametrize(
+    "linea",
+    [
+        '@pytest.mark.skipif(not torch.cuda.is_available(), reason="requiere GPU")',
+        '@unittest.skipIf(sys.platform == "win32", "solo Unix")',
+    ],
+)
 def test_saltar_segun_el_entorno_lo_confirma_la_persona(proyecto, linea):
     raiz, temporal = proyecto
     r = silenciar("Write", prueba_con(raiz, f"{linea}\ndef test_x():\n    pass\n"), raiz, temporal)
@@ -401,11 +443,14 @@ def test_saltar_segun_el_entorno_lo_confirma_la_persona(proyecto, linea):
     assert salida["permissionDecision"] == "ask" and "skip" in salida["permissionDecisionReason"]
 
 
-@pytest.mark.parametrize("contenido", [
-    'torch = pytest.importorskip("torch")\n',
-    "@saltar_sin_gpu\ndef test_x():\n    pass\n",
-    "def test_skip_de_lineas_vacias():\n    assert recortar('') == ''\n",
-])
+@pytest.mark.parametrize(
+    "contenido",
+    [
+        'torch = pytest.importorskip("torch")\n',
+        "@saltar_sin_gpu\ndef test_x():\n    pass\n",
+        "def test_skip_de_lineas_vacias():\n    assert recortar('') == ''\n",
+    ],
+)
 def test_deja_lo_que_no_salta_pruebas(proyecto, contenido):
     raiz, temporal = proyecto
     r = silenciar("Write", prueba_con(raiz, contenido), raiz, temporal)
@@ -435,12 +480,14 @@ def test_entrada_rara_no_bloquea(proyecto):
     raiz, temporal = proyecto
     assert correr("no_silenciar.py", {}, raiz, temporal).returncode == 0
     assert correr("no_silenciar.py", {"tool_name": "Edit", "tool_input": None}, raiz, temporal).returncode == 0
-    r = subprocess.run([sys.executable, "-I", str(HOOKS / "no_silenciar.py")], input="no es json",
-                       capture_output=True, text=True)
+    r = subprocess.run(
+        [sys.executable, "-I", str(HOOKS / "no_silenciar.py")], input="no es json", capture_output=True, text=True
+    )
     assert r.returncode == 0
 
 
 # --- notificar.py ---
+
 
 def test_notificacion_pasa_el_texto_como_argumento(proyecto, tmp_path):
     raiz, temporal = proyecto

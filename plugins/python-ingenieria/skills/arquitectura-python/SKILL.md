@@ -62,6 +62,7 @@ class RepositorioLotes(Protocol):
     def obtener(self, lote_id: str) -> Lote: ...
     def guardar(self, lote: Lote) -> None: ...
 
+
 class RegistrarCosecha:
     def __init__(self, lotes: RepositorioLotes) -> None:
         self._lotes = lotes
@@ -71,6 +72,7 @@ class RegistrarCosecha:
         lote.registrar_cosecha(toneladas)  # la regla vive en el dominio
         self._lotes.guardar(lote)
         return lote
+
 
 # entrypoints/api.py
 def registrar_cosecha_dep(session: Annotated[Session, Depends(get_session)]) -> RegistrarCosecha:

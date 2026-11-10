@@ -84,8 +84,12 @@ def test_un_commit_viejo_se_puede_explicar_aunque_haya_otros_despues(repo):
     textos["titulo"] = "Agrega multiplicar"
     textos["resumen"].update(problema="p", solucion="s", como_se_probo="c")
     for paso in textos["pasos"]:
-        paso.update(titulo="t", explicacion="e", notas={str(n): "n" for n in paso["lineas_nuevas"]},
-                    notas_borradas={str(n): "b" for n in paso["lineas_borradas"]})
+        paso.update(
+            titulo="t",
+            explicacion="e",
+            notas={str(n): "n" for n in paso["lineas_nuevas"]},
+            notas_borradas={str(n): "b" for n in paso["lineas_borradas"]},
+        )
     (destino / "textos.json").write_text(json.dumps(textos))
     (repo / "config.yml").write_text("nombre: otra\n")
     git(repo, "commit", "-q", "-am", "otro cambio")

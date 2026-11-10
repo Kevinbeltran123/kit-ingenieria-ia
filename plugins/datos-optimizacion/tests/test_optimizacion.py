@@ -51,6 +51,7 @@ def instancia_aleatoria(semilla: int) -> dict:
 
 # --- Verificador (siempre corre, sin solver) ---
 
+
 def test_verificador_acepta_el_optimo_calculado_a_mano():
     sol = {"asignacion": {"L1": "A", "L2": "A", "L3": "B"}, "objetivo_m": 800}
     assert verificar(MINIMA, sol) == []
@@ -78,6 +79,7 @@ def test_fuerza_bruta_confirma_el_optimo_a_mano():
 
 
 # --- Modelo (solo si OR-Tools está instalado) ---
+
 
 @pytest.fixture
 def resolver():

@@ -19,9 +19,12 @@ Un archivo `.pt`, `.pth`, `.pkl`, `.bin` o `.ckpt` es pickle: **cargarlo puede e
    ```
 4. **Hugging Face / timm con revisión fija** (hash de commit, no `main`) y safetensors:
    ```python
-   model = AutoModel.from_pretrained("facebook/dinov3-vitb16-pretrain-lvd1689m",
-                                     revision="<sha del commit>", use_safetensors=True,
-                                     trust_remote_code=False)
+   model = AutoModel.from_pretrained(
+       "facebook/dinov3-vitb16-pretrain-lvd1689m",
+       revision="<sha del commit>",
+       use_safetensors=True,
+       trust_remote_code=False,
+   )
    ```
 5. **Nunca `trust_remote_code=True`** con repos de terceros. Si un modelo lo exige, copia y revisa su código en el repo propio.
    **Tampoco `torch.hub.load` desde GitHub:** ejecuta el `hubconf.py` del repo, que es lo mismo con otro nombre, y

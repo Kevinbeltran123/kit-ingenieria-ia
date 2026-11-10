@@ -42,7 +42,9 @@ def main() -> int:
 
     check = subprocess.run(
         [ruff, "check", "--fix", "--force-exclude", "--output-format", "concise", archivo],
-        cwd=raiz, capture_output=True, text=True,
+        cwd=raiz,
+        capture_output=True,
+        text=True,
     )
     subprocess.run([ruff, "format", "--force-exclude", archivo], cwd=raiz, capture_output=True)
 

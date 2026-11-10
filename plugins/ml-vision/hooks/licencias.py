@@ -33,7 +33,9 @@ ARCHIVOS_DEPENDENCIAS = re.compile(
     r"^(pyproject\.toml|setup\.cfg|setup\.py|environment\.ya?ml|pixi\.toml|requirements[\w.-]*\.(txt|in))$"
 )
 PEP723 = re.compile(r"^# /// script\s*$(.*?)^# ///\s*$", re.MULTILINE | re.DOTALL)
-DOCKERFILE = re.compile(r"^(?:dockerfile|containerfile)(?:[.-][\w.-]+)?$|\.(?:dockerfile|containerfile)$", re.IGNORECASE)
+DOCKERFILE = re.compile(
+    r"^(?:dockerfile|containerfile)(?:[.-][\w.-]+)?$|\.(?:dockerfile|containerfile)$", re.IGNORECASE
+)
 FORMA_EXEC = re.compile(r"^(\s*(?:RUN|CMD|ENTRYPOINT)\s+)(\[.*\])\s*$", re.IGNORECASE | re.MULTILINE)
 IMAGEN = re.compile(r"^\s*FROM\s+(?:--\S+\s+)*(\S+)", re.IGNORECASE | re.MULTILINE)
 INSTALADORES = {"pip", "pip3", "uv", "uvx", "poetry", "conda", "mamba", "micromamba", "pixi", "pipx"}
@@ -51,7 +53,8 @@ def aprobados(raiz: Path) -> set[str]:
         return set()
     texto = archivo.read_text(encoding="utf-8", errors="ignore")
     return {
-        nombre for nombre in PAQUETES
+        nombre
+        for nombre in PAQUETES
         if re.search(rf"^\s*[-*]?\s*APROBADO:\s*{re.escape(nombre)}(?![\w\[])", texto, re.IGNORECASE | re.MULTILINE)
     }
 
@@ -62,7 +65,8 @@ def agregados(antes: str, despues: str) -> list[str]:
 
 def es_dependencias(ruta: Path) -> bool:
     return bool(ARCHIVOS_DEPENDENCIAS.match(ruta.name)) or (
-        ruta.parent.name == "requirements" and ruta.suffix in {".txt", ".in"})
+        ruta.parent.name == "requirements" and ruta.suffix in {".txt", ".in"}
+    )
 
 
 def archivo_antes_y_despues(herramienta: str, entrada: dict) -> tuple[str, str]:
@@ -106,7 +110,7 @@ def paquetes_que_instala(seg: list[str]) -> list[str]:
     sub = [a for a in args if not a.startswith("-")]
     if sub[:2] == ["tool", "run"] or (cmd == "pipx" and sub[:1] == ["run"]):
         # La herramienta es el primer argumento que no es opción ni valor de una; lo demás es suyo.
-        resto = args[args.index("run") + 1:]
+        resto = args[args.index("run") + 1 :]
         herramienta = [a for o, a in zip(["-"] + resto, resto) if not a.startswith("-") and o not in CON_VALOR]
         return valores + herramienta[:1]
     if sub[:1] == ["run"]:
@@ -121,9 +125,10 @@ def restringidos_en_bash(comando: str) -> list[str]:
     encontrados: list[str] = []
     for seg in segmentos(comando):
         for i, palabra in enumerate(seg):
-            nombre, resto = os.path.basename(palabra), seg[i + 1:]
-            if nombre == "ssh" or (nombre in SHELLS and any(
-                    a.startswith("-") and not a.startswith("--") and "c" in a for a in resto)):
+            nombre, resto = os.path.basename(palabra), seg[i + 1 :]
+            if nombre == "ssh" or (
+                nombre in SHELLS and any(a.startswith("-") and not a.startswith("--") and "c" in a for a in resto)
+            ):
                 # Lo que corren `bash -c '...'` o `ssh host '...'` es otro comando.
                 for texto in (a for a in resto if not a.startswith("-")):
                     encontrados += restringidos_en_bash(texto)
@@ -138,11 +143,13 @@ def restringidos_en_bash(comando: str) -> list[str]:
 
 def restringidos_en_dockerfile(texto: str) -> list[str]:
     """Paquetes restringidos que traen los RUN (y CMD/ENTRYPOINT con `uv run --with`) y las imágenes de FROM."""
+
     def a_shell(m: re.Match) -> str:  # RUN ["pip", "install", "x"] -> RUN pip install x
         try:
             return m.group(1) + " ".join(shlex.quote(str(p)) for p in json.loads(m.group(2)))
         except (ValueError, TypeError):
             return m.group(0)
+
     texto = FORMA_EXEC.sub(a_shell, texto)
     # Las líneas que no son RUN no instalan nada, y las continuaciones y heredocs ya los lee segmentos().
     encontrados = restringidos_en_bash(texto)
@@ -153,8 +160,10 @@ def restringidos_en_dockerfile(texto: str) -> list[str]:
 
 APROBACION = re.compile(r"^\s*[-*]?\s*APROBADO:", re.IGNORECASE | re.MULTILINE)
 ESCRIBE = re.compile(r">|\btee\b|\bsed\s+(?:-\w+\s+)*-i|\bperl\s+-\w*i")
-SOLO_LA_PERSONA = ("Bloqueado: solo la persona registra aprobaciones de licencia en LICENSES.md. "
-                   "Pídele que agregue ella misma la línea 'APROBADO: <paquete> — <licencia y quién aprobó>'.")
+SOLO_LA_PERSONA = (
+    "Bloqueado: solo la persona registra aprobaciones de licencia en LICENSES.md. "
+    "Pídele que agregue ella misma la línea 'APROBADO: <paquete> — <licencia y quién aprobó>'."
+)
 
 
 def antes_y_despues(herramienta: str, entrada: dict) -> tuple[str, str]:
@@ -210,8 +219,9 @@ def main() -> int:
             nuevos = agregados(entrada.get("old_string", ""), entrada.get("new_string", ""))
         else:
             edits = entrada.get("edits") or []
-            nuevos = agregados("\n".join(e.get("old_string", "") for e in edits),
-                               "\n".join(e.get("new_string", "") for e in edits))
+            nuevos = agregados(
+                "\n".join(e.get("old_string", "") for e in edits), "\n".join(e.get("new_string", "") for e in edits)
+            )
     elif herramienta == "Bash":
         nuevos = restringidos_en_bash(entrada.get("command", ""))
 

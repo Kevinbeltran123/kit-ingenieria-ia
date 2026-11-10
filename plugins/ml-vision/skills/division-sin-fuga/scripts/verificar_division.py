@@ -67,8 +67,11 @@ def main(argv=None) -> int:
     p.add_argument("manifiesto", type=Path)
     p.add_argument("--col-imagen", default="imagen")
     p.add_argument("--col-split", default="split")
-    p.add_argument("--grupos", default="palma_id,lote,finca",
-                   help="columnas de agrupación separadas por coma; las que no existan se reportan como error")
+    p.add_argument(
+        "--grupos",
+        default="palma_id,lote,finca",
+        help="columnas de agrupación separadas por coma; las que no existan se reportan como error",
+    )
     p.add_argument("--col-fecha", default="fecha")
     p.add_argument("--temporal", action="store_true", help="exige que el split de prueba sea posterior a los demás")
     p.add_argument("--split-prueba", default="test")
@@ -89,8 +92,11 @@ def main(argv=None) -> int:
         requeridas.append(args.col_fecha)
     faltantes = [c for c in requeridas if c not in columnas]
     if faltantes:
-        print(f"ERROR: columnas inexistentes en el manifiesto: {', '.join(faltantes)}. "
-              f"Columnas disponibles: {', '.join(columnas)}", file=sys.stderr)
+        print(
+            f"ERROR: columnas inexistentes en el manifiesto: {', '.join(faltantes)}. "
+            f"Columnas disponibles: {', '.join(columnas)}",
+            file=sys.stderr,
+        )
         return 2
 
     conteo = defaultdict(int)
@@ -120,9 +126,11 @@ def main(argv=None) -> int:
                 continue
             por_hash[sha256(ruta)].add(fila[args.col_split])
         if filas and ausentes == len(filas):
-            print(f"ERROR [hash] no se encontró ninguna imagen en {args.imagenes}: el chequeo por hash no corrió. "
-                  "Revisa la ruta. Donde no estén las imágenes (por ejemplo en CI), agrega al manifiesto una "
-                  "columna sha256 y pásala en --grupos.")
+            print(
+                f"ERROR [hash] no se encontró ninguna imagen en {args.imagenes}: el chequeo por hash no corrió. "
+                "Revisa la ruta. Donde no estén las imágenes (por ejemplo en CI), agrega al manifiesto una "
+                "columna sha256 y pásala en --grupos."
+            )
             return 2
         dup = {h[:12]: s for h, s in por_hash.items() if len(s) > 1}
         if dup:
@@ -154,11 +162,15 @@ def main(argv=None) -> int:
                     continue
                 if max(lista) >= inicio_prueba:
                     fallas += 1
-                    print(f"FALLA [temporal] '{split}' llega hasta {max(lista)} y "
-                          f"'{args.split_prueba}' empieza el {inicio_prueba}: la prueba debe ser posterior")
+                    print(
+                        f"FALLA [temporal] '{split}' llega hasta {max(lista)} y "
+                        f"'{args.split_prueba}' empieza el {inicio_prueba}: la prueba debe ser posterior"
+                    )
                 else:
-                    print(f"OK    [temporal] '{split}' termina ({max(lista)}) antes de que empiece "
-                          f"'{args.split_prueba}' ({inicio_prueba})")
+                    print(
+                        f"OK    [temporal] '{split}' termina ({max(lista)}) antes de que empiece "
+                        f"'{args.split_prueba}' ({inicio_prueba})"
+                    )
 
     if fallas:
         print(f"\nResultado: {fallas} problema(s) de fuga. La división NO es válida.")

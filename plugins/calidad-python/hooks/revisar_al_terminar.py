@@ -43,11 +43,15 @@ def comandos(raiz: Path, editados: list[str]) -> tuple[list[tuple[str, list[str]
     """Devuelve (nombre, comando, códigos de salida aceptados) según lo que use el repo, y lo
     configurado que no está instalado: eso no se revisó y no puede contar como que pasó."""
     lista, faltan = [], []
-    tipos = [nombre for nombre, seccion, archivos in [
-        ("ty", "tool.ty", ["ty.toml"]),
-        ("mypy", "tool.mypy", ["mypy.ini", ".mypy.ini"]),
-        ("pyright", "tool.pyright", ["pyrightconfig.json"]),
-    ] if configurado(raiz, seccion, *archivos)]
+    tipos = [
+        nombre
+        for nombre, seccion, archivos in [
+            ("ty", "tool.ty", ["ty.toml"]),
+            ("mypy", "tool.mypy", ["mypy.ini", ".mypy.ini"]),
+            ("pyright", "tool.pyright", ["pyrightconfig.json"]),
+        ]
+        if configurado(raiz, seccion, *archivos)
+    ]
     instalados = [(nombre, h) for nombre in tipos if (h := buscar_herramienta(raiz, nombre))]
     if instalados:
         nombre, herramienta = instalados[0]
@@ -94,8 +98,10 @@ def main() -> int:
 
     lista, faltan = comandos(raiz, editados)
     fallos = {
-        nombre: (f"## {nombre}: está configurado pero no instalado, así que no se revisó\n"
-                 "Instala las herramientas de desarrollo en el .venv del proyecto (con uv: `uv sync`) y vuelve a terminar.")
+        nombre: (
+            f"## {nombre}: está configurado pero no instalado, así que no se revisó\n"
+            "Instala las herramientas de desarrollo en el .venv del proyecto (con uv: `uv sync`) y vuelve a terminar."
+        )
         for nombre in faltan
     }
     for nombre, cmd, aceptados in lista:
@@ -119,8 +125,10 @@ def main() -> int:
 
     marca.unlink()
     contador.unlink(missing_ok=True)
-    aviso = (f"calidad-python: después de {MAX_BLOQUEOS} intentos, {', '.join(fallos)} sigue fallando o sin "
-             "poder revisarse. Revísalo antes de dar la tarea por terminada.")
+    aviso = (
+        f"calidad-python: después de {MAX_BLOQUEOS} intentos, {', '.join(fallos)} sigue fallando o sin "
+        "poder revisarse. Revísalo antes de dar la tarea por terminada."
+    )
     print(json.dumps({"systemMessage": aviso}, ensure_ascii=False))
     return 0
 

@@ -27,8 +27,15 @@ from pathlib import Path
 
 CARPETA = ".explicaciones"
 NO_EXPLICAR = {  # los cambia una herramienta, no una persona
-    "uv.lock", "poetry.lock", "Pipfile.lock", "pdm.lock", "package-lock.json", "pnpm-lock.yaml",
-    "yarn.lock", "bun.lockb", "Cargo.lock",
+    "uv.lock",
+    "poetry.lock",
+    "Pipfile.lock",
+    "pdm.lock",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lockb",
+    "Cargo.lock",
 }
 MAX_LINEAS_PASO = 40
 MAX_HUECO = 3  # dos bloques del mismo método separados por hasta 3 líneas iguales forman un paso
@@ -106,8 +113,9 @@ def definiciones(fuente: str) -> list[tuple[int, int, str]]:
                 es_clase = isinstance(hijo, ast.ClassDef)
                 nombre = f"{prefijo}{hijo.name}"
                 inicio = min([hijo.lineno] + [d.lineno for d in hijo.decorator_list])
-                salida.append((inicio, hijo.end_lineno or hijo.lineno,
-                               f"class {nombre}" if es_clase else f"def {nombre}()"))
+                salida.append(
+                    (inicio, hijo.end_lineno or hijo.lineno, f"class {nombre}" if es_clase else f"def {nombre}()")
+                )
                 visitar(hijo, f"{nombre}.")
             else:
                 visitar(hijo, prefijo)
@@ -195,8 +203,12 @@ def pasos_de_archivo(lineas: list[dict], es_python: bool) -> list[dict]:
         if pasos:
             previo = pasos[-1]
             hueco = i0 - previo["i1"] - 1
-            if hueco <= MAX_HUECO and previo["contexto"] == ctx and i1 - previo["i0"] < MAX_LINEAS_PASO \
-                    and not any(lineas[i].get("n") in inicios for i in range(previo["i1"] + 1, i0 + 1)):
+            if (
+                hueco <= MAX_HUECO
+                and previo["contexto"] == ctx
+                and i1 - previo["i0"] < MAX_LINEAS_PASO
+                and not any(lineas[i].get("n") in inicios for i in range(previo["i1"] + 1, i0 + 1))
+            ):
                 previo["i1"] = i1
                 continue
         pasos.append({"i0": i0, "i1": i1, "contexto": ctx})
@@ -205,8 +217,9 @@ def pasos_de_archivo(lineas: list[dict], es_python: bool) -> list[dict]:
 
 def numeros(lineas: list[dict], paso: dict, tipo: str) -> list[int]:
     clave = "n" if tipo == "+" else "o"
-    return [lineas[i][clave] for i in range(paso["i0"], paso["i1"] + 1)
-            if lineas[i]["t"] == tipo and lineas[i]["c"].strip()]
+    return [
+        lineas[i][clave] for i in range(paso["i0"], paso["i1"] + 1) if lineas[i]["t"] == tipo and lineas[i]["c"].strip()
+    ]
 
 
 def codigo_para_leer(lineas: list[dict], paso: dict) -> list[str]:
@@ -257,8 +270,12 @@ def main(argv: list[str] | None = None) -> int:
             omitidos.append({"ruta": ruta, "motivo": "lo cambia el gestor de paquetes, no una persona"})
             continue
         if anterior is None:
-            texto = subprocess.run(["git", "diff", "--no-index", "-U1000000", "--", "/dev/null", ruta],
-                                   cwd=raiz, capture_output=True, text=True).stdout
+            texto = subprocess.run(
+                ["git", "diff", "--no-index", "-U1000000", "--", "/dev/null", ruta],
+                cwd=raiz,
+                capture_output=True,
+                text=True,
+            ).stdout
         else:
             rutas = [anterior, ruta] if anterior != ruta else [ruta]
             texto = git(raiz, "diff", "-M", "-U1000000", *rango, "--", *rutas)
@@ -269,33 +286,49 @@ def main(argv: list[str] | None = None) -> int:
         if not any(l["t"] in "+-" for l in lineas):
             continue
         indice = len(archivos)
-        archivos.append({
-            "ruta": ruta, "anterior": anterior if anterior != ruta else None, "estado": estado,
-            "mas": sum(l["t"] == "+" for l in lineas), "menos": sum(l["t"] == "-" for l in lineas),
-            "lineas": lineas,
-        })
+        archivos.append(
+            {
+                "ruta": ruta,
+                "anterior": anterior if anterior != ruta else None,
+                "estado": estado,
+                "mas": sum(l["t"] == "+" for l in lineas),
+                "menos": sum(l["t"] == "-" for l in lineas),
+                "lineas": lineas,
+            }
+        )
         for paso in pasos_de_archivo(lineas, ruta.endswith((".py", ".pyi"))):
             pasos.append({"id": len(pasos) + 1, "archivo": indice, **paso})
 
     if not pasos:
-        sys.exit(f"No hay cambios para explicar entre {base_ref} y {'el árbol de trabajo' if args.sin_commit else 'HEAD'}.")
+        sys.exit(
+            f"No hay cambios para explicar entre {base_ref} y {'el árbol de trabajo' if args.sin_commit else 'HEAD'}."
+        )
 
     carpeta = raiz / CARPETA / ("commits/" + hasta_sha[:7] if commit else carpeta_de_rama(rama))
     carpeta.mkdir(parents=True, exist_ok=True)
     excluir_de_git(raiz)
     datos = {
-        "version": 1, "repo": raiz.name, "rama": rama, "commit": commit,
-        "base": {"ref": base_ref, "sha": base_sha}, "hasta": hasta_sha, "sin_commit": args.sin_commit,
+        "version": 1,
+        "repo": raiz.name,
+        "rama": rama,
+        "commit": commit,
+        "base": {"ref": base_ref, "sha": base_sha},
+        "hasta": hasta_sha,
+        "sin_commit": args.sin_commit,
         "recolectado": datetime.now().isoformat(timespec="seconds"),
-        "archivos": archivos, "pasos": pasos, "omitidos": omitidos,
+        "archivos": archivos,
+        "pasos": pasos,
+        "omitidos": omitidos,
     }
     (carpeta / "datos.json").write_text(json.dumps(datos, ensure_ascii=False))
 
     textos = {
-        "_instrucciones": ("Completa cada campo vacío (ver la skill explicar-cambios). En cada paso: "
-                           "'explicacion' del bloque o método, una nota en 'notas' por cada número de "
-                           "'lineas_nuevas' y en 'notas_borradas' por cada número de 'lineas_borradas' "
-                           "(se aceptan rangos como \"61-64\"). 'codigo' es solo para leer."),
+        "_instrucciones": (
+            "Completa cada campo vacío (ver la skill explicar-cambios). En cada paso: "
+            "'explicacion' del bloque o método, una nota en 'notas' por cada número de "
+            "'lineas_nuevas' y en 'notas_borradas' por cada número de 'lineas_borradas' "
+            "(se aceptan rangos como \"61-64\"). 'codigo' es solo para leer."
+        ),
         "titulo": "",
         "resumen": {"problema": "", "solucion": "", "como_se_probo": "", "decisiones": "", "pendiente": ""},
         "pasos": [],
@@ -305,21 +338,31 @@ def main(argv: list[str] | None = None) -> int:
     for paso in pasos:
         a = archivos[paso["archivo"]]
         es_python = a["ruta"].endswith((".py", ".pyi"))
-        textos["pasos"].append({
-            "id": paso["id"], "archivo": a["ruta"], "contexto": paso["contexto"] or ("(nivel de módulo)" if es_python else ""),
-            "codigo": codigo_para_leer(a["lineas"], paso),
-            "lineas_nuevas": numeros(a["lineas"], paso, "+"),
-            "lineas_borradas": numeros(a["lineas"], paso, "-"),
-            "titulo": "", "explicacion": "", "notas": {}, "notas_borradas": {}, "alerta": None,
-        })
+        textos["pasos"].append(
+            {
+                "id": paso["id"],
+                "archivo": a["ruta"],
+                "contexto": paso["contexto"] or ("(nivel de módulo)" if es_python else ""),
+                "codigo": codigo_para_leer(a["lineas"], paso),
+                "lineas_nuevas": numeros(a["lineas"], paso, "+"),
+                "lineas_borradas": numeros(a["lineas"], paso, "-"),
+                "titulo": "",
+                "explicacion": "",
+                "notas": {},
+                "notas_borradas": {},
+                "alerta": None,
+            }
+        )
     destino = carpeta / "textos.json"
     if destino.exists():
         destino.replace(carpeta / "textos.anterior.json")
     destino.write_text(json.dumps(textos, ensure_ascii=False, indent=1))
 
     total = sum(len(p["lineas_nuevas"]) + len(p["lineas_borradas"]) for p in textos["pasos"])
-    print(f"{len(archivos)} archivos, {len(pasos)} pasos, {total} líneas para explicar"
-          + (f"; sin explicar: {', '.join(o['ruta'] for o in omitidos)}" if omitidos else ""))
+    print(
+        f"{len(archivos)} archivos, {len(pasos)} pasos, {total} líneas para explicar"
+        + (f"; sin explicar: {', '.join(o['ruta'] for o in omitidos)}" if omitidos else "")
+    )
     siguiente = f"construir.py {carpeta.relative_to(raiz)}" if commit else "construir.py"
     print(f"Completa {destino.relative_to(raiz)} y después corre {siguiente}.")
     return 0

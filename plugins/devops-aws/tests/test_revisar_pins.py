@@ -19,7 +19,9 @@ def workflow(tmp_path, cuerpo: str) -> Path:
 
 
 def test_workflow_bien_fijado_pasa(tmp_path):
-    gh = workflow(tmp_path, f"""on: push
+    gh = workflow(
+        tmp_path,
+        f"""on: push
 permissions:
   contents: read
 jobs:
@@ -28,8 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@{SHA} # v5
       - uses: ./acciones/local
-      - uses: docker://alpine@sha256:{'b' * 64}
-""")
+      - uses: docker://alpine@sha256:{"b" * 64}
+""",
+    )
     r = correr(gh)
     assert r.returncode == 0, r.stdout
 

@@ -15,9 +15,17 @@ def main() -> int:
     titulo = datos.get("title") or "Claude Code"
     # El texto va como argumento, no dentro del script, para que no se pueda inyectar AppleScript.
     subprocess.run(
-        ["osascript", "-e", "on run argv", "-e",
-         "display notification (item 1 of argv) with title (item 2 of argv)",
-         "-e", "end run", mensaje, titulo],
+        [
+            "osascript",
+            "-e",
+            "on run argv",
+            "-e",
+            "display notification (item 1 of argv) with title (item 2 of argv)",
+            "-e",
+            "end run",
+            mensaje,
+            titulo,
+        ],
         capture_output=True,
     )
     return 0

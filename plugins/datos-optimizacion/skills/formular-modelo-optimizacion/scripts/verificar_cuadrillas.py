@@ -36,7 +36,9 @@ def verificar(instancia: dict, solucion: dict) -> list[str]:
     if not errores:
         objetivo = sum(instancia["dist_m"][c][l] for l, c in asignacion.items())
         if solucion.get("objetivo_m") != objetivo:
-            errores.append(f"El objetivo reportado ({solucion.get('objetivo_m')} m) no coincide con el recalculado ({objetivo} m).")
+            errores.append(
+                f"El objetivo reportado ({solucion.get('objetivo_m')} m) no coincide con el recalculado ({objetivo} m)."
+            )
     return errores
 
 

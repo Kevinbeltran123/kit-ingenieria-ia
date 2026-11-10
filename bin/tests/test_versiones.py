@@ -28,7 +28,9 @@ def test_uv_tiene_una_sola_version():
 
 
 def test_gitleaks_misma_version_en_pre_commit_y_ci():
-    rev = re.search(r"gitleaks/gitleaks\n\s+rev: v([\d.]+)", texto("plantillas/python/.pre-commit-config.yaml")).group(1)
+    rev = re.search(r"gitleaks/gitleaks\n\s+rev: v([\d.]+)", texto("plantillas/python/.pre-commit-config.yaml")).group(
+        1
+    )
     ci = texto("plantillas/github/workflows/ci.yml")
     assert f"download/v{rev}/gitleaks_{rev}_linux_x64.tar.gz" in ci
     assert f"gitleaks {rev}" in ci  # el nombre del paso
@@ -37,9 +39,15 @@ def test_gitleaks_misma_version_en_pre_commit_y_ci():
 def test_prek_fijado_igual_en_todos_los_sitios():
     """`uvx prek` sin versión instala la última aunque tenga horas: cada mención lleva la misma versión."""
     version = re.search(r"uvx prek@([\d.]+) run", texto("plantillas/github/workflows/ci.yml")).group(1)
-    for ruta in ("README.md", "bin/adoptar.py", "bin/humo_plantillas.py", "plantillas/README.md",
-                 "plantillas/claude/CLAUDE.md", "plantillas/python/.pre-commit-config.yaml",
-                 "plantillas/github/workflows/ci.yml"):
+    for ruta in (
+        "README.md",
+        "bin/adoptar.py",
+        "bin/humo_plantillas.py",
+        "plantillas/README.md",
+        "plantillas/claude/CLAUDE.md",
+        "plantillas/python/.pre-commit-config.yaml",
+        "plantillas/github/workflows/ci.yml",
+    ):
         t = texto(ruta)
         assert set(re.findall(r"prek@([\d.]+)", t)) <= {version}, ruta
         assert not re.search(r"uvx prek(?![@\w])", t), f"{ruta}: uvx prek sin versión"
@@ -47,6 +55,7 @@ def test_prek_fijado_igual_en_todos_los_sitios():
 
 def test_acciones_del_kit_y_de_la_plantilla_con_el_mismo_sha():
     """Dependabot solo ve .github/workflows del kit: al aceptar su PR hay que copiar el SHA a la plantilla."""
+
     def acciones(ruta: str) -> dict[str, str]:
         return dict(re.findall(r"uses: ([\w./-]+)@([0-9a-f]{40})", texto(ruta)))
 

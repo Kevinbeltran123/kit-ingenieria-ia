@@ -38,11 +38,11 @@ from collections import Counter
 from pathlib import Path
 
 MARCAS = [
-    r"noqa\b",                                         # ruff, flake8, complexipy: una línea
-    r"(?:ruff|flake8):\s*(?:noqa|disable)\b",          # ruff: el archivo o un bloque
-    r"type:\s*ignore\b",                               # todo verificador de tipos (PEP 484)
+    r"noqa\b",  # ruff, flake8, complexipy: una línea
+    r"(?:ruff|flake8):\s*(?:noqa|disable)\b",  # ruff: el archivo o un bloque
+    r"type:\s*ignore\b",  # todo verificador de tipos (PEP 484)
     r"ty:\s*ignore\b",
-    r"(?:pyright|mypy):\s*(?!strict\b)\S",             # ignore[...] o configuración del archivo
+    r"(?:pyright|mypy):\s*(?!strict\b)\S",  # ignore[...] o configuración del archivo
     r"pragma[:\s]?\s*no\s*(?:cover|branch|mutate)\b",  # coverage y mutmut
     r"nosec\b",
     r"nosemgrep\b",
@@ -50,12 +50,12 @@ MARCAS = [
 ]
 EXCEPCION = re.compile(r"#\s*(?:" + "|".join(MARCAS) + r")[^\n]*", re.IGNORECASE)
 SALTOS = [
-    r"(?<![\w.])(?:pytest\.)?mark\.(?:skip|xfail)\b",               # decorador, pytestmark o marks=
-    r"(?<![\w.])(?:pytest\.)?mark\.skipif\(\s*(?:True|1)\s*[,)]",   # un skip disfrazado
+    r"(?<![\w.])(?:pytest\.)?mark\.(?:skip|xfail)\b",  # decorador, pytestmark o marks=
+    r"(?<![\w.])(?:pytest\.)?mark\.skipif\(\s*(?:True|1)\s*[,)]",  # un skip disfrazado
     r"(?<![\w.])pytest\.(?:skip|xfail)\s*\(|\bskip\.Exception\b",
     r"\bSkipTest\b|\.skipTest\s*\(|@(?:unittest\.)?(?:skip|expectedFailure)\b",
     r"(?<![\w.])pytest\.exit\([^\n]*returncode\s*=\s*0\b|\bos\._exit\s*\(\s*0\s*\)",  # salir en verde
-    r"\.outcome\s*=\s*[\"']passed[\"']",                             # reportar como pasada una que falló
+    r"\.outcome\s*=\s*[\"']passed[\"']",  # reportar como pasada una que falló
 ]
 SALTO = re.compile(r"(?:" + "|".join(SALTOS) + r")[^\n]*")
 CONDICIONAL = re.compile(r"(?<![\w.])(?:(?:pytest\.)?mark\.skipif|(?:unittest\.)?skip(?:If|Unless))\b[^\n]*")
@@ -64,10 +64,12 @@ REDIRECCIONES = {">", ">>", ">|", "&>", "&>>"}
 PUNTUACION = set("();<>|&")
 PYTHON = (".py", ".pyi")
 PERMITIR = "CALIDAD_PYTHON_PERMITIR_SILENCIAR"
-CONSEJO = ("Corrige el código para que cumpla la regla o pase la prueba. Si la prueba depende del entorno (GPU, "
-           "sistema operativo, una dependencia opcional), usa `pytest.importorskip` o `@pytest.mark.skipif(<condición>, "
-           "reason=...)`. Si es un falso positivo, explícale a la persona por qué y dile qué agregar y en qué línea: lo "
-           "agrega ella. Aunque te lo pida, este hook no te deja.")
+CONSEJO = (
+    "Corrige el código para que cumpla la regla o pase la prueba. Si la prueba depende del entorno (GPU, "
+    "sistema operativo, una dependencia opcional), usa `pytest.importorskip` o `@pytest.mark.skipif(<condición>, "
+    "reason=...)`. Si es un falso positivo, explícale a la persona por qué y dile qué agregar y en qué línea: lo "
+    "agrega ella. Aunque te lo pida, este hook no te deja."
+)
 
 
 def excepciones(texto: str) -> Counter:
@@ -96,8 +98,10 @@ def agregadas(herramienta: str, entrada: dict) -> tuple[list[str], list[str]]:
     if not str(entrada.get("file_path") or "").endswith(PYTHON):
         return [], []
     antes, despues = archivo_antes_y_despues(herramienta, entrada)
-    return ([*(excepciones(despues) - excepciones(antes)).elements()],
-            [*(condicionales(despues) - condicionales(antes)).elements()])
+    return (
+        [*(excepciones(despues) - excepciones(antes)).elements()],
+        [*(condicionales(despues) - condicionales(antes)).elements()],
+    )
 
 
 def palabras(comando: str) -> list[str]:
@@ -116,14 +120,18 @@ def escribe_en_un_py(tokens: list[str]) -> bool:
         if t in REDIRECCIONES and i + 1 < len(tokens) and tokens[i + 1].endswith(PYTHON):
             return True
         argumentos = []  # los del mismo comando simple, hasta el siguiente ;, | o >
-        for a in tokens[i + 1:]:
+        for a in tokens[i + 1 :]:
             if a and set(a) <= PUNTUACION:
                 break
             argumentos.append(a)
         nombre = os.path.basename(t)
-        en_sitio = nombre == "tee" or (nombre in {"sed", "gsed", "perl"} and any(
-            a.startswith("--in-place") or (a.startswith("-") and not a.startswith("--") and "i" in a)
-            for a in argumentos))
+        en_sitio = nombre == "tee" or (
+            nombre in {"sed", "gsed", "perl"}
+            and any(
+                a.startswith("--in-place") or (a.startswith("-") and not a.startswith("--") and "i" in a)
+                for a in argumentos
+            )
+        )
         if en_sitio and any(a.endswith(PYTHON) for a in argumentos):
             return True
     return False
@@ -135,8 +143,10 @@ def silencia_por_terminal(comando: str) -> str | None:
         if t.split("=", 1)[0] in EN_BLOQUE:
             return f"`{t}` silencia de una vez todo lo que hoy falla"
     if (EXCEPCION.search(comando) or SALTO.search(comando)) and escribe_en_un_py(tokens):
-        return ("el comando escribe una excepción en un .py (por terminal no se distingue si la agrega o la "
-                "quita: para quitarla, usa Edit)")
+        return (
+            "el comando escribe una excepción en un .py (por terminal no se distingue si la agrega o la "
+            "quita: para quitarla, usa Edit)"
+        )
     return None
 
 
@@ -154,22 +164,31 @@ def main() -> int:
         nuevas, dudosas = agregadas(herramienta, entrada)
         if nuevas:
             lista = "\n".join(f"  {c[:120]}" for c in nuevas[:5])
-            print(f"Bloqueado: solo la persona agrega excepciones a las reglas o salta pruebas. Este cambio agrega en "
-                  f"{entrada.get('file_path')}:\n{lista}\n{CONSEJO}", file=sys.stderr)
+            print(
+                f"Bloqueado: solo la persona agrega excepciones a las reglas o salta pruebas. Este cambio agrega en "
+                f"{entrada.get('file_path')}:\n{lista}\n{CONSEJO}",
+                file=sys.stderr,
+            )
             return 2
         if dudosas:
-            motivo = (f"calidad-python: el cambio agrega en {entrada.get('file_path')} una prueba que se salta según "
-                      f"una condición: {'; '.join(c[:120] for c in dudosas[:3])}. Confirma solo si la condición es del "
-                      "entorno (GPU, sistema operativo, una dependencia opcional) y no una forma de esquivar una prueba "
-                      "que falla.")
-            salida = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
-                                             "permissionDecisionReason": motivo}}
+            motivo = (
+                f"calidad-python: el cambio agrega en {entrada.get('file_path')} una prueba que se salta según "
+                f"una condición: {'; '.join(c[:120] for c in dudosas[:3])}. Confirma solo si la condición es del "
+                "entorno (GPU, sistema operativo, una dependencia opcional) y no una forma de esquivar una prueba "
+                "que falla."
+            )
+            salida = {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "ask",
+                    "permissionDecisionReason": motivo,
+                }
+            }
             print(json.dumps(salida, ensure_ascii=False))
     elif herramienta == "Bash":
         motivo = silencia_por_terminal(entrada.get("command", ""))
         if motivo:
-            print(f"Bloqueado: solo la persona agrega excepciones a las reglas: {motivo}.\n{CONSEJO}",
-                  file=sys.stderr)
+            print(f"Bloqueado: solo la persona agrega excepciones a las reglas: {motivo}.\n{CONSEJO}", file=sys.stderr)
             return 2
     return 0
 

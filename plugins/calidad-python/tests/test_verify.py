@@ -27,7 +27,9 @@ def correr(raiz: Path):
     # PATH mínimo para que no encuentre herramientas reales del sistema.
     return subprocess.run(
         [sys.executable, "-I", str(SCRIPT), str(raiz)],
-        capture_output=True, text=True, env={"PATH": "/usr/bin:/bin"},
+        capture_output=True,
+        text=True,
+        env={"PATH": "/usr/bin:/bin"},
     )
 
 

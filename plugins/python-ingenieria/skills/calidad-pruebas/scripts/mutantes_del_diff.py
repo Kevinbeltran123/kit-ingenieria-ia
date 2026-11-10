@@ -59,8 +59,10 @@ def main() -> int:
     parser.add_argument("--base", default="origin/main")
     args = parser.parse_args()
     if not base_existe(args.base):
-        print(f"No existe la base {args.base}. Pásala con --base; en CI usa fetch-depth: 0 para tener la historia.",
-              file=sys.stderr)
+        print(
+            f"No existe la base {args.base}. Pásala con --base; en CI usa fetch-depth: 0 para tener la historia.",
+            file=sys.stderr,
+        )
         return 2
     patrones = sorted({pat for f in archivos_cambiados(args.base) if (pat := a_patron(f))})
     if not patrones:

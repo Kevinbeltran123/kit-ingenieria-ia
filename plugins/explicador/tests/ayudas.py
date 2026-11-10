@@ -15,13 +15,13 @@ HOOK = PLUGIN / "hooks" / "exigir_explicacion.py"
 ENV = {k: v for k, v in os.environ.items() if k != "EXPLICADOR_DESACTIVAR"}
 ENV.update({"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"})
 
-VIEJO = '''def sumar(a, b):
+VIEJO = """def sumar(a, b):
     return a + b
 
 
 def restar(a, b):
     return a - b
-'''
+"""
 NUEVO = '''def sumar(a, b):
     """Suma dos números."""
     return a + b
@@ -41,8 +41,14 @@ def git(raiz: Path, *args: str) -> str:
 
 
 def correr(script: Path, raiz: Path, *args: str, entrada: str | None = None, env: dict | None = None):
-    return subprocess.run([sys.executable, "-I", str(script), *args], cwd=raiz, input=entrada,
-                          capture_output=True, text=True, env={**ENV, **(env or {})})
+    return subprocess.run(
+        [sys.executable, "-I", str(script), *args],
+        cwd=raiz,
+        input=entrada,
+        capture_output=True,
+        text=True,
+        env={**ENV, **(env or {})},
+    )
 
 
 def crear_repo(raiz: Path) -> Path:
@@ -75,8 +81,9 @@ def completar(raiz: Path, alerta: dict | None = None) -> dict:
     """Llena textos.json como lo haría Claude: una nota por cada línea pedida."""
     textos = leer(raiz, "textos.json")
     textos["titulo"] = "Agrega multiplicar"
-    textos["resumen"].update(problema="No se podía multiplicar.", solucion="Nueva función multiplicar.",
-                             como_se_probo="pytest: 3 de 3")
+    textos["resumen"].update(
+        problema="No se podía multiplicar.", solucion="Nueva función multiplicar.", como_se_probo="pytest: 3 de 3"
+    )
     for paso in textos["pasos"]:
         paso["titulo"] = f"Paso {paso['id']}"
         paso["explicacion"] = "Qué hace el bloque y por qué cambió."

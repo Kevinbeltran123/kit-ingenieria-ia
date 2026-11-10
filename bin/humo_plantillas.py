@@ -21,7 +21,7 @@ from pathlib import Path
 
 KIT = Path(__file__).resolve().parent.parent
 
-PYPROJECT = '''[project]
+PYPROJECT = """[project]
 name = "app"
 version = "0.1.0"
 requires-python = ">=3.12"
@@ -31,7 +31,7 @@ dependencies = []
 requires = ["uv_build>=0.13,<0.14"]
 build-backend = "uv_build"
 
-'''
+"""
 
 ARCHIVOS = {
     "src/app/__init__.py": '"""Paquete de prueba del kit."""\n',
@@ -56,7 +56,7 @@ def reportar(kg: float, hectareas: float) -> str:
     """Rendimiento del lote como texto."""
     return f"{rendimiento_kg_ha(kg, hectareas):.1f} kg/ha"
 ''',
-    "tests/test_lote.py": '''import pytest
+    "tests/test_lote.py": """import pytest
 
 from app.application.reporte import reportar
 from app.domain.lote import rendimiento_kg_ha
@@ -73,7 +73,7 @@ def test_hectareas_cero_es_error():
 
 def test_reporte():
     assert reportar(1000, 4) == "250.0 kg/ha"
-''',
+""",
 }
 
 # Los pasos del job `calidad` de la plantilla de CI, en su orden, salvo pip-audit (depende de la
@@ -122,7 +122,9 @@ def probar_docker(repo: Path) -> str | None:
             return "docker build"
         uid = subprocess.run(["docker", "run", "--rm", imagen, "id", "-u"], cwd=repo, capture_output=True, text=True)
         if uid.returncode != 0 or uid.stdout.strip() == "0":
-            return f"docker run id -u (salió {uid.stdout.strip() or uid.returncode}; debe ser un usuario distinto de root)"
+            return (
+                f"docker run id -u (salió {uid.stdout.strip() or uid.returncode}; debe ser un usuario distinto de root)"
+            )
     finally:
         subprocess.run(["docker", "rmi", "-f", imagen], capture_output=True)
     return None
@@ -131,8 +133,11 @@ def probar_docker(repo: Path) -> str | None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--conservar", action="store_true", help="no borrar el repo de prueba")
-    parser.add_argument("--sin-docker", action="store_true",
-                        help="no construir la imagen del Dockerfile (el CI del kit sí la construye)")
+    parser.add_argument(
+        "--sin-docker",
+        action="store_true",
+        help="no construir la imagen del Dockerfile (el CI del kit sí la construye)",
+    )
     args = parser.parse_args(argv)
     faltan = [h for h in ("uv", "uvx", "git") if not shutil.which(h)]
     if faltan:
@@ -167,8 +172,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nFALLA en {len(fallos)} de {total} pasos:", *fallos, sep="\n  ")
         return 1
     if motivo:
-        print(f"\n{len(PASOS)}/{total} pasos OK, 1 sin revisar: {motivo}, así que el Dockerfile no se probó. "
-              "Arregla Docker, o pasa --sin-docker para saltarlo a propósito.")
+        print(
+            f"\n{len(PASOS)}/{total} pasos OK, 1 sin revisar: {motivo}, así que el Dockerfile no se probó. "
+            "Arregla Docker, o pasa --sin-docker para saltarlo a propósito."
+        )
         return 1
     nota = " (Dockerfile sin probar: --sin-docker)" if args.sin_docker else ""
     print(f"\n{total}/{total} pasos OK: las plantillas funcionan en un repo nuevo{nota}.")

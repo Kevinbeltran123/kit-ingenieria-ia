@@ -16,7 +16,10 @@ def test_arma_un_paso_por_metodo_y_omite_lockfiles(repo):
     assert [a["ruta"] for a in datos["archivos"]] == ["calc.py", "config.yml"]
     assert [o["ruta"] for o in datos["omitidos"]] == ["uv.lock"]
     assert datos["hasta"] == git(repo, "rev-parse", "HEAD")
-    pasos = [(p["archivo"], p["contexto"], p["lineas_nuevas"], p["lineas_borradas"]) for p in leer(repo, "textos.json")["pasos"]]
+    pasos = [
+        (p["archivo"], p["contexto"], p["lineas_nuevas"], p["lineas_borradas"])
+        for p in leer(repo, "textos.json")["pasos"]
+    ]
     assert pasos == [
         ("calc.py", "def sumar()", [2], []),
         ("calc.py", "def multiplicar()", [10, 11], []),
@@ -66,7 +69,8 @@ def test_sin_commit_incluye_cambios_y_archivos_nuevos(repo):
 
 def test_un_archivo_largo_se_parte_por_funciones(repo):
     funciones = "\n\n".join(
-        f"def f{k}():\n" + "\n".join(f"    x{j} = {j}" for j in range(25)) + "\n    return 0" for k in range(3))
+        f"def f{k}():\n" + "\n".join(f"    x{j} = {j}" for j in range(25)) + "\n    return 0" for k in range(3)
+    )
     (repo / "largo.py").write_text(funciones + "\n")
     git(repo, "add", ".")
     git(repo, "commit", "-q", "-m", "largo")

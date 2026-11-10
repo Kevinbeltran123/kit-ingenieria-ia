@@ -17,6 +17,7 @@ Meta: ante un error en producción, poder ir de una alerta a la traza y de la tr
 ```python
 import logging, sys, structlog
 
+
 def configurar_logs(nivel: str = "INFO") -> None:
     compartidos = [
         structlog.contextvars.merge_contextvars,
@@ -36,10 +37,12 @@ def configurar_logs(nivel: str = "INFO") -> None:
     )
     # Los logs de la librería estándar (uvicorn, boto3) pasan por los mismos procesadores.
     manejador = logging.StreamHandler()
-    manejador.setFormatter(structlog.stdlib.ProcessorFormatter(
-        foreign_pre_chain=compartidos,
-        processors=[structlog.stdlib.ProcessorFormatter.remove_processors_meta, *render],
-    ))
+    manejador.setFormatter(
+        structlog.stdlib.ProcessorFormatter(
+            foreign_pre_chain=compartidos,
+            processors=[structlog.stdlib.ProcessorFormatter.remove_processors_meta, *render],
+        )
+    )
     raiz = logging.getLogger()
     raiz.handlers = [manejador]
     raiz.setLevel(nivel)

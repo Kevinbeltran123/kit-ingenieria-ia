@@ -36,7 +36,10 @@ def crear_proyecto(raiz: Path, capas=CAPAS) -> Path:
 def lint_imports(raiz: Path) -> subprocess.CompletedProcess:
     r = subprocess.run(
         ["uvx", "--no-config", "--from", f"import-linter=={VERSION}", "lint-imports"],
-        cwd=raiz, capture_output=True, text=True, env={**os.environ, "PYTHONPATH": str(raiz / "src")},
+        cwd=raiz,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(raiz / "src")},
     )
     if "Failed to fetch" in r.stderr or "error sending request" in r.stderr:
         pytest.skip("uv no pudo descargar import-linter (sin red ni caché)")
@@ -98,4 +101,7 @@ def test_la_revision_comenta_con_el_token_del_workflow():
 def test_una_sola_revision_por_pr_a_la_vez():
     """Cada push a un PR lanzaba otra revisión completa con la API key aunque la anterior siguiera corriendo."""
     flujo = (KIT / "plantillas" / "github" / "workflows" / "claude-review.yml").read_text()
-    assert re.search(r"concurrency:\n  group: \S*\$\{\{ github\.event\.pull_request\.number \}\}\n  cancel-in-progress: true\n", flujo)
+    assert re.search(
+        r"concurrency:\n  group: \S*\$\{\{ github\.event\.pull_request\.number \}\}\n  cancel-in-progress: true\n",
+        flujo,
+    )

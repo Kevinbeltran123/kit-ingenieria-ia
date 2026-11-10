@@ -31,11 +31,15 @@ def falsa(raiz: Path, nombre: str, codigo: int, salida: str = "") -> Path:
 def correr(script: Path, *args, cwd=None):
     return subprocess.run(
         [sys.executable, "-I", str(script), *map(str, args)],
-        capture_output=True, text=True, env=PATH_MINIMO, cwd=cwd,
+        capture_output=True,
+        text=True,
+        env=PATH_MINIMO,
+        cwd=cwd,
     )
 
 
 # --- deuda.py ---
+
 
 def test_deuda_informa_hallazgos_y_faltantes(raiz):
     (raiz / "src").mkdir()
@@ -58,7 +62,9 @@ def test_vulture_sin_config_muestra_funciones_y_clases(raiz):
 
 def test_vulture_respeta_la_config_del_repo(raiz):
     """Pasar rutas o umbral por línea de comandos reemplaza [tool.vulture], incluida la lista blanca."""
-    (raiz / "pyproject.toml").write_text('[tool.vulture]\npaths = ["src", "vulture_whitelist.py"]\nmin_confidence = 60\n')
+    (raiz / "pyproject.toml").write_text(
+        '[tool.vulture]\npaths = ["src", "vulture_whitelist.py"]\nmin_confidence = 60\n'
+    )
     vulture = falsa(raiz, "vulture", 0)
     correr(DEUDA, raiz)
     assert vulture.read_text().strip() == ""
@@ -80,6 +86,7 @@ def test_deuda_escribe_archivo(raiz):
 
 # --- mutantes_del_diff.py ---
 
+
 def cargar(script: Path):
     spec = importlib.util.spec_from_file_location("modulo", script)
     modulo = importlib.util.module_from_spec(spec)
@@ -87,15 +94,18 @@ def cargar(script: Path):
     return modulo
 
 
-@pytest.mark.parametrize(("ruta", "esperado"), [
-    ("src/app/domain/lote.py", "app.domain.lote.*"),
-    ("app/servicio.py", "app.servicio.*"),
-    ("src/app/__init__.py", "app.x*"),  # solo las funciones del __init__, no todo el paquete
-    ("tests/test_lote.py", None),
-    ("src/app/test_algo.py", None),
-    ("conftest.py", None),
-    ("README.md", None),
-])
+@pytest.mark.parametrize(
+    ("ruta", "esperado"),
+    [
+        ("src/app/domain/lote.py", "app.domain.lote.*"),
+        ("app/servicio.py", "app.servicio.*"),
+        ("src/app/__init__.py", "app.x*"),  # solo las funciones del __init__, no todo el paquete
+        ("tests/test_lote.py", None),
+        ("src/app/test_algo.py", None),
+        ("conftest.py", None),
+        ("README.md", None),
+    ],
+)
 def test_a_patron(ruta, esperado):
     assert cargar(MUTANTES).a_patron(ruta) == esperado
 
@@ -122,6 +132,7 @@ def test_mutantes_desde_git(tmp_path):
 
 def test_base_inexistente_es_error_y_no_lista_vacia(tmp_path):
     """Sin la rama base, la lista vacía haría que mutmut mutara todo el repo."""
+
     def git(*args):
         subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
 
@@ -153,6 +164,7 @@ def test_mutantes_sin_cambios_sale_con_1(tmp_path):
 
 
 # --- suministro.py ---
+
 
 def test_suministro_avisa_si_falta_lock_y_enfriamiento(raiz):
     (raiz / "pyproject.toml").write_text("[project]\nname='x'\n")
@@ -216,19 +228,26 @@ def test_suministro_no_usa_un_pip_audit_global(raiz, tmp_path):
     (global_bin / "pip-audit").write_text(f'#!/bin/sh\ntouch "{marca}"\nexit 0\n')
     (global_bin / "pip-audit").chmod(0o755)
     (raiz / "pyproject.toml").write_text('[tool.uv]\nexclude-newer = "7 days"\n')
-    r = subprocess.run([sys.executable, "-I", str(SUMINISTRO), str(raiz)], capture_output=True, text=True,
-                       env={"PATH": f"{global_bin}:/usr/bin:/bin"})
+    r = subprocess.run(
+        [sys.executable, "-I", str(SUMINISTRO), str(raiz)],
+        capture_output=True,
+        text=True,
+        env={"PATH": f"{global_bin}:/usr/bin:/bin"},
+    )
     assert not marca.exists()
     assert any(h.startswith("pip-audit") for h in no_instalados(r.stdout))
 
 
-@pytest.mark.parametrize(("pyproject", "configurado"), [
-    ('[tool.uv]\nexclude-newer = "7 days"\n', True),
-    ('[tool.uv] # enfriamiento\nexclude-newer = "P7D"\n', True),
-    ('[tool.uv]\n# exclude-newer = "7 days"\n', False),
-    ('[tool.uv.pip]\nexclude-newer = "7 days"\n', False),  # solo aplica a `uv pip`, no al lock
-    ('[tool.uv]\nexclude-newer-package = { torch = false }\n', False),
-    ('[project]\ndescription = "usa exclude-newer"\n', False),
-])
+@pytest.mark.parametrize(
+    ("pyproject", "configurado"),
+    [
+        ('[tool.uv]\nexclude-newer = "7 days"\n', True),
+        ('[tool.uv] # enfriamiento\nexclude-newer = "P7D"\n', True),
+        ('[tool.uv]\n# exclude-newer = "7 days"\n', False),
+        ('[tool.uv.pip]\nexclude-newer = "7 days"\n', False),  # solo aplica a `uv pip`, no al lock
+        ("[tool.uv]\nexclude-newer-package = { torch = false }\n", False),
+        ('[project]\ndescription = "usa exclude-newer"\n', False),
+    ],
+)
 def test_enfriamiento_configurado(pyproject, configurado):
     assert cargar(SUMINISTRO).enfriamiento_configurado(pyproject) is configurado

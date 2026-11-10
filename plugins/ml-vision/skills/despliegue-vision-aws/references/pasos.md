@@ -10,19 +10,28 @@ from sagemaker.core import image_uris
 from sagemaker.train import ModelTrainer
 from sagemaker.train.configs import CheckpointConfig, Compute, InputData, SourceCode, StoppingCondition
 
-imagen = image_uris.retrieve(framework="pytorch", region=REGION, version="2.10.0", py_version="py313",
-                             instance_type="ml.g5.xlarge", image_scope="training")
+imagen = image_uris.retrieve(
+    framework="pytorch",
+    region=REGION,
+    version="2.10.0",
+    py_version="py313",
+    instance_type="ml.g5.xlarge",
+    image_scope="training",
+)
 entrenador = ModelTrainer(
-    training_image=imagen, role=ROL_SAGEMAKER,
+    training_image=imagen,
+    role=ROL_SAGEMAKER,
     source_code=SourceCode(source_dir="src", entry_script="train.py"),
     compute=Compute(instance_type="ml.g5.xlarge", instance_count=1, enable_managed_spot_training=True),
     stopping_condition=StoppingCondition(max_runtime_in_seconds=4 * 3600, max_wait_time_in_seconds=8 * 3600),
     checkpoint_config=CheckpointConfig(s3_uri=f"s3://{BUCKET}/checkpoints/{EXPERIMENTO}/"),
     environment={"MLFLOW_TRACKING_URI": MLFLOW_ARN, "GIT_SHA": GIT_SHA},
 )
-entrenador.train(input_data_config=[
-    InputData(channel_name="train", data_source=f"s3://{BUCKET}/datasets/{HASH_DVC}/"),
-])
+entrenador.train(
+    input_data_config=[
+        InputData(channel_name="train", data_source=f"s3://{BUCKET}/datasets/{HASH_DVC}/"),
+    ]
+)
 ```
 - La imagen de PyTorch 2.10.0 solo viene con Python 3.13 (`py313`; SDK 3.28.0). Para otra versión, mira las que
   trae `image_uris` en el SDK instalado.
@@ -38,8 +47,9 @@ import onnx
 
 # Se registra el ONNX del paso 3 y los pesos en safetensors. No uses mlflow.pytorch.log_model: cargar ese
 # formato (pickle o pt2) ejecuta código, lo que contradice la skill carga-segura-modelos.
-mlflow.onnx.log_model(onnx.load("modelos/palma.onnx"), name="model", input_example=ejemplo,
-                      registered_model_name="palma-pc-clasificador")
+mlflow.onnx.log_model(
+    onnx.load("modelos/palma.onnx"), name="model", input_example=ejemplo, registered_model_name="palma-pc-clasificador"
+)
 mlflow.log_artifact("modelos/pesos.safetensors")
 mlflow.log_artifact("docs/model-card.md")
 mlflow.log_artifact("reportes/evaluacion.html")
@@ -57,7 +67,7 @@ import numpy as np, onnxruntime as ort, torch
 from PIL import Image
 
 from entrenamiento.transformaciones import transformacion_eval  # la de validación y test
-from servicio.preprocesar import preprocesar                     # la misma función que llama la Lambda
+from servicio.preprocesar import preprocesar  # la misma función que llama la Lambda
 
 
 def test_paridad_onnx(modelo_pytorch, rutas_test, tmp_path):  # rutas_test: JPEG reales del test, no ruido
@@ -65,8 +75,15 @@ def test_paridad_onnx(modelo_pytorch, rutas_test, tmp_path):  # rutas_test: JPEG
     lote = torch.stack([transformacion_eval(Image.open(r).convert("RGB")) for r in rutas_test])
     # dynamic_shapes por posición: en un dict, las claves son los argumentos de forward
     # (pixel_values en transformers), no los input_names del ONNX.
-    torch.onnx.export(modelo_pytorch, (lote,), tmp_path / "model.onnx", dynamo=True,
-                      input_names=["x"], output_names=["y"], dynamic_shapes=({0: "batch"},))
+    torch.onnx.export(
+        modelo_pytorch,
+        (lote,),
+        tmp_path / "model.onnx",
+        dynamo=True,
+        input_names=["x"],
+        output_names=["y"],
+        dynamic_shapes=({0: "batch"},),
+    )
     sesion = ort.InferenceSession(str(tmp_path / "model.onnx"), providers=["CPUExecutionProvider"])
     with torch.no_grad():
         esperado = modelo_pytorch(lote).numpy()

@@ -39,6 +39,7 @@ VARIABLES_ENTORNO_DB = ("DATABASE_URL", "PGHOST", "PGDATABASE", "ENV", "APP_ENV"
 
 # ---------- utilidades ----------
 
+
 def tokens_de(cmd: str) -> list[str]:
     texto = cmd.replace("`", " ; ").replace("\n", " ; ")
     try:
@@ -67,7 +68,7 @@ def segmentos(cmd: str, profundidad: int = 0) -> list[list[str]]:
         nombre = Path(seg[0]).name
         if profundidad < 3 and nombre in SHELLS and "-c" in seg:
             i = seg.index("-c")
-            final += segmentos(" ".join(seg[i + 1:]), profundidad + 1)
+            final += segmentos(" ".join(seg[i + 1 :]), profundidad + 1)
         elif profundidad < 3 and nombre == "eval":
             final += segmentos(" ".join(seg[1:]), profundidad + 1)
         else:
@@ -90,7 +91,7 @@ def quitar_prefijos(seg: list[str]) -> list[str]:
         elif primero in EJECUTORES and len(seg) > 1 and seg[1] in (EJECUTORES[primero], "dlx"):
             seg = saltar_flags(seg[2:])
         elif primero == "aws-vault" and "--" in seg:
-            seg = seg[seg.index("--") + 1:]
+            seg = seg[seg.index("--") + 1 :]
         else:
             break
     return seg
@@ -117,11 +118,21 @@ def argumentos(seg: list[str]) -> list[str]:
     return salida
 
 
-AWS_FLAGS_CON_VALOR = {"--profile", "--region", "--output", "--endpoint-url", "--query", "--color",
-                       "--cli-read-timeout", "--cli-connect-timeout", "--ca-bundle"}
+AWS_FLAGS_CON_VALOR = {
+    "--profile",
+    "--region",
+    "--output",
+    "--endpoint-url",
+    "--query",
+    "--color",
+    "--cli-read-timeout",
+    "--cli-connect-timeout",
+    "--ca-bundle",
+}
 
 
 # ---------- reglas de Bash ----------
+
 
 def regla_infra(seg: list[str]) -> str | None:
     nombre, args = Path(seg[0]).name, argumentos(seg)
@@ -141,15 +152,23 @@ def regla_infra(seg: list[str]) -> str | None:
         return f"{nombre} {primero}"
     if nombre == "aws" and len(args) >= 2:
         servicio, op = args[0], args[1]
-        if servicio == "cloudformation" and op in ("deploy", "create-stack", "update-stack",
-                                                    "delete-stack", "execute-change-set"):
+        if servicio == "cloudformation" and op in (
+            "deploy",
+            "create-stack",
+            "update-stack",
+            "delete-stack",
+            "execute-change-set",
+        ):
             return f"aws cloudformation {op}"
         if servicio == "s3" and (op in ("rm", "rb", "mv") or (op == "sync" and "--delete" in seg)):
             return f"aws s3 {op}"
         if re.match(r"^(delete|terminate|remove|deregister|revoke|detach|disable)-", op):
             return f"aws {servicio} {op}"
-        if re.match(r"^(put-bucket-(policy|acl)|put-.*-policy|attach-.*-policy|create-access-key|"
-                    r"update-assume-role-policy|update-function-code|stop-instances)$", op):
+        if re.match(
+            r"^(put-bucket-(policy|acl)|put-.*-policy|attach-.*-policy|create-access-key|"
+            r"update-assume-role-policy|update-function-code|stop-instances)$",
+            op,
+        ):
             return f"aws {servicio} {op}"
     return None
 
@@ -205,8 +224,31 @@ def regla_sql(cmd: str, segs: list[list[str]]) -> tuple[str, str] | None:
     return None
 
 
-LECTORES = {"cat", "less", "more", "head", "tail", "bat", "strings", "xxd", "od", "base64", "cp", "mv",
-            "grep", "rg", "awk", "sed", "nl", "tac", "curl", "nc", "openssl", "vim", "nano"}
+LECTORES = {
+    "cat",
+    "less",
+    "more",
+    "head",
+    "tail",
+    "bat",
+    "strings",
+    "xxd",
+    "od",
+    "base64",
+    "cp",
+    "mv",
+    "grep",
+    "rg",
+    "awk",
+    "sed",
+    "nl",
+    "tac",
+    "curl",
+    "nc",
+    "openssl",
+    "vim",
+    "nano",
+}
 CREDENCIALES = re.compile(r"\.aws/(credentials|sso/cache)|\.ssh/id_[^/\s]*(?<!\.pub)$|\.config/gcloud/.*credentials")
 VAR_SECRETA = re.compile(r"\$\{?[A-Z0-9_]*(SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|ACCESS_KEY|PRIVATE_KEY)[A-Z0-9_]*")
 ENV_REAL = re.compile(r"(^|/)\.env(rc)?(\.[\w.-]+)?$")  # .envrc es el de direnv
@@ -245,9 +287,12 @@ ARCHIVO_DB = re.compile(r"\.(sqlite3?|db)$")
 
 def rm_seguro(objetivo: str) -> bool:
     nombre = Path(objetivo).name
-    return (os.path.expanduser(objetivo).startswith(RM_SEGURO)
-            or any(p in objetivo for p in RM_PARTES_SEGURAS)
-            or nombre in RM_REGENERABLES or nombre.endswith(".egg-info"))
+    return (
+        os.path.expanduser(objetivo).startswith(RM_SEGURO)
+        or any(p in objetivo for p in RM_PARTES_SEGURAS)
+        or nombre in RM_REGENERABLES
+        or nombre.endswith(".egg-info")
+    )
 
 
 def banderas_cortas(args: list[str]) -> str:
@@ -284,7 +329,7 @@ def regla_git(args: list[str]) -> str | None:
         i += 2 if args[i] in ("-C", "-c") else 1
     if i >= len(args):
         return None
-    sub, resto = args[i], args[i + 1:]
+    sub, resto = args[i], args[i + 1 :]
     banderas = banderas_cortas(resto)
     if sub == "push" and ("--force" in resto or "f" in banderas or any(a.startswith("+") for a in resto)):
         return "git push --force"
@@ -337,15 +382,29 @@ def toca_config_protegida(segs: list[list[str]]) -> str | None:
 
 # ---------- regla de archivos ----------
 
-LOCKFILES = {"uv.lock", "poetry.lock", "Pipfile.lock", "pdm.lock", "package-lock.json", "pnpm-lock.yaml",
-             "yarn.lock", "bun.lockb", "Cargo.lock"}
+LOCKFILES = {
+    "uv.lock",
+    "poetry.lock",
+    "Pipfile.lock",
+    "pdm.lock",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lockb",
+    "Cargo.lock",
+}
 
 
 def sin_commit(p: Path) -> bool:
     """True solo si git dice que el archivo no está rastreado (recién creado). Sin git, False: se protege."""
     try:
-        r = subprocess.run(["git", "ls-files", "--error-unmatch", "--", p.name], cwd=p.parent,
-                           capture_output=True, text=True, timeout=5)
+        r = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "--", p.name],
+            cwd=p.parent,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
     except (OSError, subprocess.TimeoutExpired):
         return False
     return r.returncode == 1  # 1 = git no lo conoce; 128 = no es un repo de git
@@ -360,15 +419,20 @@ def regla_archivos(ruta: str) -> str | None:
         return f"{p.name} contiene secretos; edita .env.example y pide al usuario que actualice su .env"
     if p.name in LOCKFILES:
         return f"{p.name} se cambia con el gestor de paquetes (p. ej. `uv add`, `uv lock`), no a mano"
-    alembic = any(partes[i] in ("migrations", "alembic") and partes[i + 1] == "versions" for i in range(len(partes) - 2))
+    alembic = any(
+        partes[i] in ("migrations", "alembic") and partes[i + 1] == "versions" for i in range(len(partes) - 2)
+    )
     django = p.parent.name == "migrations" and re.match(r"^\d{4}_.*\.py$", p.name)
     if (alembic or django) and p.exists() and not sin_commit(p):
-        return ("esa migración ya está en git y puede estar aplicada; crea una nueva en lugar de editarla "
-                "(una recién generada y sin commit sí se puede corregir)")
+        return (
+            "esa migración ya está en git y puede estar aplicada; crea una nueva en lugar de editarla "
+            "(una recién generada y sin commit sí se puede corregir)"
+        )
     return None
 
 
 # ---------- principal ----------
+
 
 def reglas_desactivadas(raiz: Path) -> set[str]:
     desactivadas = {r.strip() for r in os.environ.get("BARRERAS_DESACTIVAR", "").split(",") if r.strip()}
@@ -387,23 +451,30 @@ def bloquear(regla: str, motivo: str, consejo: str) -> int:
 
 
 def preguntar(motivo: str) -> int:
-    salida = {"hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "ask",
-        "permissionDecisionReason": f"barreras (sql): {motivo}. Confirma solo si sabes a qué base de datos apunta.",
-    }}
+    salida = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "ask",
+            "permissionDecisionReason": f"barreras (sql): {motivo}. Confirma solo si sabes a qué base de datos apunta.",
+        }
+    }
     print(json.dumps(salida))
     return 0
 
 
-CONSEJO_INFRA = ("Los cambios de infraestructura van por PR y se aplican desde CI. "
-                 "Para revisar usa plan, diff, synth o validate.")
-CONSEJO_SQL = ("En producción solo se consulta con un rol de solo lectura; los cambios van como migración "
-               "revisada en un PR. Explícale al usuario qué querías hacer.")
-CONSEJO_SECRETOS = "No leas ni imprimas credenciales. Si necesitas saber si existe una variable, usa `test -n \"$VAR\"`."
-CONSEJO_LOCAL = ("Puede borrar trabajo que no está en git. Si de verdad hace falta, pídele a la persona que lo "
-                 "corra ella. Alternativas: git stash, git push --force-with-lease, git clean -n para ver qué se "
-                 "borraría, git branch -d. Si fallan los hooks de pre-commit, corrige lo que reportan en vez de saltarlos.")
+CONSEJO_INFRA = (
+    "Los cambios de infraestructura van por PR y se aplican desde CI. Para revisar usa plan, diff, synth o validate."
+)
+CONSEJO_SQL = (
+    "En producción solo se consulta con un rol de solo lectura; los cambios van como migración "
+    "revisada en un PR. Explícale al usuario qué querías hacer."
+)
+CONSEJO_SECRETOS = 'No leas ni imprimas credenciales. Si necesitas saber si existe una variable, usa `test -n "$VAR"`.'
+CONSEJO_LOCAL = (
+    "Puede borrar trabajo que no está en git. Si de verdad hace falta, pídele a la persona que lo "
+    "corra ella. Alternativas: git stash, git push --force-with-lease, git clean -n para ver qué se "
+    "borraría, git branch -d. Si fallan los hooks de pre-commit, corrige lo que reportan en vez de saltarlos."
+)
 
 
 def evaluar(datos: dict) -> int:

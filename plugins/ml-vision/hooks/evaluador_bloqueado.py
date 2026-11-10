@@ -200,7 +200,9 @@ def main() -> int:
             raiz_real = normalizar(raiz, ".")
             menciona = [str(b.relative_to(raiz_real)) if raiz_real in b.parents else str(b) for b in protegidas]
             if any(m.rstrip("/") in comando for m in menciona):
-                print("Comando no analizable que menciona una ruta protegida del evaluador; bloqueado.", file=sys.stderr)
+                print(
+                    "Comando no analizable que menciona una ruta protegida del evaluador; bloqueado.", file=sys.stderr
+                )
                 return 2
             return 0
         candidatas = objetivos
@@ -210,8 +212,11 @@ def main() -> int:
         propia = raiz_git(c)
         base = protegida(c, protegidas + (rutas_protegidas(propia) if propia else []))
         if base and base.parts[-2:] == CONFIG.parts:
-            print(f"Bloqueado: '{c}' es la configuración que define qué protege este hook; solo la cambia "
-                  "la persona. Pídele el cambio.", file=sys.stderr)
+            print(
+                f"Bloqueado: '{c}' es la configuración que define qué protege este hook; solo la cambia "
+                "la persona. Pídele el cambio.",
+                file=sys.stderr,
+            )
             return 2
         if base:
             print(

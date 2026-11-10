@@ -58,8 +58,10 @@ def evaluar(datos: dict) -> int:
     rama, head = git(raiz, "rev-parse", "--abbrev-ref", "HEAD"), git(raiz, "rev-parse", "HEAD")
     ultimo = raiz / ".explicaciones" / carpeta_de_rama(rama) / "ultimo.json"
     if not ultimo.is_file():
-        return bloquear(f"antes de abrir el PR, genera la explicación del cambio con {SKILL}. "
-                        "La persona necesita entender el cambio línea por línea antes de revisarlo.")
+        return bloquear(
+            f"antes de abrir el PR, genera la explicación del cambio con {SKILL}. "
+            "La persona necesita entender el cambio línea por línea antes de revisarlo."
+        )
     info = json.loads(ultimo.read_text())
     if info.get("hasta") != head:
         hecha = str(info.get("hasta") or "cambios sin commit")[:10]
@@ -67,8 +69,10 @@ def evaluar(datos: dict) -> int:
     abiertos = [a for a in info.get("alertas", []) if a.get("tipo") == "bug" and a.get("estado") == "abierta"]
     if abiertos:
         lista = "\n".join(f"- {a.get('donde', '')}: {a.get('texto', '')}" for a in abiertos)
-        return bloquear(f"la explicación marcó {len(abiertos)} posible(s) error(es) sin resolver:\n{lista}\n"
-                        "Corrígelos y vuelve a generar la explicación, o pregúntale a la persona si los descarta.")
+        return bloquear(
+            f"la explicación marcó {len(abiertos)} posible(s) error(es) sin resolver:\n{lista}\n"
+            "Corrígelos y vuelve a generar la explicación, o pregúntale a la persona si los descarta."
+        )
     return 0
 
 

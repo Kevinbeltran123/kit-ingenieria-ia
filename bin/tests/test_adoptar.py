@@ -17,16 +17,25 @@ import adoptar  # noqa: E402
 
 
 def correr(*args):
-    return subprocess.run([sys.executable, "-I", str(BIN / "adoptar.py"), *map(str, args)],
-                          capture_output=True, text=True)
+    return subprocess.run(
+        [sys.executable, "-I", str(BIN / "adoptar.py"), *map(str, args)], capture_output=True, text=True
+    )
 
 
 def test_crea_todo_en_repo_vacio(tmp_path):
     r = correr(tmp_path)
     assert r.returncode == 0, r.stderr
-    for destino in [".python-version", ".pre-commit-config.yaml", "CLAUDE.md", ".github/workflows/ci.yml",
-                    ".github/workflows/claude-review.yml", ".github/dependabot.yml",
-                    "Dockerfile", ".dockerignore", ".claude/settings.json"]:
+    for destino in [
+        ".python-version",
+        ".pre-commit-config.yaml",
+        "CLAUDE.md",
+        ".github/workflows/ci.yml",
+        ".github/workflows/claude-review.yml",
+        ".github/dependabot.yml",
+        "Dockerfile",
+        ".dockerignore",
+        ".claude/settings.json",
+    ]:
         assert (tmp_path / destino).exists(), destino
     settings = json.loads((tmp_path / ".claude/settings.json").read_text())
     fuente = settings["extraKnownMarketplaces"]["kit-ingenieria-ia"]["source"]
@@ -50,8 +59,11 @@ def test_nunca_sobrescribe(tmp_path):
 def test_perfil_ml_crea_codeowners_del_evaluador(tmp_path):
     r = correr(tmp_path, "--perfil", "ml", "--sin-docker")
     assert r.returncode == 0, r.stderr
-    reglas = [l.split()[0] for l in (tmp_path / ".github/CODEOWNERS").read_text().splitlines()
-              if l.strip() and not l.startswith("#")]
+    reglas = [
+        l.split()[0]
+        for l in (tmp_path / ".github/CODEOWNERS").read_text().splitlines()
+        if l.strip() and not l.startswith("#")
+    ]
     for ruta in ["/eval/", "/splits/", "/data/splits/", "/.claude/ml-vision.json"]:
         assert ruta in reglas, ruta
     assert "Require review from Code Owners" in r.stdout
@@ -137,7 +149,10 @@ def test_marketplace_desde_github(tmp_path):
     correr(tmp_path, "--marketplace-github", "kevin/kit-ingenieria-ia", "--ref", "v0.1.0", "--sin-docker")
     settings = json.loads((tmp_path / ".claude/settings.json").read_text())
     assert settings["extraKnownMarketplaces"]["kit-ingenieria-ia"]["source"] == {
-        "source": "github", "repo": "kevin/kit-ingenieria-ia", "ref": "v0.1.0"}
+        "source": "github",
+        "repo": "kevin/kit-ingenieria-ia",
+        "ref": "v0.1.0",
+    }
     assert not (tmp_path / "Dockerfile").exists()
 
 
@@ -148,20 +163,28 @@ def test_errores_de_uso(tmp_path):
 
 # --- Sintaxis de las plantillas ---
 
+
 def test_plantillas_json_y_toml_validas():
     json.loads((PLANTILLAS / "claude/settings.json").read_text())
     tomllib = pytest.importorskip("tomllib")  # Python 3.11+
     tomllib.loads((PLANTILLAS / "python/pyproject.toml.fragmento").read_text())
 
 
-YAMLS = ["python/.pre-commit-config.yaml", "github/workflows/ci.yml",
-         "github/workflows/claude-review.yml", "github/dependabot.yml"]
+YAMLS = [
+    "python/.pre-commit-config.yaml",
+    "github/workflows/ci.yml",
+    "github/workflows/claude-review.yml",
+    "github/dependabot.yml",
+]
 
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv no disponible")
 def test_plantillas_yaml_validas():
     rutas = [str(PLANTILLAS / y) for y in YAMLS]
     codigo = "import sys, yaml\nfor p in sys.argv[1:]: yaml.safe_load(open(p))"
-    r = subprocess.run(["uv", "run", "--no-project", "--with", "pyyaml", "python", "-c", codigo, *rutas],
-                       capture_output=True, text=True)
+    r = subprocess.run(
+        ["uv", "run", "--no-project", "--with", "pyyaml", "python", "-c", codigo, *rutas],
+        capture_output=True,
+        text=True,
+    )
     assert r.returncode == 0, r.stderr

@@ -20,7 +20,7 @@ Agrupar por lote implica agrupar por palma (cada palma pertenece a un solo lote)
 ## Fincas nuevas: holdout de finca
 
 ```python
-fincas_test = ["F3"]                      # elegir con negocio: representativa, no la "fácil"
+fincas_test = ["F3"]  # elegir con negocio: representativa, no la "fácil"
 test = df[df["finca"].isin(fincas_test)]
 resto = df[~df["finca"].isin(fincas_test)]
 # Dentro de resto, GroupKFold por finca (si hay ≥3) o StratifiedGroupKFold por lote.

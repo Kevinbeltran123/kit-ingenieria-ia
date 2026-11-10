@@ -47,11 +47,15 @@ def pasos(raiz: Path) -> tuple[list[tuple[str, list[str], set[int]]], list[str]]
     elif configurado(raiz, "tool.ruff", "ruff.toml", ".ruff.toml"):
         faltan.append("ruff")
 
-    tipos = [(nombre, cmd) for nombre, seccion, archivos, cmd in [
-        ("ty", "tool.ty", ["ty.toml"], ["check"]),
-        ("mypy", "tool.mypy", ["mypy.ini", ".mypy.ini"], ["."]),
-        ("pyright", "tool.pyright", ["pyrightconfig.json"], []),
-    ] if configurado(raiz, seccion, *archivos)]
+    tipos = [
+        (nombre, cmd)
+        for nombre, seccion, archivos, cmd in [
+            ("ty", "tool.ty", ["ty.toml"], ["check"]),
+            ("mypy", "tool.mypy", ["mypy.ini", ".mypy.ini"], ["."]),
+            ("pyright", "tool.pyright", ["pyrightconfig.json"], []),
+        ]
+        if configurado(raiz, seccion, *archivos)
+    ]
     instalados = [(nombre, h, cmd) for nombre, cmd in tipos if (h := buscar_herramienta(raiz, nombre))]
     if instalados:
         nombre, herramienta, cmd = instalados[0]
