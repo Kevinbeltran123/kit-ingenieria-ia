@@ -19,7 +19,7 @@ Se aplican con `bin/adoptar.py`, que **nunca sobrescribe** archivos existentes:
 | `github/workflows/claude-review.yml` | `.github/workflows/claude-review.yml` | Revisión de PR con `pr-review-toolkit`, instalado desde el commit que auditó el kit (marketplace propio que arma el workflow); necesita el secreto `ANTHROPIC_API_KEY`. Comenta con el `GITHUB_TOKEN` del workflow: no hace falta instalar la Claude GitHub App. Una revisión por PR a la vez: un push nuevo cancela la anterior |
 | `github/dependabot.yml` | `.github/dependabot.yml` | uv, Actions y Docker con cooldown de 7 días |
 | `github/CODEOWNERS.ml` | `.github/CODEOWNERS` (solo perfil ml) | Dueños de `eval/`, `splits/`, la config del hook y `LICENSES.md`. No se crea si el repo ya tiene CODEOWNERS en la raíz o en `docs/` |
-| `docker/Dockerfile`, `docker/.dockerignore` | raíz | Multi-stage con uv, usuario sin privilegios |
+| `docker/Dockerfile`, `docker/.dockerignore` | raíz | Multi-stage con uv, usuario sin privilegios, ejemplo de `HEALTHCHECK` comentado. La prueba de humo construye la imagen y comprueba que no corre como root; es el único Dockerfile del kit (la skill `dockerfile-python-uv` remite aquí) |
 
 ## Marketplace: local o GitHub
 JSON no admite comentarios, así que la variante se elige al adoptar:

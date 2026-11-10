@@ -86,7 +86,8 @@ El CI (`.github/workflows/ci.yml`) lo hace en cada push: las pruebas de cada plu
 ```sh
 claude plugin validate .
 for t in plugins/*/tests bin/tests; do python3 -m pytest "$t" -q; done
-python3 bin/humo_plantillas.py   # repo nuevo con las plantillas y los pasos de su CI (necesita red)
+python3 bin/humo_plantillas.py   # repo nuevo con las plantillas, los pasos de su CI y su imagen Docker (necesita red y Docker;
+                                 # --sin-docker para saltar la imagen a propósito: sin Docker y sin la opción, sale con 1)
 ```
 
 ## Licencia

@@ -7,42 +7,27 @@ description: Escribe o revisa Dockerfiles de apps Python con uv siguiendo el pat
 
 Objetivo: imagen pequeña, reproducible (mismo `uv.lock` → mismas dependencias), sin herramientas de build ni secretos en la imagen final, y que no corra como root.
 
-## Patrón (basado en astral-sh/uv-docker-example, multistage)
-```dockerfile
-# syntax=docker/dockerfile:1
-FROM python:3.12-slim-bookworm AS build
-# uv fijado por versión (mejor aún por digest @sha256:...)
-COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /bin/
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=0
-WORKDIR /app
-# 1) Solo dependencias: esta capa se reutiliza mientras no cambie el lock
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project --no-dev
-# 2) El proyecto
-COPY . /app
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev
+## Patrón (multi-stage con uv, de astral-sh/uv-docker-example)
 
-FROM python:3.12-slim-bookworm
-RUN groupadd --system app && useradd --system --gid app --no-create-home app
-COPY --from=build --chown=app:app /app /app
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
-USER app
-WORKDIR /app
-EXPOSE 8000
-HEALTHCHECK --interval=30s --timeout=3s CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-CMD ["uvicorn", "mi_app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-La plantilla lista para copiar está en `plantillas/` del kit.
+El Dockerfile de referencia es `plantillas/docker/Dockerfile` del kit, con su `.dockerignore` al lado: `bin/adoptar.py`
+los copia al repo y la prueba de humo del kit construye la imagen y comprueba que no corre como root. No lo copies aquí
+ni en otra skill: si hay que cambiar el patrón, se cambia la plantilla. Lo que hace:
+
+1. Etapa `builder` sobre `ghcr.io/astral-sh/uv:<uv>-python<versión>-<distro>-slim`. Primero solo las dependencias
+   (`uv sync --locked --no-install-project --no-dev` con `uv.lock` y `pyproject.toml` montados), que quedan en caché
+   mientras no cambie el lock; después `COPY . /app` y `uv sync --locked --no-dev`.
+2. Etapa final sobre `python:<versión>-slim-<distro>`, la misma versión de Python y la misma distro que el builder:
+   copia `/app` con el `.venv` ya armado, usuario sin privilegios (`USER app`), `PATH` al `.venv` y `CMD` en forma exec.
+3. Para un servicio HTTP, descomenta `EXPOSE` y `HEALTHCHECK` (la plantilla trae el ejemplo) y cambia el `CMD`.
 
 ## Reglas
 - La imagen base de build y la final deben ser **la misma versión de Python y la misma distro**: el `.venv` se copia tal cual.
 - `--locked`: falla si `uv.lock` no coincide con `pyproject.toml`. Nunca `uv pip install` sueltos.
 - `--no-dev`: sin pytest ni linters en producción.
 - **No root** (`USER app`). Si el servicio necesita escribir, solo en una carpeta propia.
-- `.dockerignore` con al menos: `.venv`, `.git`, `__pycache__`, `.env*`, `tests/`, `*.pyc`, `.mypy_cache`, `.ruff_cache`, datos y modelos grandes.
+- `.dockerignore` con al menos: `.venv`, `.git`, `__pycache__`, `*.pyc`, `.env*`, `secrets/`, `tests/`, `.github/`, `.claude/`,
+  las cachés (`.pytest_cache`, `.ruff_cache`, `.mypy_cache`), `.explicaciones/`, y los datos y modelos grandes del repo. La plantilla
+  trae todo menos lo último.
 - **Secretos nunca en la imagen** (ni en `ENV`, ni `COPY .env`, ni `ARG`). En build, `RUN --mount=type=secret`; en ejecución, variables del orquestador (ECS task definition con Secrets Manager).
 - Proceso principal en forma exec (`CMD ["..."]`) para que reciba las señales de apagado.
 - ML/GPU: partir de una base CUDA oficial fijada por digest; separar en otra etapa la descarga de pesos y cargarlos en formato safetensors.

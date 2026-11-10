@@ -20,4 +20,7 @@ COPY --from=builder --chown=app:app /app /app
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
 WORKDIR /app
 USER app
+# Para un servicio HTTP, descomenta y ajusta el puerto y la ruta de salud:
+# EXPOSE 8000
+# HEALTHCHECK --interval=30s --timeout=3s CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
 CMD ["python", "-m", "app"]
