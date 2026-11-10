@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Claude Code 2.1.315 (2026-10-30), desde el lockfile con hashes de integridad
+      - name: Claude Code desde el lockfile con hashes de integridad (la versión la fija package.json y la sube Dependabot)
         run: npm ci --prefix .github/claude-code --no-audit --no-fund
       - name: Validar el marketplace y cada plugin
         run: .github/claude-code/node_modules/.bin/claude plugin validate .

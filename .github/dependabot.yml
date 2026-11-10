@@ -1,0 +1,21 @@
+# Actualizaciones del propio kit, con el mismo cooldown de 7 días que el kit exige a los repos:
+# - las acciones de .github/workflows (fijadas por SHA; Dependabot sube el SHA y el comentario de versión);
+# - Claude Code en el lockfile del job que valida el marketplace (.github/claude-code).
+# Las acciones de plantillas/github/workflows no las ve Dependabot: una prueba de bin/tests exige que usen
+# el mismo SHA que el CI del kit, así que al aceptar un PR de Dependabot hay que copiarlo allí.
+# La versión de uv (setup-uv, pre-commit, Dockerfile) y las de prek y gitleaks se suben a mano: otra prueba
+# de bin/tests exige que coincidan en todos los sitios.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: npm
+    directory: "/.github/claude-code"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
