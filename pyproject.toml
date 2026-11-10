@@ -1,0 +1,20 @@
+# Configuración de ruff para el código del propio kit (hooks, scripts de skills, bin y pruebas): el kit se aplica
+# lo que exige a los repos. Se corre sin instalar nada, igual que en el CI:
+#     uvx ruff@0.17.3 check . && uvx ruff@0.17.3 format --check .
+# No hay [project]: el kit no es un paquete de Python.
+[tool.ruff]
+line-length = 120  # el código del kit está escrito a 120 columnas; la plantilla para repos usa 100
+target-version = "py39"  # los hooks corren con el python3 de macOS y de Amazon Linux 2023
+
+[tool.ruff.lint]
+# Las mismas familias que el fragmento de la plantilla, menos las que no aplican a hooks que corren con
+# `python3 -I` y hablan por stdout y stderr: T20 (print es su salida), S (subprocess y shlex son su trabajo),
+# D (docstrings solo en los módulos), FAST y TID (no hay FastAPI ni APIs prohibidas), y C90 y PLR09: los hooks que
+# analizan comandos de shell concentran ramas por diseño y los cubren las pruebas de cada plugin; para medirlos
+# habría que refactorizarlos primero.
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RET", "PIE", "C4", "PERF", "ARG", "FBT001", "FBT002", "ERA", "PTH", "N", "RUF"]
+ignore = ["PERF203"]  # try/except dentro de bucles de decenas de elementos (archivos JSON, filas de un CSV)
+allowed-confusables = ["–", "−"]  # tipografía intencional: rangos y líneas borradas en el HTML del explicador
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["ARG", "FBT", "E501"]  # fixtures que no se usan, bools de parametrize, comandos largos de prueba
