@@ -93,7 +93,7 @@ def describir(fuente: dict) -> str:
     return f"{fuente.get('source')} {fuente.get('path', '')}".strip()
 
 
-def fijar_fuente(existente: dict, nuevo: dict, pidio_github: bool) -> list[str]:
+def fijar_fuente(existente: dict, nuevo: dict, *, pidio_github: bool) -> list[str]:
     """La fuente del kit va entera: nunca se mezclan claves de dos fuentes (local y GitHub).
 
     Se reemplaza solo si se pidió --marketplace-github; si no, se respeta la que ya tenía el repo.
@@ -109,7 +109,9 @@ def fijar_fuente(existente: dict, nuevo: dict, pidio_github: bool) -> list[str]:
     return [f"cambiado: fuente del kit → {describir(pedida)} (antes: {describir(previa)})"]
 
 
-def adoptar(repo: Path, perfil: str, dry_run: bool, github: str | None, ref: str | None, sin_docker: bool) -> list[str]:
+def adoptar(
+    repo: Path, perfil: str, *, dry_run: bool, github: str | None, ref: str | None, sin_docker: bool
+) -> list[str]:
     informe: list[str] = []
     prefijo = "[dry-run] " if dry_run else ""
 
@@ -128,7 +130,7 @@ def adoptar(repo: Path, perfil: str, dry_run: bool, github: str | None, ref: str
     ruta_settings = repo / ".claude" / "settings.json"
     if ruta_settings.exists():
         existente = json.loads(ruta_settings.read_text())
-        cambios = fijar_fuente(existente, nuevo, github is not None)
+        cambios = fijar_fuente(existente, nuevo, pidio_github=github is not None)
         final, agregados = fusionar(existente, nuevo)
         informe.extend(f"{prefijo}{c}" for c in cambios)
         if agregados:
@@ -184,7 +186,15 @@ def main(argv: list[str] | None = None) -> int:
         print("--ref solo tiene sentido con --marketplace-github", file=sys.stderr)
         return 1
 
-    for linea in adoptar(repo, args.perfil, args.dry_run, args.marketplace_github, args.ref, args.sin_docker):
+    informe = adoptar(
+        repo,
+        args.perfil,
+        dry_run=args.dry_run,
+        github=args.marketplace_github,
+        ref=args.ref,
+        sin_docker=args.sin_docker,
+    )
+    for linea in informe:
         print(linea)
     print(
         PASOS.format(fragmento=PLANTILLAS / "python" / "pyproject.toml.fragmento")

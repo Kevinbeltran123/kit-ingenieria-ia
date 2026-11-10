@@ -40,7 +40,7 @@ def test_sin_herramientas_no_lo_reporta_como_exito(raiz):
 
 
 def sin_revisar(salida: str) -> list[str]:
-    linea = next(l for l in salida.splitlines() if l.startswith("No instalados"))
+    linea = next(fila for fila in salida.splitlines() if fila.startswith("No instalados"))
     return linea.split(": ", 1)[1].split(". ")[0].split(", ")
 
 
@@ -108,7 +108,7 @@ def test_pytest_sin_pruebas_no_es_fallo(raiz):
 def test_tipos_solo_el_configurado(raiz):
     (raiz / "pyproject.toml").write_text("[tool.mypy]\n")
     ty = falsa(raiz, "ty", 0)
-    mypy = falsa(raiz, "mypy", 1, "error: tipo")
+    falsa(raiz, "mypy", 1, "error: tipo")
     deptry = falsa(raiz, "deptry", 0)
     r = correr(raiz)
     assert r.returncode == 1 and "FALLA mypy" in r.stdout
@@ -122,7 +122,7 @@ def test_orden_de_los_pasos(raiz):
     for nombre in ["uv", "ruff", "ty", "lint-imports", "pytest", "deptry"]:
         falsa(raiz, nombre, 0)
     (raiz / "tests").mkdir()
-    lineas = [l.split()[1] for l in correr(raiz).stdout.splitlines() if l.startswith("OK")]
+    lineas = [fila.split()[1] for fila in correr(raiz).stdout.splitlines() if fila.startswith("OK")]
     assert lineas == ["uv", "ruff", "ruff", "ty", "import-linter", "pytest", "deptry"]
 
 

@@ -36,7 +36,7 @@ def leer_fecha(texto: str) -> date:
 
 def sha256(ruta: Path) -> str:
     h = hashlib.sha256()
-    with open(ruta, "rb") as f:
+    with ruta.open("rb") as f:
         for bloque in iter(lambda: f.read(1 << 20), b""):
             h.update(bloque)
     return h.hexdigest()
@@ -78,7 +78,7 @@ def main(argv=None) -> int:
     p.add_argument("--imagenes", type=Path, help="carpeta base de las imágenes para buscar duplicados por hash")
     args = p.parse_args(argv)
 
-    with open(args.manifiesto, newline="", encoding="utf-8") as f:
+    with args.manifiesto.open(newline="", encoding="utf-8") as f:
         lector = csv.DictReader(f)
         columnas = lector.fieldnames or []
         filas = list(lector)

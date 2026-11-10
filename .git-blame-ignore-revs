@@ -1,0 +1,3 @@
+# Commits de solo formato. Para que git blame los salte en local: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub lo respeta solo).
+7a292bfcfeb74e763550f5429c15c62436c4c028

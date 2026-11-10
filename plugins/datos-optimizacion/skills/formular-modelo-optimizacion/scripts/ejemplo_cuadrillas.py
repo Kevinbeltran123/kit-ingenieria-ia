@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 from ortools.sat.python import cp_model
 
@@ -35,17 +36,17 @@ def resolver(instancia: dict, limite_s: float = 10.0) -> dict:
     """Devuelve {"estado": ..., "asignacion": {lote: cuadrilla}, "objetivo_m": int}."""
     cuadrillas = list(instancia["cuadrillas"])
     lotes = list(instancia["lotes"])
-    kg = {l: int(instancia["lotes"][l]["kg"]) for l in lotes}
+    kg = {lote: int(instancia["lotes"][lote]["kg"]) for lote in lotes}
     cap = {c: int(instancia["cuadrillas"][c]["cap_kg"]) for c in cuadrillas}
-    dist = {(c, l): int(instancia["dist_m"][c][l]) for c in cuadrillas for l in lotes}
+    dist = {(c, lote): int(instancia["dist_m"][c][lote]) for c in cuadrillas for lote in lotes}
 
     modelo = cp_model.CpModel()
-    x = {(c, l): modelo.new_bool_var(f"x_{c}_{l}") for c in cuadrillas for l in lotes}
-    for l in lotes:
-        modelo.add_exactly_one(x[c, l] for c in cuadrillas)
+    x = {(c, lote): modelo.new_bool_var(f"x_{c}_{lote}") for c in cuadrillas for lote in lotes}
+    for lote in lotes:
+        modelo.add_exactly_one(x[c, lote] for c in cuadrillas)
     for c in cuadrillas:
-        modelo.add(sum(kg[l] * x[c, l] for l in lotes) <= cap[c])
-    modelo.minimize(sum(dist[c, l] * x[c, l] for c in cuadrillas for l in lotes))
+        modelo.add(sum(kg[lote] * x[c, lote] for lote in lotes) <= cap[c])
+    modelo.minimize(sum(dist[c, lote] * x[c, lote] for c in cuadrillas for lote in lotes))
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = limite_s
@@ -53,7 +54,7 @@ def resolver(instancia: dict, limite_s: float = 10.0) -> dict:
 
     if estado not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         return {"estado": solver.status_name(estado), "asignacion": {}, "objetivo_m": None}
-    asignacion = {l: c for c in cuadrillas for l in lotes if solver.value(x[c, l])}
+    asignacion = {lote: c for c in cuadrillas for lote in lotes if solver.value(x[c, lote])}
     return {
         "estado": solver.status_name(estado),
         "asignacion": asignacion,
@@ -62,5 +63,5 @@ def resolver(instancia: dict, limite_s: float = 10.0) -> dict:
 
 
 if __name__ == "__main__":
-    instancia = json.load(open(sys.argv[1])) if len(sys.argv) > 1 else INSTANCIA_MINIMA
+    instancia = json.loads(Path(sys.argv[1]).read_text()) if len(sys.argv) > 1 else INSTANCIA_MINIMA
     print(json.dumps(resolver(instancia), indent=2, ensure_ascii=False))

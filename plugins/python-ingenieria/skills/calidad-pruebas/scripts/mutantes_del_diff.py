@@ -28,7 +28,7 @@ def archivos_cambiados(base: str) -> set[str]:
     for cmd in comandos:
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode == 0:
-            archivos.update(l for l in r.stdout.splitlines() if l)
+            archivos.update(linea for linea in r.stdout.splitlines() if linea)
     return archivos
 
 

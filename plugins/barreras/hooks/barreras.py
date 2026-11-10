@@ -16,6 +16,7 @@ No es una barrera completa: la seguridad real son reglas deny, sandbox y permiso
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -53,7 +54,7 @@ def tokens_de(cmd: str) -> list[str]:
 def segmentos(cmd: str, profundidad: int = 0) -> list[list[str]]:
     """Divide un comando en subcomandos y desenvuelve bash -c / eval."""
     resultado, actual = [], []
-    for tok in tokens_de(cmd) + [";"]:
+    for tok in [*tokens_de(cmd), ";"]:
         if tok in OPERADORES or set(tok) <= set(";&|()<>"):
             if actual:
                 resultado.append(actual)
@@ -288,7 +289,7 @@ ARCHIVO_DB = re.compile(r"\.(sqlite3?|db)$")
 def rm_seguro(objetivo: str) -> bool:
     nombre = Path(objetivo).name
     return (
-        os.path.expanduser(objetivo).startswith(RM_SEGURO)
+        str(Path(objetivo).expanduser()).startswith(RM_SEGURO)
         or any(p in objetivo for p in RM_PARTES_SEGURAS)
         or nombre in RM_REGENERABLES
         or nombre.endswith(".egg-info")
@@ -438,10 +439,8 @@ def reglas_desactivadas(raiz: Path) -> set[str]:
     desactivadas = {r.strip() for r in os.environ.get("BARRERAS_DESACTIVAR", "").split(",") if r.strip()}
     config = raiz / ".claude" / "barreras.json"
     if config.exists():
-        try:
+        with contextlib.suppress(ValueError, AttributeError, TypeError):  # config inválida: se aplican todas las reglas
             desactivadas |= set(json.loads(config.read_text()).get("desactivar", []))
-        except (ValueError, AttributeError, TypeError):
-            pass  # config inválida: se aplican todas las reglas
     return desactivadas & REGLAS
 
 

@@ -111,7 +111,7 @@ def paquetes_que_instala(seg: list[str]) -> list[str]:
     if sub[:2] == ["tool", "run"] or (cmd == "pipx" and sub[:1] == ["run"]):
         # La herramienta es el primer argumento que no es opción ni valor de una; lo demás es suyo.
         resto = args[args.index("run") + 1 :]
-        herramienta = [a for o, a in zip(["-"] + resto, resto) if not a.startswith("-") and o not in CON_VALOR]
+        herramienta = [a for o, a in zip(["-", *resto], resto) if not a.startswith("-") and o not in CON_VALOR]
         return valores + herramienta[:1]
     if sub[:1] == ["run"]:
         return valores  # `uv run`, `poetry run`, `pixi run`: solo instalan lo de --with
@@ -125,7 +125,7 @@ def restringidos_en_bash(comando: str) -> list[str]:
     encontrados: list[str] = []
     for seg in segmentos(comando):
         for i, palabra in enumerate(seg):
-            nombre, resto = os.path.basename(palabra), seg[i + 1 :]
+            nombre, resto = Path(palabra).name, seg[i + 1 :]
             if nombre == "ssh" or (
                 nombre in SHELLS and any(a.startswith("-") and not a.startswith("--") and "c" in a for a in resto)
             ):

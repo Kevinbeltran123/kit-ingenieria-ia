@@ -155,9 +155,9 @@ def primera_cambiada(lineas: list[dict], i0: int, i1: int) -> dict | None:
     return None
 
 
-def pasos_de_archivo(lineas: list[dict], es_python: bool) -> list[dict]:
-    nuevo = "\n".join(l["c"] for l in lineas if l["t"] in " +")
-    viejo = "\n".join(l["c"] for l in lineas if l["t"] in " -")
+def pasos_de_archivo(lineas: list[dict], *, es_python: bool) -> list[dict]:
+    nuevo = "\n".join(fila["c"] for fila in lineas if fila["t"] in " +")
+    viejo = "\n".join(fila["c"] for fila in lineas if fila["t"] in " -")
     defs_nuevo = definiciones(nuevo) if es_python else []
     defs_viejo = definiciones(viejo) if es_python else []
     inicios = {d[0] for d in defs_nuevo}
@@ -188,8 +188,7 @@ def pasos_de_archivo(lineas: list[dict], es_python: bool) -> list[dict]:
         inicio = i0
         for corte in [*cortes, i1 + 1]:
             if corte > inicio:
-                for a in range(inicio, corte, MAX_LINEAS_PASO):
-                    piezas.append([a, min(a + MAX_LINEAS_PASO, corte) - 1])
+                piezas.extend([a, min(a + MAX_LINEAS_PASO, corte) - 1] for a in range(inicio, corte, MAX_LINEAS_PASO))
             inicio = corte
     # 2. Juntar piezas cercanas del mismo método, sin pasar de MAX líneas. Un trozo que solo tiene
     #    líneas en blanco no es un paso: se pega al anterior si está al lado, o se deja sin explicar.
@@ -225,9 +224,9 @@ def numeros(lineas: list[dict], paso: dict, tipo: str) -> list[int]:
 def codigo_para_leer(lineas: list[dict], paso: dict) -> list[str]:
     filas = []
     for i in range(paso["i0"], paso["i1"] + 1):
-        l = lineas[i]
-        numero = l["o"] if l["t"] == "-" else l["n"]
-        filas.append(f"{l['t']} {numero:>5} | {l['c']}")
+        fila = lineas[i]
+        numero = fila["o"] if fila["t"] == "-" else fila["n"]
+        filas.append(f"{fila['t']} {numero:>5} | {fila['c']}")
     return filas
 
 
@@ -261,8 +260,9 @@ def main(argv: list[str] | None = None) -> int:
         anterior, ruta = (partes[1], partes[2]) if estado in "RC" else (partes[1], partes[1])
         entradas.append((estado, ruta, anterior))
     if args.sin_commit:
-        for ruta in git(raiz, "ls-files", "--others", "--exclude-standard").splitlines():
-            entradas.append(("A", ruta, None))
+        entradas.extend(
+            ("A", ruta, None) for ruta in git(raiz, "ls-files", "--others", "--exclude-standard").splitlines()
+        )
 
     archivos, pasos, omitidos = [], [], []
     for estado, ruta, anterior in entradas:
@@ -283,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
         if lineas is None:
             omitidos.append({"ruta": ruta, "motivo": "archivo binario"})
             continue
-        if not any(l["t"] in "+-" for l in lineas):
+        if not any(fila["t"] in "+-" for fila in lineas):
             continue
         indice = len(archivos)
         archivos.append(
@@ -291,12 +291,12 @@ def main(argv: list[str] | None = None) -> int:
                 "ruta": ruta,
                 "anterior": anterior if anterior != ruta else None,
                 "estado": estado,
-                "mas": sum(l["t"] == "+" for l in lineas),
-                "menos": sum(l["t"] == "-" for l in lineas),
+                "mas": sum(fila["t"] == "+" for fila in lineas),
+                "menos": sum(fila["t"] == "-" for fila in lineas),
                 "lineas": lineas,
             }
         )
-        for paso in pasos_de_archivo(lineas, ruta.endswith((".py", ".pyi"))):
+        for paso in pasos_de_archivo(lineas, es_python=ruta.endswith((".py", ".pyi"))):
             pasos.append({"id": len(pasos) + 1, "archivo": indice, **paso})
 
     if not pasos:

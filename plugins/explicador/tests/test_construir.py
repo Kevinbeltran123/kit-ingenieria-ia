@@ -117,5 +117,5 @@ def test_el_codigo_explicado_puede_contener_los_marcadores(repo):
     pagina = next(carpeta(repo).glob("*.html")).read_text()
     crudo = re.search(r'<script type="application/json" id="datos">(.*?)</script>', pagina, re.S).group(1)
     datos = json.loads(crudo.replace("<\\/", "</"))
-    lineas = [l["c"] for a in datos["archivos"] if a["ruta"] == "notas.md" for l in a["lineas"]]
+    lineas = [fila["c"] for a in datos["archivos"] if a["ruta"] == "notas.md" for fila in a["lineas"]]
     assert lineas == ["__DATOS__ y /*__FUENTES__*/ y __TITULO__ y </script>"]

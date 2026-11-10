@@ -196,7 +196,7 @@ def test_suministro_falla_si_hay_cve(raiz):
 
 
 def no_instalados(salida: str) -> list[str]:
-    linea = next(l for l in salida.splitlines() if l.startswith("No instalados"))
+    linea = next(fila for fila in salida.splitlines() if fila.startswith("No instalados"))
     return linea.split(": ", 1)[1].split(", ")
 
 

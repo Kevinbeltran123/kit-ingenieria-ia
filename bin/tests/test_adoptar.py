@@ -60,9 +60,9 @@ def test_perfil_ml_crea_codeowners_del_evaluador(tmp_path):
     r = correr(tmp_path, "--perfil", "ml", "--sin-docker")
     assert r.returncode == 0, r.stderr
     reglas = [
-        l.split()[0]
-        for l in (tmp_path / ".github/CODEOWNERS").read_text().splitlines()
-        if l.strip() and not l.startswith("#")
+        linea.split()[0]
+        for linea in (tmp_path / ".github/CODEOWNERS").read_text().splitlines()
+        if linea.strip() and not linea.startswith("#")
     ]
     for ruta in ["/eval/", "/splits/", "/data/splits/", "/.claude/ml-vision.json"]:
         assert ruta in reglas, ruta

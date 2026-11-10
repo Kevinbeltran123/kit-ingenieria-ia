@@ -39,7 +39,7 @@ from pathlib import Path
 
 MARCAS = [
     r"noqa\b",  # ruff, flake8, complexipy: una línea
-    r"(?:ruff|flake8):\s*(?:noqa|disable)\b",  # ruff: el archivo o un bloque
+    r"(?:ruff|flake8):\s*(?:noqa|disable)\b",  # el archivo entero o un bloque
     r"type:\s*ignore\b",  # todo verificador de tipos (PEP 484)
     r"ty:\s*ignore\b",
     r"(?:pyright|mypy):\s*(?!strict\b)\S",  # ignore[...] o configuración del archivo
@@ -124,7 +124,7 @@ def escribe_en_un_py(tokens: list[str]) -> bool:
             if a and set(a) <= PUNTUACION:
                 break
             argumentos.append(a)
-        nombre = os.path.basename(t)
+        nombre = Path(t).name
         en_sitio = nombre == "tee" or (
             nombre in {"sed", "gsed", "perl"}
             and any(

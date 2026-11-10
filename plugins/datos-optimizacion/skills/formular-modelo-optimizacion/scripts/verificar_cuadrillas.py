@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 
 
 def verificar(instancia: dict, solucion: dict) -> list[str]:
@@ -19,9 +20,7 @@ def verificar(instancia: dict, solucion: dict) -> list[str]:
     lotes = instancia["lotes"]
     asignacion = solucion.get("asignacion", {})
 
-    for lote in lotes:
-        if lote not in asignacion:
-            errores.append(f"El lote {lote} quedó sin cuadrilla.")
+    errores.extend(f"El lote {lote} quedó sin cuadrilla." for lote in lotes if lote not in asignacion)
     for lote, cuadrilla in asignacion.items():
         if lote not in lotes:
             errores.append(f"Se asignó un lote que no existe: {lote}.")
@@ -29,12 +28,12 @@ def verificar(instancia: dict, solucion: dict) -> list[str]:
             errores.append(f"El lote {lote} tiene una cuadrilla que no existe: {cuadrilla}.")
 
     for cuadrilla, datos in cuadrillas.items():
-        carga = sum(lotes[l]["kg"] for l, c in asignacion.items() if c == cuadrilla and l in lotes)
+        carga = sum(lotes[lote]["kg"] for lote, c in asignacion.items() if c == cuadrilla and lote in lotes)
         if carga > datos["cap_kg"]:
             errores.append(f"La cuadrilla {cuadrilla} recibe {carga} kg y su capacidad es {datos['cap_kg']} kg.")
 
     if not errores:
-        objetivo = sum(instancia["dist_m"][c][l] for l, c in asignacion.items())
+        objetivo = sum(instancia["dist_m"][c][lote] for lote, c in asignacion.items())
         if solucion.get("objetivo_m") != objetivo:
             errores.append(
                 f"El objetivo reportado ({solucion.get('objetivo_m')} m) no coincide con el recalculado ({objetivo} m)."
@@ -43,8 +42,8 @@ def verificar(instancia: dict, solucion: dict) -> list[str]:
 
 
 if __name__ == "__main__":
-    instancia = json.load(open(sys.argv[1]))
-    solucion = json.load(open(sys.argv[2]))
+    instancia = json.loads(Path(sys.argv[1]).read_text())
+    solucion = json.loads(Path(sys.argv[2]).read_text())
     errores = verificar(instancia, solucion)
     print("\n".join(errores) if errores else "Solución factible y objetivo correcto.")
     sys.exit(1 if errores else 0)

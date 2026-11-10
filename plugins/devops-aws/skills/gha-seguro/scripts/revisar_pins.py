@@ -42,7 +42,7 @@ def revisar(ruta: Path) -> list[str]:
             problemas.append(f"{ruta}:{n}: action sin SHA de 40 caracteres: {ref}")
 
     es_workflow = "workflows" in ruta.parts
-    if es_workflow and not any(re.match(r"^permissions:", l) for l in lineas):
+    if es_workflow and not any(re.match(r"^permissions:", linea) for linea in lineas):
         problemas.append(f"{ruta}: falta `permissions:` a nivel de workflow")
     return problemas
 

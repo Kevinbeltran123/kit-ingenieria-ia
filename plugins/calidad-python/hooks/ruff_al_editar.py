@@ -33,7 +33,7 @@ def main() -> int:
     sesion = re.sub(r"[^A-Za-z0-9_-]", "", datos.get("session_id", "")) or "sin-sesion"
     marcas = Path(tempfile.gettempdir()) / "claude-calidad-python"
     marcas.mkdir(exist_ok=True)
-    with open(marcas / sesion, "a") as f:
+    with (marcas / sesion).open("a") as f:
         f.write(archivo + "\n")
 
     ruff = buscar_herramienta(raiz, "ruff")

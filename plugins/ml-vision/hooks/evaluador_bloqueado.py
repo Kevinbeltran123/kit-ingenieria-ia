@@ -52,7 +52,7 @@ def rutas_protegidas(raiz: Path) -> list[Path]:
 
 
 def normalizar(raiz: Path, ruta: str) -> Path:
-    p = Path(os.path.expanduser(ruta))
+    p = Path(ruta).expanduser()
     if not p.is_absolute():
         p = raiz / p
     return Path(os.path.normpath(os.path.realpath(p)))
@@ -142,14 +142,14 @@ def objetivos_bash(comando: str, cwd: Path) -> list[Path] | None:
 
 
 def sin_prefijos(seg: list[str]) -> list[str]:
-    while seg and ("=" in seg[0] and not seg[0].startswith("-") or seg[0] in PREFIJOS):
+    while seg and (("=" in seg[0] and not seg[0].startswith("-")) or seg[0] in PREFIJOS):
         seg = seg[1:]
     return seg
 
 
 def scripts_internos(seg: list[str]) -> list[str] | None:
     """Textos que el segmento corre como comandos: `bash -c '...'` (y sh, zsh, dash) o `eval ...`."""
-    cmd = os.path.basename(seg[0]) if seg else ""
+    cmd = Path(seg[0]).name if seg else ""
     if cmd == "eval":
         return [" ".join(seg[1:])]
     if cmd in SHELLS and any(a.startswith("-") and not a.startswith("--") and "c" in a for a in seg[1:]):
@@ -161,7 +161,7 @@ def scripts_internos(seg: list[str]) -> list[str] | None:
 def objetivos_segmento(seg: list[str]) -> list[str]:
     if not seg:
         return []
-    cmd = os.path.basename(seg[0])
+    cmd = Path(seg[0]).name
     args = [a for a in seg[1:] if not a.startswith("-")]
     if cmd in ESCRIBEN:
         return args

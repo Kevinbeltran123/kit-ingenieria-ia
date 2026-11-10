@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "skills" / "formular-modelo-optimizacion" / "scripts"))
 
-from verificar_cuadrillas import verificar  # noqa: E402
+from verificar_cuadrillas import verificar
 
 MINIMA = {
     "cuadrillas": {"A": {"cap_kg": 5000}, "B": {"cap_kg": 4000}},
@@ -35,7 +35,7 @@ def fuerza_bruta(instancia: dict) -> int | None:
     mejor = None
     for combo in itertools.product(instancia["cuadrillas"], repeat=len(lotes)):
         asignacion = dict(zip(lotes, combo))
-        objetivo = sum(instancia["dist_m"][c][l] for l, c in asignacion.items())
+        objetivo = sum(instancia["dist_m"][c][lote] for lote, c in asignacion.items())
         if not verificar(instancia, {"asignacion": asignacion, "objetivo_m": objetivo}):
             mejor = objetivo if mejor is None else min(mejor, objetivo)
     return mejor
@@ -45,7 +45,7 @@ def instancia_aleatoria(semilla: int) -> dict:
     rng = random.Random(semilla)
     cuadrillas = {f"C{i}": {"cap_kg": rng.randint(3000, 8000)} for i in range(3)}
     lotes = {f"L{j}": {"kg": rng.randint(500, 4000)} for j in range(5)}
-    dist = {c: {l: rng.randint(50, 2000) for l in lotes} for c in cuadrillas}
+    dist = {c: {lote: rng.randint(50, 2000) for lote in lotes} for c in cuadrillas}
     return {"cuadrillas": cuadrillas, "lotes": lotes, "dist_m": dist}
 
 

@@ -11,7 +11,7 @@ COLUMNAS = ["imagen", "split", "palma_id", "lote", "finca", "fecha"]
 
 def manifiesto(tmp_path: Path, filas: list[dict], columnas=COLUMNAS) -> Path:
     ruta = tmp_path / "manifest.csv"
-    with open(ruta, "w", newline="", encoding="utf-8") as f:
+    with ruta.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=columnas)
         w.writeheader()
         for fila in filas:
@@ -44,14 +44,14 @@ def test_division_limpia_pasa(tmp_path):
 
 
 def test_misma_palma_en_dos_splits_falla(tmp_path):
-    filas = division_limpia() + [fila("e.jpg", "test", "P1", "L3", "F3", "2026-03-02")]
+    filas = [*division_limpia(), fila("e.jpg", "test", "P1", "L3", "F3", "2026-03-02")]
     r = correr(manifiesto(tmp_path, filas))
     assert r.returncode == 1
     assert "FALLA [palma_id]" in r.stdout and "P1: test, train" in r.stdout
 
 
 def test_mismo_lote_en_dos_splits_falla_aunque_las_palmas_sean_distintas(tmp_path):
-    filas = division_limpia() + [fila("e.jpg", "test", "P9", "L1", "F3", "2026-03-02")]
+    filas = [*division_limpia(), fila("e.jpg", "test", "P9", "L1", "F3", "2026-03-02")]
     r = correr(manifiesto(tmp_path, filas))
     assert r.returncode == 1
     assert "FALLA [lote]" in r.stdout
@@ -59,13 +59,13 @@ def test_mismo_lote_en_dos_splits_falla_aunque_las_palmas_sean_distintas(tmp_pat
 
 
 def test_misma_finca_en_dos_splits_falla(tmp_path):
-    filas = division_limpia() + [fila("e.jpg", "test", "P9", "L9", "F1", "2026-03-02")]
+    filas = [*division_limpia(), fila("e.jpg", "test", "P9", "L9", "F1", "2026-03-02")]
     r = correr(manifiesto(tmp_path, filas))
     assert r.returncode == 1 and "FALLA [finca]" in r.stdout
 
 
 def test_misma_imagen_en_dos_splits_falla(tmp_path):
-    filas = division_limpia() + [fila("a.jpg", "test", "P8", "L8", "F8", "2026-03-02")]
+    filas = [*division_limpia(), fila("a.jpg", "test", "P8", "L8", "F8", "2026-03-02")]
     r = correr(manifiesto(tmp_path, filas), "--grupos", "palma_id")
     assert r.returncode == 1 and "FALLA [imagen]" in r.stdout
 
@@ -102,7 +102,7 @@ def test_manifiesto_vacio_es_error_de_uso(tmp_path):
 
 
 def test_valores_vacios_se_avisan_pero_no_fallan(tmp_path):
-    filas = division_limpia() + [fila("e.jpg", "test", "", "L3", "F3", "2026-03-05")]
+    filas = [*division_limpia(), fila("e.jpg", "test", "", "L3", "F3", "2026-03-05")]
     r = correr(manifiesto(tmp_path, filas))
     assert r.returncode == 0
     assert "AVISO [palma_id] 1 fila(s) sin valor" in r.stdout
@@ -193,7 +193,7 @@ def test_columna_sha256_detecta_duplicados_sin_las_imagenes(tmp_path):
     filas = division_limpia()
     for f, h in zip(filas, ["h1", "h2", "h3", "h1"]):
         f["sha256"] = h
-    r = correr(manifiesto(tmp_path, filas, columnas=COLUMNAS + ["sha256"]), "--grupos", "palma_id,lote,finca,sha256")
+    r = correr(manifiesto(tmp_path, filas, columnas=[*COLUMNAS, "sha256"]), "--grupos", "palma_id,lote,finca,sha256")
     assert r.returncode == 1 and "FALLA [sha256]" in r.stdout
 
 

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import contextlib
 import html
 import json
 import re
@@ -247,10 +248,8 @@ def armar_indice(raiz: Path) -> Path:
 
 def abrir(ruta: Path) -> None:
     comando = ["open"] if sys.platform == "darwin" else ["xdg-open"]
-    try:
+    with contextlib.suppress(OSError):
         subprocess.run([*comando, str(ruta)], check=False, capture_output=True)
-    except OSError:
-        pass
 
 
 def main(argv: list[str] | None = None) -> int:
