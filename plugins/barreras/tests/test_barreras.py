@@ -374,6 +374,47 @@ def test_claude_no_puede_editar_la_config(raiz):
     assert bash("cat .claude/barreras.json", raiz).returncode == 0
 
 
+
+@pytest.mark.parametrize("nombre", ["settings.json", "settings.local.json"])
+@pytest.mark.parametrize("herramienta", ["Edit", "Write"])
+def test_claude_no_edita_los_settings_de_claude_code(nombre, herramienta, raiz):
+    """Ahí viven enabledPlugins, las reglas deny y el sandbox: editarlos apaga el kit en la siguiente sesión."""
+    r = editar(raiz / ".claude" / nombre, raiz, herramienta)
+    assert r.returncode == 2
+    assert "autoprotección" in r.stderr and "solo la cambia el usuario" in r.stderr
+
+
+@pytest.mark.parametrize("cmd", [
+    "echo '{}' > .claude/settings.json",
+    "sed -i '' 's/true/false/' .claude/settings.json",
+    "tee .claude/settings.local.json < nuevo.json",
+    "git rm .claude/settings.json",
+    "git checkout -- .claude/settings.json",
+    "cp otro.json ./.claude/settings.json",
+])
+def test_settings_de_claude_code_no_se_tocan_por_bash(cmd, raiz):
+    r = bash(cmd, raiz)
+    assert r.returncode == 2, cmd
+    assert "autoprotección" in r.stderr
+
+
+@pytest.mark.parametrize("cmd", [
+    "cat .claude/settings.json",
+    "jq .enabledPlugins .claude/settings.json",
+    "git diff .claude/settings.json",
+    "git add .claude/settings.json",
+    "code .vscode/settings.json",
+    "echo x > settings.json",
+])
+def test_leer_los_settings_y_otros_settings_json_pasa(cmd, raiz):
+    assert bash(cmd, raiz).returncode == 0, cmd
+
+
+def test_la_autoproteccion_de_settings_no_se_desactiva(raiz):
+    env = {"BARRERAS_DESACTIVAR": "infra,sql,archivos,secretos,local"}
+    assert correr({"tool_name": "Edit", "tool_input": {"file_path": str(raiz / ".claude/settings.json")}},
+                  raiz, env_extra=env).returncode == 2
+
 def test_autoproteccion_no_se_puede_desactivar(raiz):
     r = editar(raiz / ".claude" / "barreras.json", raiz, "Write")
     assert r.returncode == 2

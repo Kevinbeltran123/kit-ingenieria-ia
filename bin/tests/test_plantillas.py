@@ -62,6 +62,7 @@ def test_las_reglas_de_secretos_cubren_cualquier_carpeta():
     for patron in ("Read(**/.env)", "Read(**/.env.*)", "Read(**/.envrc)", "Read(**/secrets/**)"):
         assert patron in reglas, patron
     assert not [r for r in reglas if r.startswith("Read(./")]
+    assert "Edit(**/.claude/settings.json)" in reglas  # el archivo que define los límites no lo edita Claude
 
 
 def test_repo_sin_adaptadores_ni_entrypoints_todavia_pasa(tmp_path):

@@ -1,6 +1,7 @@
 """PreToolUse: barreras contra acciones peligrosas del agente.
 
-Reglas (se pueden desactivar por repo, salvo la autoprotección):
+Reglas (se pueden desactivar por repo, salvo la autoprotección: ni .claude/barreras.json ni los
+settings de Claude Code del repo, donde viven los plugins y las reglas deny, los edita el agente):
   infra     apply/deploy/destroy de Terraform, CDK, SAM, Pulumi, Serverless y AWS CLI destructivo
   sql       SQL destructivo con un cliente de base de datos (bloquea en producción, pregunta fuera)
   archivos  editar .env, lockfiles, migraciones existentes o .git/
@@ -304,11 +305,34 @@ def regla_git(args: list[str]) -> str | None:
     return None
 
 
-def toca_config_barreras(segs: list[list[str]]) -> bool:
+CONFIG_PROTEGIDA = {
+    "barreras.json": "la configuración de barreras",
+    "settings.json": "la configuración de Claude Code del repo (plugins, reglas deny, sandbox)",
+    "settings.local.json": "la configuración local de Claude Code (plugins, reglas deny, sandbox)",
+}
+RUTA_SETTINGS = re.compile(r"(^|/)\.claude/settings(\.local)?\.json$")
+SOLO_LEEN_CONFIG = {"cat", "less", "head", "tail", "jq", "grep", "diff", "wc", "stat", "ls", "test"}
+GIT_ESCRIBE = {"rm", "mv", "checkout", "restore"}
+
+
+def config_protegida(ruta: str) -> str | None:
+    p = Path(ruta)
+    return CONFIG_PROTEGIDA.get(p.name) if p.parent.name == ".claude" else None
+
+
+def toca_config_protegida(segs: list[list[str]]) -> str | None:
+    """Comando que puede modificar barreras.json o los settings de Claude Code; leerlos está permitido."""
     for seg in segs:
-        if any("barreras.json" in t for t in seg) and Path(seg[0]).name not in ("cat", "less", "head", "jq", "grep"):
-            return True
-    return False
+        tocadas = [t for t in seg if "barreras.json" in t or RUTA_SETTINGS.search(t)]
+        if not tocadas:
+            continue
+        nombre = Path(seg[0]).name
+        if nombre in SOLO_LEEN_CONFIG:
+            continue
+        if nombre == "git" and not any(a in GIT_ESCRIBE for a in seg[1:]):
+            continue
+        return CONFIG_PROTEGIDA.get(Path(tocadas[0]).name, "la configuración de barreras")
+    return None
 
 
 # ---------- regla de archivos ----------
@@ -390,8 +414,8 @@ def evaluar(datos: dict) -> int:
 
     if herramienta in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
         ruta = entrada.get("file_path") or entrada.get("notebook_path") or ""
-        if Path(ruta).name == "barreras.json" and Path(ruta).parent.name == ".claude":
-            return bloquear("autoprotección", "la configuración de barreras solo la cambia el usuario", "")
+        if que := config_protegida(ruta):
+            return bloquear("autoprotección", f"{que} solo la cambia el usuario", "")
         if "archivos" not in apagadas and (motivo := regla_archivos(ruta)):
             return bloquear("archivos", motivo, "")
         return 0
@@ -401,8 +425,8 @@ def evaluar(datos: dict) -> int:
     cmd = entrada.get("command", "")
     segs = segmentos(cmd)
 
-    if toca_config_barreras(segs):
-        return bloquear("autoprotección", "la configuración de barreras solo la cambia el usuario", "")
+    if que := toca_config_protegida(segs):
+        return bloquear("autoprotección", f"{que} solo la cambia el usuario", "")
     for seg in segs:
         if "infra" not in apagadas and (motivo := regla_infra(seg)):
             return bloquear("infra", f"`{motivo}`", CONSEJO_INFRA)

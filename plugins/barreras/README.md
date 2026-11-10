@@ -13,7 +13,7 @@ Si el hook falla por un error interno, **bloquea** (falla cerrado). Si ni siquie
 | `archivos` | Editar `.env*` (salvo `.env.example/.sample/.template`), lockfiles (`uv.lock`, `poetry.lock`, `package-lock.json`, `pnpm-lock.yaml`…), migraciones que ya están en git (`migrations/versions/`, `alembic/versions/`, Django `migrations/0001_*.py`) y `.git/` | Crear migraciones nuevas y corregirlas antes del commit |
 | `secretos` | Leer `~/.aws/credentials`, llaves `~/.ssh/id_*`, `.env`, `.envrc`; `printenv`/`env`/`export -p` completos; `echo $..._SECRET/_TOKEN/_PASSWORD` | Llaves `.pub`, `ssh -i llave`, `printenv PATH`, `.env.example` |
 | `local` | Borrar trabajo: `rm -rf` fuera de `/tmp` y cachés, `find -delete`, `git reset --hard`, `git push --force`, `git clean -f`, `git checkout .`, `git restore .`, `git stash drop·clear`, `git branch -D`, `git worktree remove --force`, `git commit --no-verify`, borrar `.db`/`.sqlite` | `rm` de un archivo, `rm -rf /tmp/...`, `rm -rf` de lo que se regenera (`.venv`, `dist`, `build`, `htmlcov`, `*.egg-info`, cachés), `--force-with-lease`, `git clean -n`, `git branch -d` |
-| autoprotección | Que Claude edite `.claude/barreras.json` (no se puede desactivar) | Leerlo |
+| autoprotección | Que Claude edite `.claude/barreras.json`, o `.claude/settings.json` y `settings.local.json`, donde viven los plugins activos, las reglas `deny` y el sandbox del repo (no se puede desactivar) | Leerlos, `git diff`, `git add` |
 
 Detecta evasiones simples: `&&`, `;`, `|`, `$(...)`, saltos de línea, `bash -c "..."`, `eval`, prefijos (`sudo`, `VAR=x`, `uv run`, `npx`, `aws-vault exec ... --`) y mayúsculas/minúsculas en SQL.
 
@@ -37,7 +37,7 @@ Un hook que lee texto se puede esquivar (scripts, `make deploy`, `npm run deploy
   "permissions": {
     "deny": [
       "Read(**/.env)", "Read(**/.env.*)", "Read(**/.envrc)", "Read(~/.aws/**)", "Read(~/.ssh/**)",
-      "Edit(**/.env)", "Edit(**/.env.*)", "Edit(**/uv.lock)",
+      "Edit(**/.env)", "Edit(**/.env.*)", "Edit(**/uv.lock)", "Edit(**/.claude/settings.json)",
       "Bash(terraform apply *)", "Bash(terraform destroy *)",
       "Bash(cdk deploy *)", "Bash(cdk destroy *)", "Bash(pulumi up *)", "Bash(pulumi destroy *)"
     ]

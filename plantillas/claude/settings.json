@@ -25,6 +25,7 @@
       "Read(**/secrets/**)",
       "Read(~/.aws/**)",
       "Read(~/.ssh/**)",
+      "Edit(**/.claude/settings.json)",
       "Bash(terraform apply)",
       "Bash(terraform apply *)",
       "Bash(terraform destroy *)",
