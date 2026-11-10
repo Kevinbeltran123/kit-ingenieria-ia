@@ -1,5 +1,37 @@
 # Estado
 
+## Dónde quedamos (2026-11-09)
+Segunda revisión del kit, de solo lectura, con 15 hallazgos; Kevin dijo «dale» a todos y están aplicados en `main`, un
+commit por arreglo (19 commits sobre v0.3.0, incluido este). **Sin push todavía**: el CI de GitHub es quien verifica la
+construcción de la imagen Docker de la prueba de humo, que en este Mac no se pudo (el cliente docker de Homebrew no
+trae buildx y el Dockerfile usa `--mount`). Hecho:
+- Errores confirmados: `[tool.typos]` ya no cuenta como ty configurado (verify.py y el hook de Stop comparan la
+  cabecera de la tabla); barreras frena `git checkout .`, `git stash drop` y `git stash clear`; `claude-review.yml`
+  comenta con el `GITHUB_TOKEN` del workflow (sin `github_token`, la acción cambiaba el OIDC por un token de la Claude
+  GitHub App en api.anthropic.com y fallaba en una organización sin la App; verificado en action.yml y token.ts del
+  commit fijado) y tiene `concurrency` por PR.
+- El kit se aplica lo que exige: `pyproject.toml` con ruff (120 columnas, py39, sin C90/PLR09/T20/S/D, con el porqué),
+  commit de solo formato en `.git-blame-ignore-revs`, 62 hallazgos arreglados sin cambiar comportamiento, job `estilo`
+  en el CI; `dependabot.yml` propio (acciones y Claude Code del lockfile, cooldown 7 días);
+  `bin/tests/test_versiones.py` ata uv, gitleaks, prek, ruff, los SHA de las acciones del kit y de las plantillas, y el
+  lockfile de Claude Code; prek fijado (`uvx prek@0.5.9`) en todos los textos; `terceros/marketplace-entradas.json`
+  borrado (marketplace.json es la única lista).
+- Plantillas: `.python-version` (3.12) copiado por adoptar.py; un solo Dockerfile (la skill `dockerfile-python-uv`
+  remite a la plantilla), `.dockerignore` con `tests/`, `.github/`, `.claude/`, y `humo_plantillas.py` construye la
+  imagen y comprueba que no corre como root (sin Docker con BuildKit sale con 1; `--sin-docker` lo salta a propósito);
+  deny `Edit(**/.claude/settings.json)` en la plantilla de settings.
+- barreras: `rm -rf` de `.venv`, `dist`, `build`, `htmlcov`, `.tox`, `.nox`, `.coverage` y `*.egg-info` pasa (nombre
+  exacto); autoprotección también de `.claude/settings.json` y `settings.local.json` (Edit/Write y Bash que escribe;
+  leer, `git diff` y `git add` pasan; no se desactiva).
+- Menores: línea `/plugin install <plugin> --marketplace Kevinbeltran123/kit-ingenieria-ia` en los 8 README (único
+  aviso nuevo de `claude plugin validate` 2.1.319; quedan los 8 de `version`, decididos en B6); README de plantillas al
+  día; `.impeccable/` fuera del kit; rama local `revision-2026-11-08` borrada.
+
+Verificación local: 623 pruebas pasan y 14 se saltan sin OR-Tools (con OR-Tools 9.15, las 19 de optimización
+también), `claude plugin validate .` pasa, `uvx ruff@0.17.3 check .` y `format --check .` limpios, zizmor sin
+hallazgos en los workflows del kit y de las plantillas, prueba de humo 8/8 con `--sin-docker`. Pendiente de ver en
+GitHub: el `docker build` del job `plantillas` y los jobs nuevos.
+
 ## Dónde quedamos (2026-11-08)
 Revisión completa del kit en `investigacion/09-revision-2026-11-08.md` (~60 hallazgos agrupados en 48, con
 evidencia y arreglo). Están hechos todos los arreglos NECESARIOS que no dependen de GitHub, un commit por arreglo:
@@ -67,7 +99,8 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
        tiene código») las explica, probadas con ruff 0.17.3, ty 0.0.95 y complexipy 8.3.0 (eef1007).
      - Extra: Claude tampoco salta pruebas (skip, xfail, `SkipTest`, salir en verde); un `skipif` nuevo se le
        pregunta a la persona (0812aa2, probado con Claude Code real).
-     - `.impeccable/config.json` versionado, como pide impeccable (e749b61).
+     - `.impeccable/config.json` versionado, como pide impeccable (e749b61). Quitado el 2026-11-09: es una herramienta
+       local, no parte del kit (queda `.impeccable/` en .gitignore).
 
 ## Pendiente que decide Kevin
 1. Resuelto el 2026-11-08: el repo pasó a público, así Actions corre gratis (Kevin no va a pagar más). Si vuelve a
@@ -82,7 +115,9 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
 5. Skills no construidas aún: `geo-raster-agro`, CLAUDE.md del equipo de datos, observabilidad de ML (drift).
 6. EXTRA de la revisión sin hacer: D5 (aws-core cuesta ~4.900 tokens fijos), D6 (solapes entre skills), F2 (skills
    según el stack de la empresa).
-7. Al subir ty (fijado en 0.0.95; la última es 0.0.99): 0.0.97 renombró `unresolved-import` a `import-not-found`
+7. Push de los commits del 2026-11-09 y mirar el CI: es la primera vez que corre el `docker build` de la prueba de humo
+   y los jobs `estilo` y Dependabot.
+8. Al subir ty (fijado en 0.0.95; la última es 0.0.99): 0.0.97 renombró `unresolved-import` a `import-not-found`
    (changelog de ty). Revisar los `# ty: ignore[...]` y regenerar las líneas base con `--update-baseline`.
 
 ## Decisiones
@@ -105,3 +140,11 @@ Con el kit en GitHub (2026-11-08) también quedaron hechos:
 - De otros proyectos se toma solo lo que el kit y Claude Code no traen ya (pstack: `/correct`, el estado legítimo,
   las preguntas de benchmark). Repos con código viejo: la línea base de cada herramienta, no un gate propio.
   Nada de *Software Engineering at Google* en el kit (CC BY-NC-ND).
+- El kit se aplica sus propias reglas (2026-11-09): ruff con `pyproject.toml` en la raíz, 120 columnas y sin las
+  familias que no tienen sentido en hooks (T20, S, D, FAST, TID) ni las de complejidad (C90, PLR09: los hooks que
+  analizan shell concentran ramas por diseño y los cubren sus pruebas). Las excepciones van en la configuración, no
+  en `# noqa`. Los commits de solo formato, en `.git-blame-ignore-revs`.
+- La revisión con Claude en CI usa el `GITHUB_TOKEN` del workflow, no la Claude GitHub App (menos piezas externas; la
+  App exige instalarla en la organización). Si se quiere la App: quitar `github_token` y devolver `id-token: write`.
+- Una versión repetida en varios sitios se ata con una prueba (`test_versiones.py`), no con un comentario.
+- Lo que no es del kit (herramientas locales como impeccable) no se versiona en el kit.
