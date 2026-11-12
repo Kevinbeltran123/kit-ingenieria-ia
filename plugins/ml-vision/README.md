@@ -12,6 +12,7 @@ Visión por computador y MLOps para el proyecto de enfermedades en palma (y simi
 | `carga-segura-modelos` | torch ≥ 2.10, `weights_only=True`, safetensors con revisión fija, sin `trust_remote_code`. |
 | `licencias-vision` | AGPL de Ultralytics, RF-DETR sin `[plus]`, DINOv3/SAM 3; cómo registrar aprobaciones. |
 | `ficha-modelo` | Plantillas de model card y dataset card con límites de validación en campo. |
+| `explicar-resultado` | Explicar un resultado afirmación por afirmación con `scripts/resultado.py`: cada cifra sale de `resultado.json`, con referencia, alcance y lo no comprobado; no deja reportar con un error abierto. |
 | `despliegue-vision-aws` | SageMaker spot, MLflow App, Batch Transform, Lambda + ONNX, paridad ONNX, drift de embeddings. |
 
 ## Hooks (PreToolUse)
