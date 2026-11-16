@@ -105,6 +105,26 @@ def revisar_afirmacion(numero: int, afirmacion: dict, disponibles: dict[str, flo
     return faltas
 
 
+def censo(afirmaciones: list) -> set:
+    """Claves medidas contra etiqueta_historica: la regla y el aviso se deciden por clave, no por afirmación."""
+    return {a.get("clave") for a in afirmaciones if a.get("referencia") == "etiqueta_historica"}
+
+
+def revisar_referencias(afirmaciones: list) -> list[str]:
+    """Una misma clave no puede citarse con referencias distintas."""
+    por_clave: dict[object, list] = {}
+    for afirmacion in afirmaciones:
+        referencias = por_clave.setdefault(afirmacion.get("clave"), [])
+        if afirmacion.get("referencia") not in referencias:
+            referencias.append(afirmacion.get("referencia"))
+    return [
+        f"la clave {clave} se cita con referencias distintas ({', '.join(map(str, referencias))}): "
+        "una cifra se mide contra una sola referencia"
+        for clave, referencias in por_clave.items()
+        if len(referencias) > 1
+    ]
+
+
 def revisar_alerta(numero: int, alerta: dict) -> list[str]:
     """Lista lo que le falta a una alerta."""
     faltas = []
@@ -154,30 +174,26 @@ def revisar_veredicto(explicacion: dict, disponibles: dict[str, float], hipotesi
     faltas += [
         f"hipótesis: el umbral {clave} no está en resultado.json" for clave in umbrales if clave not in disponibles
     ]
-    if estado not in ("se_apoya", "se_refuta"):
-        return faltas
-    historicas = [
-        n
-        for n in citadas
-        if 1 <= n <= len(afirmaciones) and afirmaciones[n - 1].get("referencia") == "etiqueta_historica"
-    ]
-    if historicas:
-        faltas.append(
-            f"veredicto {estado}: se apoya en la afirmación {historicas[0]}, medida contra etiqueta_historica; "
-            "un registro no es verdad de campo: usa intermedio o no_aplica"
-        )
-    censo = {a.get("clave") for a in afirmaciones if a.get("referencia") == "etiqueta_historica"}
-    faltas += [
-        f"veredicto {estado}: el umbral {clave} es una cifra medida contra etiqueta_historica; "
-        "un registro no es verdad de campo: usa intermedio o no_aplica"
-        for clave in umbrales
-        if clave in censo
-    ]
     explicadas = {a.get("clave") for a in afirmaciones}
     faltas += [
         f"veredicto {estado}: el umbral {clave} no lo explica ninguna afirmación: no se sabe contra qué se midió"
         for clave in umbrales
         if clave not in explicadas
+    ]
+    if estado not in ("se_apoya", "se_refuta"):
+        return faltas
+    historicas = censo(afirmaciones)
+    del_censo = [n for n in citadas if 1 <= n <= len(afirmaciones) and afirmaciones[n - 1].get("clave") in historicas]
+    if del_censo:
+        faltas.append(
+            f"veredicto {estado}: se apoya en la afirmación {del_censo[0]}, cuya clave se midió contra "
+            "etiqueta_historica; un registro no es verdad de campo: usa intermedio o no_aplica"
+        )
+    faltas += [
+        f"veredicto {estado}: el umbral {clave} es una cifra medida contra etiqueta_historica; "
+        "un registro no es verdad de campo: usa intermedio o no_aplica"
+        for clave in umbrales
+        if clave in historicas
     ]
     return faltas
 
@@ -191,6 +207,7 @@ def revisar(explicacion: dict, disponibles: dict[str, float], sha: str, hipotesi
         faltas.append("no hay afirmaciones")
     for numero, afirmacion in enumerate(afirmaciones, 1):
         faltas += revisar_afirmacion(numero, afirmacion, disponibles)
+    faltas += revisar_referencias(afirmaciones)
     for numero, alerta in enumerate(explicacion.get("alertas") or [], 1):
         faltas += revisar_alerta(numero, alerta)
     if "veredicto" in explicacion:
@@ -212,25 +229,29 @@ def avisos(explicacion: dict) -> list[str]:
     ]
 
 
-def cifra(afirmacion: dict, disponibles: dict[str, float]) -> str:
-    """La cifra de una afirmación tal como va en explicacion.md, con el aviso si se midió contra el censo."""
-    valor = formato(disponibles[afirmacion["clave"]])
-    return f"{valor} ({AVISO_HISTORICA})" if afirmacion["referencia"] == "etiqueta_historica" else valor
+def cifra(clave: str, disponibles: dict[str, float], historicas: set) -> str:
+    """La cifra de una clave tal como va en explicacion.md, con el aviso si la clave se midió contra el censo."""
+    valor = formato(disponibles[clave])
+    return f"{valor} ({AVISO_HISTORICA})" if clave in historicas else valor
 
 
 def markdown(explicacion: dict, disponibles: dict[str, float]) -> str:
     """Arma la explicación con las cifras de resultado.json."""
     afirmaciones = explicacion["afirmaciones"]
+    historicas = censo(afirmaciones)
     lineas = [f"# {explicacion['titulo']}", "", f"**Pregunta:** {explicacion['pregunta']}", ""]
     lineas += ["## Cómo se hizo", "", explicacion["como_se_hizo"], "", "## Qué se puede afirmar", ""]
     for afirmacion in explicacion["afirmaciones"]:
-        texto = afirmacion["texto"].replace("{valor}", cifra(afirmacion, disponibles))
+        texto = afirmacion["texto"].replace("{valor}", cifra(afirmacion["clave"], disponibles, historicas))
         lineas.append(f"- {texto}")
         lineas.append(f"  - Cifra: `{afirmacion['clave']}`. Referencia: {afirmacion['referencia']}.")
         lineas.append(f"  - Alcance: {afirmacion['alcance']['descripcion']}.")
     veredicto = explicacion.get("veredicto")
     if veredicto:
-        texto = CITA.sub(lambda cita: cifra(afirmaciones[int(cita.group(1)) - 1], disponibles), veredicto["texto"])
+        texto = CITA.sub(
+            lambda cita: cifra(afirmaciones[int(cita.group(1)) - 1]["clave"], disponibles, historicas),
+            veredicto["texto"],
+        )
         lineas += ["", "## Veredicto", "", f"**{veredicto['estado']}**: {texto}"]
     lineas += ["", "## Lo que no se comprobó", ""]
     for afirmacion in explicacion["afirmaciones"]:

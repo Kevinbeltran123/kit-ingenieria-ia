@@ -28,7 +28,8 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
    - `afirmaciones`: una por cada cosa que el resultado permite decir. En cada una:
      - `texto`: la afirmación, con `{valor}` donde va la cifra. No escribas el número.
      - `clave`: la ruta de la cifra en `resultado.json`, con puntos (`auc.media`).
-     - `referencia`: contra qué se midió: `campo`, `experto`, `etiqueta_historica` o `ninguna`.
+     - `referencia`: contra qué se midió: `campo`, `experto`, `etiqueta_historica` o `ninguna`. Una cifra se mide
+       contra una sola referencia: si dos afirmaciones usan la misma `clave`, llevan la misma `referencia`.
      - `alcance`: `{"unidades": <n>, "grupos": <n>, "descripcion": "8.980 palmas de 11 lotes, un vuelo por lote"}`.
      - `no_comprobado`: lista de lo que esta afirmación no cubre (lotes, fechas, sensores, clases). No puede
        quedar vacía: siempre hay algo fuera.
@@ -43,11 +44,11 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
        `{"hipotesis": {"texto": "...", "umbrales": {"auc.media": 0.8}}}`, escrito antes de correr el experimento.
      - `texto` cita la cifra de al menos una afirmación con `{a1}`, `{a2}`... (el número de la afirmación, desde 1),
        sin escribir números a mano: el umbral se nombra ("sobre el umbral fijado"), no se copia.
-     - Cada clave de `umbrales` está en `resultado.json` (en `claves_disponibles`). Con `se_apoya` o `se_refuta`,
-       además, cada una es la `clave` de alguna afirmación: si no, no se sabe contra qué se midió.
-     - Nunca `se_apoya` ni `se_refuta` si alguna afirmación citada tiene referencia `etiqueta_historica`, ni si
-       algún umbral es la `clave` de una afirmación con esa referencia, aunque el texto no la cite: el censo no
-       es verdad de campo. Usa `intermedio`.
+     - Cada clave de `umbrales` está en `resultado.json` (en `claves_disponibles`) y es la `clave` de alguna
+       afirmación, en cualquier estado salvo `no_aplica`: si no, no se sabe contra qué se midió.
+     - Nunca `se_apoya` ni `se_refuta` si la clave de alguna afirmación citada se midió contra
+       `etiqueta_historica`, ni si algún umbral es una de esas claves, aunque el texto no la cite: el censo no es
+       verdad de campo. Usa `intermedio`.
      - `se_apoya` o `se_refuta` solo si las cifras citadas cumplen o incumplen todos los umbrales de
        `config.json`; si unas sí y otras no, o la diferencia cae dentro del ruido entre grupos, `intermedio`.
    - `siguiente`: qué habría que hacer para cerrar lo no comprobado.
@@ -73,9 +74,19 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
 ## Qué comprueba el script del veredicto y qué no
 El script comprueba el estado, que el texto cite una afirmación existente sin cifras a mano, que haya hipótesis
 con umbrales en `config.json` cuando el estado no es `no_aplica`, que cada umbral sea una clave de
-`resultado.json`, la regla de `etiqueta_historica` (sobre las afirmaciones citadas y sobre las claves de los
-umbrales) y la del `bug` abierto. Con `se_apoya` o `se_refuta` exige que cada umbral lo explique una afirmación,
-porque solo así sabe contra qué referencia se midió. No comprueba que `config.json` se haya escrito antes de correr (las fechas de los archivos no son
+`resultado.json` y la explique una afirmación (solo así sabe contra qué referencia se midió), la regla de
+`etiqueta_historica` y la del `bug` abierto. Rechaza una misma `clave` citada con referencias distintas. Decide
+qué es del censo por clave: el conjunto de claves de las afirmaciones con `etiqueta_historica`. Con ese conjunto
+aplica la regla a las cifras citadas y a los umbrales, y pone el aviso en cada sitio de `explicacion.md` donde
+sale una de esas cifras.
+
+| Estado | Umbral sin afirmación | Cifra citada o umbral del censo |
+|---|---|---|
+| `se_apoya`, `se_refuta` | error | error |
+| `intermedio` | error | se admite, con el aviso en el `.md` |
+| `no_aplica` | no se revisa | se admite, con el aviso en el `.md` |
+
+No comprueba que `config.json` se haya escrito antes de correr (las fechas de los archivos no son
 fiables) ni que el estado concuerde con los umbrales (su sentido, mayor o menor, depende de la métrica): eso
 lo revisas tú con las reglas del paso 3.
 
