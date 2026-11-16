@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -62,7 +63,7 @@ def test_construir_pone_la_cifra_del_resultado(tmp_path):
     salida = correr("construir", tmp_path)
     assert salida.returncode == 0, salida.stderr
     texto = (tmp_path / "explicacion.md").read_text(encoding="utf-8")
-    assert "El AUC medio por lote es 0.87." in texto
+    assert "El AUC medio por lote es 0.87 (medida contra una etiqueta histórica" in texto
     assert "Los otros 17 lotes" in texto
 
 
@@ -269,3 +270,75 @@ def test_error_abierto_exige_veredicto_no_aplica(tmp_path):
     explicacion["veredicto"] = {"estado": "no_aplica", "texto": "Hay un error abierto."}
     (tmp_path / "explicacion.json").write_text(json.dumps(explicacion), encoding="utf-8")
     assert correr("construir", tmp_path).returncode == 2
+
+
+def preparar_dos_afirmaciones(carpeta: Path, estado: str, texto: str, umbrales: dict) -> None:
+    """a1 = auc.media contra el censo; a2 = n_lotes contra campo."""
+    preparar(carpeta)
+    explicacion = explicacion_con_veredicto(carpeta, estado, texto)
+    segunda = {**explicacion["afirmaciones"][0], "texto": "Se usaron {valor} lotes.", "clave": "n_lotes"}
+    explicacion["afirmaciones"].append({**segunda, "referencia": "campo"})
+    (carpeta / "explicacion.json").write_text(json.dumps(explicacion), encoding="utf-8")
+    config = {"hipotesis": {"texto": "El AUC medio supera el umbral", "umbrales": umbrales}}
+    (carpeta / "config.json").write_text(json.dumps(config), encoding="utf-8")
+
+
+def test_umbral_sobre_el_censo_no_apoya_aunque_no_se_cite(tmp_path):
+    for estado in ("se_apoya", "se_refuta"):
+        preparar_dos_afirmaciones(tmp_path, estado, "Con {a2} lotes.", {"auc.media": 0.8})
+        salida = correr("construir", tmp_path)
+        assert salida.returncode == 1
+        assert "umbral auc.media" in salida.stderr
+        assert "etiqueta_historica" in salida.stderr
+    preparar_dos_afirmaciones(tmp_path, "intermedio", "Con {a2} lotes.", {"auc.media": 0.8})
+    assert correr("construir", tmp_path).returncode == 0
+    preparar_dos_afirmaciones(tmp_path, "se_apoya", "Con {a2} lotes.", {"n_lotes": 10})
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 0, salida.stderr
+
+
+def test_umbral_con_clave_que_no_existe(tmp_path):
+    preparar_dos_afirmaciones(tmp_path, "intermedio", "Con {a2} lotes.", {"auc.maxima": 0.8})
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "auc.maxima" in salida.stderr
+    assert "no está en resultado.json" in salida.stderr
+
+
+def test_aviso_del_censo_en_cada_cifra_historica_del_md(tmp_path):
+    preparar_dos_afirmaciones(tmp_path, "intermedio", "El AUC es {a1} con {a2} lotes.", {"auc.media": 0.8})
+    assert correr("construir", tmp_path).returncode == 0
+    explicacion = json.loads((tmp_path / "explicacion.json").read_text(encoding="utf-8"))
+    lineas = (tmp_path / "explicacion.md").read_text(encoding="utf-8").splitlines()
+    historicas = [a for a in explicacion["afirmaciones"] if a["referencia"] == "etiqueta_historica"]
+    assert historicas
+    for afirmacion in historicas:
+        valor = RESULTADO
+        for parte in afirmacion["clave"].split("."):
+            valor = valor[parte]
+        cifra = re.compile(rf"(?<![\d.]){re.escape(str(valor))}(?![\d])")
+        con_cifra = [linea for linea in lineas if cifra.search(linea)]
+        assert len(con_cifra) == 2, con_cifra
+        assert all("no desempeño" in linea for linea in con_cifra), con_cifra
+
+
+def test_huella_vacia_es_otro_resultado(tmp_path):
+    preparar(tmp_path)
+    explicacion = explicacion_con_veredicto(tmp_path)
+    explicacion["resultado_sha256"] = ""
+    (tmp_path / "explicacion.json").write_text(json.dumps(explicacion), encoding="utf-8")
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "otro resultado" in salida.stderr
+
+
+def test_anclar_no_ancla_una_explicacion_invalida(tmp_path):
+    preparar(tmp_path)
+    explicacion = explicacion_con_veredicto(tmp_path)
+    explicacion["afirmaciones"][0]["clave"] = "auc.maxima"
+    explicacion["resultado_sha256"] = "viejo"
+    (tmp_path / "explicacion.json").write_text(json.dumps(explicacion), encoding="utf-8")
+    salida = correr("anclar", tmp_path)
+    assert salida.returncode == 1
+    assert "no está en resultado.json" in salida.stderr
+    assert json.loads((tmp_path / "explicacion.json").read_text(encoding="utf-8"))["resultado_sha256"] == "viejo"

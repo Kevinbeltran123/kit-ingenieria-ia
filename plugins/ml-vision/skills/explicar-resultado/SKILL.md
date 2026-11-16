@@ -43,8 +43,10 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
        `{"hipotesis": {"texto": "...", "umbrales": {"auc.media": 0.8}}}`, escrito antes de correr el experimento.
      - `texto` cita la cifra de al menos una afirmación con `{a1}`, `{a2}`... (el número de la afirmación, desde 1),
        sin escribir números a mano: el umbral se nombra ("sobre el umbral fijado"), no se copia.
-     - Nunca `se_apoya` ni `se_refuta` si alguna afirmación citada tiene referencia `etiqueta_historica`: el
-       censo no es verdad de campo. Usa `intermedio`.
+     - Cada clave de `umbrales` está en `resultado.json` (en `claves_disponibles`).
+     - Nunca `se_apoya` ni `se_refuta` si alguna afirmación citada tiene referencia `etiqueta_historica`, ni si
+       algún umbral es la `clave` de una afirmación con esa referencia, aunque el texto no la cite: el censo no
+       es verdad de campo. Usa `intermedio`.
      - `se_apoya` o `se_refuta` solo si las cifras citadas cumplen o incumplen todos los umbrales de
        `config.json`; si unas sí y otras no, o la diferencia cae dentro del ruido entre grupos, `intermedio`.
    - `siguiente`: qué habría que hacer para cerrar lo no comprobado.
@@ -57,17 +59,22 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
    puestas y sale con 0. Sale con 2 si queda un `bug` abierto: corrígelo y vuelve a correr el experimento, o
    pregúntale a la persona.
    Si `resultado.json` cambió después de la plantilla, sale con 1: "la explicación es de otro resultado: vuelve
-   a explicar". Revisa cada afirmación y el veredicto contra el resultado nuevo y después ancla la explicación:
+   a explicar". Lo mismo si `resultado_sha256` está vacío. Revisa cada afirmación y el veredicto contra el
+   resultado nuevo y después ancla la explicación:
    ```bash
    python3 "${CLAUDE_PLUGIN_ROOT}/skills/explicar-resultado/scripts/resultado.py" anclar runs/<id>
    ```
+   `anclar` pasa las mismas revisiones que `construir` (menos la de la huella); si algo falla, lo lista, sale
+   con 1 y no toca la huella.
 
 5. Dale a la persona la ruta de `explicacion.md` y resume en dos líneas qué se puede afirmar y qué no.
 
 ## Qué comprueba el script del veredicto y qué no
 El script comprueba el estado, que el texto cite una afirmación existente sin cifras a mano, que haya hipótesis
-con umbrales en `config.json` cuando el estado no es `no_aplica`, la regla de `etiqueta_historica` y la del
-`bug` abierto. No comprueba que `config.json` se haya escrito antes de correr (las fechas de los archivos no son
+con umbrales en `config.json` cuando el estado no es `no_aplica`, que cada umbral sea una clave de
+`resultado.json`, la regla de `etiqueta_historica` (sobre las afirmaciones citadas y sobre las claves de los
+umbrales) y la del `bug` abierto. Solo sabe que un umbral es del censo si alguna afirmación declara esa clave con
+`etiqueta_historica`: un umbral sobre una cifra que ninguna afirmación explica no lo puede juzgar. No comprueba que `config.json` se haya escrito antes de correr (las fechas de los archivos no son
 fiables) ni que el estado concuerde con los umbrales (su sentido, mayor o menor, depende de la métrica): eso
 lo revisas tú con las reglas del paso 3.
 
@@ -98,5 +105,7 @@ Son las que destapan errores. Si alguna respuesta es "no sé", es una alerta de 
 ## Verificación
 - `resultado.py construir` termina con `OK: runs/<id>/explicacion.md` y sin ningún `AVISO`.
 - La sección "Veredicto" de `explicacion.md` tiene el estado y una frase con la cifra puesta.
+- Toda cifra medida contra `etiqueta_historica` lleva al lado, en cada sitio de `explicacion.md`, el aviso
+  "medida contra una etiqueta histórica".
 - En `explicacion.md` no hay ninguna cifra que no esté en `resultado.json`.
 - La sección "Lo que no se comprobó" tiene al menos una línea por afirmación.
