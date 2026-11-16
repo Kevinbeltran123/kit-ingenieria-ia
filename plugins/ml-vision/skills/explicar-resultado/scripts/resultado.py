@@ -173,6 +173,12 @@ def revisar_veredicto(explicacion: dict, disponibles: dict[str, float], hipotesi
         for clave in umbrales
         if clave in censo
     ]
+    explicadas = {a.get("clave") for a in afirmaciones}
+    faltas += [
+        f"veredicto {estado}: el umbral {clave} no lo explica ninguna afirmación: no se sabe contra qué se midió"
+        for clave in umbrales
+        if clave not in explicadas
+    ]
     return faltas
 
 

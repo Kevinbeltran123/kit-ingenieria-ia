@@ -43,7 +43,8 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
        `{"hipotesis": {"texto": "...", "umbrales": {"auc.media": 0.8}}}`, escrito antes de correr el experimento.
      - `texto` cita la cifra de al menos una afirmación con `{a1}`, `{a2}`... (el número de la afirmación, desde 1),
        sin escribir números a mano: el umbral se nombra ("sobre el umbral fijado"), no se copia.
-     - Cada clave de `umbrales` está en `resultado.json` (en `claves_disponibles`).
+     - Cada clave de `umbrales` está en `resultado.json` (en `claves_disponibles`). Con `se_apoya` o `se_refuta`,
+       además, cada una es la `clave` de alguna afirmación: si no, no se sabe contra qué se midió.
      - Nunca `se_apoya` ni `se_refuta` si alguna afirmación citada tiene referencia `etiqueta_historica`, ni si
        algún umbral es la `clave` de una afirmación con esa referencia, aunque el texto no la cite: el censo no
        es verdad de campo. Usa `intermedio`.
@@ -73,8 +74,8 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
 El script comprueba el estado, que el texto cite una afirmación existente sin cifras a mano, que haya hipótesis
 con umbrales en `config.json` cuando el estado no es `no_aplica`, que cada umbral sea una clave de
 `resultado.json`, la regla de `etiqueta_historica` (sobre las afirmaciones citadas y sobre las claves de los
-umbrales) y la del `bug` abierto. Solo sabe que un umbral es del censo si alguna afirmación declara esa clave con
-`etiqueta_historica`: un umbral sobre una cifra que ninguna afirmación explica no lo puede juzgar. No comprueba que `config.json` se haya escrito antes de correr (las fechas de los archivos no son
+umbrales) y la del `bug` abierto. Con `se_apoya` o `se_refuta` exige que cada umbral lo explique una afirmación,
+porque solo así sabe contra qué referencia se midió. No comprueba que `config.json` se haya escrito antes de correr (las fechas de los archivos no son
 fiables) ni que el estado concuerde con los umbrales (su sentido, mayor o menor, depende de la métrica): eso
 lo revisas tú con las reglas del paso 3.
 

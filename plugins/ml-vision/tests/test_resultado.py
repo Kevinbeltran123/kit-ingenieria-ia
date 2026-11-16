@@ -342,3 +342,14 @@ def test_anclar_no_ancla_una_explicacion_invalida(tmp_path):
     assert salida.returncode == 1
     assert "no está en resultado.json" in salida.stderr
     assert json.loads((tmp_path / "explicacion.json").read_text(encoding="utf-8"))["resultado_sha256"] == "viejo"
+
+
+def test_umbral_sin_afirmacion_no_apoya_ni_refuta(tmp_path):
+    for estado in ("se_apoya", "se_refuta"):
+        preparar_dos_afirmaciones(tmp_path, estado, "Con {a2} lotes.", {"auc.por_lote.3-2008": 0.8})
+        salida = correr("construir", tmp_path)
+        assert salida.returncode == 1
+        assert "el umbral auc.por_lote.3-2008 no lo explica ninguna afirmación" in salida.stderr
+    preparar_dos_afirmaciones(tmp_path, "intermedio", "Con {a2} lotes.", {"auc.por_lote.3-2008": 0.8})
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 0, salida.stderr
