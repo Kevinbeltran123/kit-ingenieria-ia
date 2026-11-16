@@ -8,7 +8,8 @@ settings de Claude Code del repo, donde viven los plugins y las reglas deny, los
   secretos  leer credenciales de AWS, llaves SSH, .env, .envrc o volcar variables de entorno
   local     borrar trabajo: rm -rf fuera de /tmp y cachés, find -delete, git reset --hard,
             push --force, clean -f, checkout/restore de todo, stash drop/clear, branch -D,
-            worktree remove --force, commit --no-verify y borrar archivos de base de datos
+            worktree remove --force, commit --no-verify y borrar archivos de base de datos;
+            también saltarse los hooks de git (--no-verify, core.hooksPath, SKIP=, uninstall, .git/hooks)
 
 Falla cerrado: ante un error interno bloquea (exit 2).
 No es una barrera completa: la seguridad real son reglas deny, sandbox y permisos de solo lectura.
@@ -29,7 +30,7 @@ REGLAS = {"infra", "sql", "archivos", "secretos", "local"}
 
 OPERADORES = {";", "&&", "||", "|", "&", "(", ")", "|&", ";;"}
 SHELLS = {"bash", "sh", "zsh", "dash", "ksh", "fish"}
-PREFIJOS_SIMPLES = {"sudo", "time", "nohup", "exec", "command", "nice", "env", "builtin", "npx", "bunx", "doas"}
+PREFIJOS_SIMPLES = {"sudo", "time", "nohup", "exec", "command", "nice", "env", "builtin", "npx", "bunx", "uvx", "doas"}
 EJECUTORES = {"uv": "run", "poetry": "run", "pipenv": "run", "pnpm": "exec", "pdm": "run", "hatch": "run"}
 FLAGS_CON_VALOR = {"--with", "--python", "-p", "--from", "--project", "--directory", "-u", "--user", "-g"}
 TIMEOUT_CON_VALOR = {"-s", "--signal", "-k", "--kill-after"}  # aparte: en sudo, -s y -k no llevan valor
@@ -62,8 +63,11 @@ def segmentos(cmd: str, profundidad: int = 0) -> list[list[str]]:
         elif tok != "$":
             actual.append(tok.lstrip("$") if tok.startswith("$(") else tok)
     final = []
-    for seg in resultado:
-        seg = quitar_prefijos(seg)
+    for crudo in resultado:
+        seg = quitar_prefijos(crudo)
+        # Las asignaciones del prefijo (VAR=x cmd, env VAR=x cmd) quedan visibles como un `export`.
+        if asignaciones := [t for t in crudo[: len(crudo) - len(seg)] if ASIGNACION.match(t)]:
+            final.append(["export", *asignaciones])
         if not seg:
             continue
         nombre = Path(seg[0]).name
@@ -77,13 +81,16 @@ def segmentos(cmd: str, profundidad: int = 0) -> list[list[str]]:
     return final
 
 
+ASIGNACION = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+
 def quitar_prefijos(seg: list[str]) -> list[str]:
     seg = list(seg)
     for _ in range(10):
         if not seg:
             break
         primero = Path(seg[0]).name
-        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", seg[0]):
+        if ASIGNACION.match(seg[0]):
             seg = seg[1:]
         elif primero in PREFIJOS_SIMPLES and len(seg) > 1:
             seg = saltar_flags(seg[1:])
@@ -321,16 +328,56 @@ def regla_local(seg: list[str]) -> str | None:
             return "find -exec rm"
     elif nombre == "git":
         return regla_git(args)
+    return regla_hooks(seg)
+
+
+# Variables que apagan hooks: SKIP y *_ALLOW_NO_CONFIG de pre-commit y prek; GIT_CONFIG_* equivale a git -c.
+VARIABLES_SIN_HOOKS = re.compile(r"^(SKIP|PREK_SKIP|PRE_COMMIT_ALLOW_NO_CONFIG|PREK_ALLOW_NO_CONFIG)=")
+GIT_CONFIG_ENTORNO = re.compile(r"^GIT_CONFIG_(PARAMETERS|KEY_\d+)=")
+RUTA_HOOKS_GIT = re.compile(r"(^|/)\.git/(hooks|config)(/|$)")
+LEEN_GIT = {"cat", "less", "more", "head", "tail", "grep", "rg", "diff", "wc", "stat", "ls", "test", "file"}
+
+
+def es_hooks_path(clave: str) -> bool:
+    return clave.lower().startswith("core.hookspath")
+
+
+def regla_hooks(seg: list[str]) -> str | None:
+    """Saltarse los hooks de git sin pasar por `git`: variables, desinstalar o tocar .git/hooks y .git/config."""
+    nombre, args = Path(seg[0]).name, seg[1:]
+    if nombre in ("export", "declare", "typeset"):
+        for a in args:
+            if VARIABLES_SIN_HOOKS.match(a) or (GIT_CONFIG_ENTORNO.match(a) and "hookspath" in a.lower()):
+                return f"apagar los hooks con {a.split('=')[0]}"
+    if nombre.split("@")[0] in ("prek", "pre-commit") and argumentos(seg)[:1] == ["uninstall"]:
+        return f"{nombre.split('@')[0]} uninstall"
+    if nombre not in LEEN_GIT and any(RUTA_HOOKS_GIT.search(t) for t in seg):
+        return "tocar .git/hooks o .git/config desde Bash"
     return None
+
+
+def git_config_hooks_path(resto: list[str]) -> bool:
+    """`git config` que escribe o borra core.hooksPath; leerlo está permitido."""
+    posicionales = [a for a in resto if not a.startswith("-")]
+    claves = [i for i, a in enumerate(posicionales) if es_hooks_path(a)]
+    if not claves:
+        return False
+    escribe = {"--unset", "--unset-all", "--add", "--replace-all"} & set(resto)
+    return bool(escribe) or posicionales[0] in ("set", "unset") or claves[0] + 1 < len(posicionales)
 
 
 def regla_git(args: list[str]) -> str | None:
     i = 0
     while i < len(args) and args[i].startswith("-"):
-        i += 2 if args[i] in ("-C", "-c") else 1
+        separado = args[i] in ("-c", "--config-env") and i + 1 < len(args) and es_hooks_path(args[i + 1])
+        if separado or (args[i].startswith("--config-env=") and es_hooks_path(args[i].split("=", 1)[1])):
+            return "git -c core.hooksPath"
+        i += 2 if args[i] in ("-C", "-c", "--config-env") else 1
     if i >= len(args):
         return None
     sub, resto = args[i], args[i + 1 :]
+    if sub == "config" and git_config_hooks_path(resto):
+        return "git config core.hooksPath"
     banderas = banderas_cortas(resto)
     if sub == "push" and ("--force" in resto or "f" in banderas or any(a.startswith("+") for a in resto)):
         return "git push --force"
@@ -344,6 +391,8 @@ def regla_git(args: list[str]) -> str | None:
         return f"git stash {resto[0]}"
     if sub == "commit" and ("--no-verify" in resto or "n" in banderas):
         return "git commit --no-verify"
+    if "--no-verify" in resto:  # push, merge, rebase, am...; en push, -n es --dry-run
+        return f"git {sub} --no-verify"
     if sub == "branch" and ("-D" in resto or ("--delete" in resto and "--force" in resto)):
         return "git branch -D"
     if sub == "worktree" and resto[:1] == ["remove"] and ("--force" in resto or "-f" in resto):
