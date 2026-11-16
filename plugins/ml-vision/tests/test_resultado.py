@@ -350,6 +350,66 @@ def test_umbral_sin_afirmacion_no_apoya_ni_refuta(tmp_path):
         salida = correr("construir", tmp_path)
         assert salida.returncode == 1
         assert "el umbral auc.por_lote.3-2008 no lo explica ninguna afirmación" in salida.stderr
+
+
+def test_umbral_sin_afirmacion_tampoco_en_intermedio(tmp_path):
     preparar_dos_afirmaciones(tmp_path, "intermedio", "Con {a2} lotes.", {"auc.por_lote.3-2008": 0.8})
     salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "el umbral auc.por_lote.3-2008 no lo explica ninguna afirmación" in salida.stderr
+    assert not (tmp_path / "explicacion.md").exists()
+
+
+RESULTADO_CENSO = {"censo": {"coincidencia": 0.7531}, "campo": {"recall": 0.9123}}
+
+
+def afirmacion(texto: str, clave: str, referencia: str) -> dict:
+    alcance = {"unidades": 3, "grupos": 1, "descripcion": "x"}
+    return {"texto": texto, "clave": clave, "referencia": referencia, "alcance": alcance, "no_comprobado": ["y"]}
+
+
+def preparar_censo(carpeta: Path, estado: str, afirmaciones: list) -> None:
+    """Recall contra campo y coincidencia con el censo; la hipótesis solo pone umbral al recall."""
+    preparar(carpeta, resultado=RESULTADO_CENSO)
+    explicacion = explicacion_con_veredicto(carpeta, estado, "Recall {a1} y coincidencia {a2}.")
+    explicacion["afirmaciones"] = afirmaciones
+    (carpeta / "explicacion.json").write_text(json.dumps(explicacion), encoding="utf-8")
+    config = {"hipotesis": {"texto": "Recall sobre el umbral", "umbrales": {"campo.recall": 0.8}}}
+    (carpeta / "config.json").write_text(json.dumps(config), encoding="utf-8")
+
+
+def test_rechaza_una_clave_con_referencias_distintas(tmp_path):
+    preparar_censo(
+        tmp_path,
+        "se_apoya",
+        [
+            afirmacion("Recall {valor}.", "campo.recall", "campo"),
+            afirmacion("Coincide {valor}.", "censo.coincidencia", "campo"),
+            afirmacion("Coincide con censo {valor}.", "censo.coincidencia", "etiqueta_historica"),
+        ],
+    )
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "la clave censo.coincidencia se cita con referencias distintas" in salida.stderr
+    assert "una cifra se mide contra una sola referencia" in salida.stderr
+    assert not (tmp_path / "explicacion.md").exists()
+
+
+def test_clave_del_censo_citada_no_da_veredicto_firme_y_avisa_siempre(tmp_path):
+    afirmaciones = [
+        afirmacion("Recall {valor}.", "campo.recall", "campo"),
+        afirmacion("Coincide con censo {valor}.", "censo.coincidencia", "etiqueta_historica"),
+    ]
+    for estado in ("se_apoya", "se_refuta"):
+        preparar_censo(tmp_path, estado, afirmaciones)
+        salida = correr("construir", tmp_path)
+        assert salida.returncode == 1
+        assert "etiqueta_historica" in salida.stderr
+    preparar_censo(tmp_path, "intermedio", afirmaciones)
+    salida = correr("construir", tmp_path)
     assert salida.returncode == 0, salida.stderr
+    con_cifra = [
+        linea for linea in (tmp_path / "explicacion.md").read_text(encoding="utf-8").splitlines() if "0.7531" in linea
+    ]
+    assert len(con_cifra) == 2, con_cifra
+    assert all("no desempeño" in linea for linea in con_cifra), con_cifra
