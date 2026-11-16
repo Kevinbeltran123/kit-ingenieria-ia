@@ -6,7 +6,7 @@ Hooks de calidad para repos Python. Sin dependencias: solo `python3` de la bibli
 
 | Momento | Qué hace |
 |---|---|
-| Antes de editar o de correr un comando (PreToolUse) | Solo tú silencias reglas: bloquea que Claude agregue `# noqa`, `# type: ignore`, `# pragma: no cover` y similares, o que corra opciones que silencian todo de una vez (`ruff --add-noqa`, `ty --add-ignore`), y que salte pruebas (`skip`, `xfail`; un `skipif` nuevo te lo pregunta). Si un falso positivo merece la excepción, Claude te dice cuál y en qué línea, y la agregas tú. |
+| Antes de editar o de correr un comando (PreToolUse) | Solo tú silencias reglas: bloquea que Claude agregue `# noqa`, `# type: ignore`, `# pragma: no cover` y similares, o que corra opciones que silencian todo de una vez (`ruff --add-noqa`, `ty --add-ignore`), y que salte pruebas (`skip`, `xfail`; un `skipif` nuevo te lo pregunta). Todo cambio en la configuración de los sensores te lo pregunta. Si un falso positivo merece la excepción, Claude te dice cuál y en qué línea, y la agregas tú. |
 | Al editar un `.py` (PostToolUse) | `ruff check --fix` + `ruff format` sobre ese archivo. Si quedan errores, Claude los ve y los corrige. |
 | Al terminar el turno (Stop) | Si se editaron `.py` en la sesión: verificador de tipos, import-linter y pytest. Si algo falla, Claude no puede terminar hasta corregirlo, y se vuelve a revisar después de cada corrección. Una herramienta configurada pero no instalada cuenta como sin revisar, no como aprobada: pide instalarla (`uv sync`). Si tras 2 intentos sigue fallando, termina y te avisa. |
 | Cuando Claude te necesita (Notification) | Aviso de macOS. |
@@ -33,14 +33,22 @@ Skill `verify`: corre todos los sensores sobre el repo completo (ruff, formato, 
 - Por terminal: `ruff --add-noqa`, `ty --add-ignore`, `ty --update-baseline`, `complexipy --snapshot-create`,
   `vulture --make-whitelist`, y escribir una excepción en un `.py` con `>`, `tee`, `sed -i` o `perl -i`. Lo que va entre
   comillas es texto: mencionarlo en un mensaje de commit no lo bloquea.
+- Configuración de los sensores: te pregunta antes de todo cambio en las secciones de calidad del `pyproject.toml`
+  (`[tool.ruff*]`, `[tool.ty*]`, `[tool.pytest*]`, `[tool.coverage*]`, `[tool.importlinter*]`, `[tool.mypy*]`,
+  `[tool.vulture]`, `[tool.complexipy]`, `[tool.deptry]`, `[tool.pyright]`) y en `ruff.toml`, `.ruff.toml`, `ty.toml`,
+  `pytest.ini`, `.coveragerc`, `.importlinter`, `mypy.ini`, `.mypy.ini`, `pyrightconfig.json`, `conftest.py` y
+  `.pre-commit-config.yaml`, también al crearlos (un `ruff.toml` o un `pytest.ini` nuevo reemplaza la configuración del
+  `pyproject.toml`). Así no pasa sin que lo veas un `"C901"` en el `ignore`, un `max-complexity` más alto o un
+  `addopts = "--deselect ..."`. El aviso nombra el archivo y las secciones; cambiar `[project]` u otras secciones no
+  pregunta. Por terminal pregunta si un `>`, `tee`, `sed -i` o `perl -i` escribe en uno de esos archivos.
 - Para una sesión en la que sí quieres que Claude las agregue (la línea base al adoptar ruff en un repo viejo, por
   ejemplo): `CALIDAD_PYTHON_PERMITIR_SILENCIAR=1 claude`.
 
 ## Límites
 - No ve archivos que Claude cambie con comandos de terminal (sed, scripts). Pre-commit y CI siguen siendo la red final.
-- `no_silenciar.py` no vigila las excepciones en la configuración (`ignore` y `per-file-ignores` de ruff, `exclude_also`
-  de coverage, `ignore_imports` de import-linter), en notebooks ni las que escribe un script; tampoco ve pruebas
-  borradas. Eso se revisa en el PR.
+- `no_silenciar.py` no vigila las excepciones en notebooks ni las que escribe un script; tampoco ve pruebas borradas.
+  En la configuración pregunta, pero no distingue apretar de aflojar, y no mira `setup.cfg`, `tox.ini`, `[tool]` con
+  claves con punto (`ruff.lint.ignore = ...`) ni archivos copiados o movidos con `cp` o `mv`. Eso se revisa en el PR.
 - pytest corre la suite completa: en repos con pruebas lentas conviene acotarla (pendiente).
 - No es una barrera de seguridad; eso va en reglas `deny` y permisos.
 

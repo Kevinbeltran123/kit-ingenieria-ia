@@ -486,6 +486,143 @@ def test_entrada_rara_no_bloquea(proyecto):
     assert r.returncode == 0
 
 
+PYPROJECT = """[project]
+name = "app"
+dependencies = ["requests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "C90"]
+ignore = []
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[[tool.importlinter.contracts]]
+name = "capas"
+type = "layers"
+
+[tool.typos]
+locale = "es"
+"""
+
+
+def pregunta(r) -> str:
+    """El motivo si el hook le pide confirmar a la persona; "" si no pregunta."""
+    assert r.returncode == 0, r.stderr
+    if not r.stdout:
+        return ""
+    salida = json.loads(r.stdout)["hookSpecificOutput"]
+    assert salida["permissionDecision"] == "ask"
+    return salida["permissionDecisionReason"]
+
+
+def editar_pyproject(raiz: Path, temporal: Path, viejo: str, nuevo: str):
+    (raiz / "pyproject.toml").write_text(PYPROJECT)
+    entrada = {"file_path": str(raiz / "pyproject.toml"), "old_string": viejo, "new_string": nuevo}
+    return silenciar("Edit", entrada, raiz, temporal)
+
+
+@pytest.mark.parametrize(
+    ("viejo", "nuevo", "seccion"),
+    [
+        ("ignore = []", 'ignore = ["C901"]', "[tool.ruff.lint]"),
+        ("max-complexity = 10", "max-complexity = 30", "[tool.ruff.lint.mccabe]"),
+        (
+            'testpaths = ["tests"]',
+            'testpaths = ["tests"]\naddopts = "--deselect tests/test_a.py"',
+            "[tool.pytest.ini_options]",
+        ),
+        (
+            'type = "layers"',
+            'type = "layers"\nignore_imports = ["app.db -> app.web"]',
+            "[[tool.importlinter.contracts]]",
+        ),
+    ],
+)
+def test_cambiar_la_configuracion_de_un_sensor_lo_confirma_la_persona(proyecto, viejo, nuevo, seccion):
+    raiz, temporal = proyecto
+    motivo = pregunta(editar_pyproject(raiz, temporal, viejo, nuevo))
+    assert "pyproject.toml" in motivo and seccion in motivo
+
+
+def test_cambiar_otras_secciones_del_pyproject_pasa(proyecto):
+    raiz, temporal = proyecto
+    assert pregunta(editar_pyproject(raiz, temporal, '["requests"]', '["requests", "httpx"]')) == ""
+    assert pregunta(editar_pyproject(raiz, temporal, 'locale = "es"', 'locale = "en"')) == ""  # tool.typos no es ty
+
+
+def test_write_y_multiedit_del_pyproject_tambien(proyecto):
+    raiz, temporal = proyecto
+    (raiz / "pyproject.toml").write_text(PYPROJECT)
+    ruta = str(raiz / "pyproject.toml")
+    escrito = {"file_path": ruta, "content": PYPROJECT.replace('"C90"]', '"C90"]\nextend-exclude = ["legado"]')}
+    assert "[tool.ruff.lint]" in pregunta(silenciar("Write", escrito, raiz, temporal))
+    edits = [
+        {"old_string": '["requests"]', "new_string": '["requests", "httpx"]'},
+        {"old_string": "max-complexity = 10", "new_string": "max-complexity = 11"},
+    ]
+    motivo = pregunta(silenciar("MultiEdit", {"file_path": ruta, "edits": edits}, raiz, temporal))
+    assert "[tool.ruff.lint.mccabe]" in motivo and "[project]" not in motivo
+
+
+@pytest.mark.parametrize(
+    ("archivo", "viejo", "nuevo"),
+    [
+        (".pre-commit-config.yaml", "- id: ruff", "- id: ruff\n        args: [--exit-zero]"),
+        ("tests/conftest.py", "import pytest", "import pytest\ncollect_ignore = ['test_lento.py']"),
+        (".coveragerc", "fail_under = 90", "fail_under = 50"),
+    ],
+)
+def test_editar_un_archivo_de_configuracion_lo_confirma_la_persona(proyecto, archivo, viejo, nuevo):
+    raiz, temporal = proyecto
+    ruta = raiz / archivo
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    ruta.write_text(f"{viejo}\n")
+    entrada = {"file_path": str(ruta), "old_string": viejo, "new_string": nuevo}
+    assert ruta.name in pregunta(silenciar("Edit", entrada, raiz, temporal))
+
+
+def test_crear_un_archivo_de_configuracion_tambien(proyecto):
+    raiz, temporal = proyecto  # un ruff.toml nuevo reemplaza entera la configuración de [tool.ruff]
+    entrada = {"file_path": str(raiz / "ruff.toml"), "content": "[lint]\nignore = ['C901']\n"}
+    motivo = pregunta(silenciar("Write", entrada, raiz, temporal))
+    assert "ruff.toml" in motivo and "[lint]" in motivo
+
+
+def test_editar_codigo_normal_pasa(proyecto):
+    raiz, temporal = proyecto
+    assert pregunta(editar_codigo(raiz, temporal, "x = 1", "x = 2")) == ""
+
+
+@pytest.mark.parametrize(
+    "comando",
+    [
+        "sed -i '' 's/max-complexity = 10/max-complexity = 30/' pyproject.toml",
+        "echo 'ignore = [\"C901\"]' >> ruff.toml",
+        "printf 'collect_ignore = []' | tee tests/conftest.py",
+    ],
+)
+def test_por_terminal_cambiar_la_configuracion_lo_confirma_la_persona(proyecto, comando):
+    raiz, temporal = proyecto
+    assert pregunta(silenciar("Bash", {"command": comando}, raiz, temporal))
+
+
+@pytest.mark.parametrize("comando", ["cat pyproject.toml", "uv add httpx", "grep -n ruff ruff.toml > notas.txt"])
+def test_por_terminal_leer_la_configuracion_pasa(proyecto, comando):
+    raiz, temporal = proyecto
+    assert pregunta(silenciar("Bash", {"command": comando}, raiz, temporal)) == ""
+
+
+def test_la_persona_puede_permitir_cambiar_la_configuracion(proyecto, monkeypatch):
+    raiz, temporal = proyecto
+    monkeypatch.setenv("CALIDAD_PYTHON_PERMITIR_SILENCIAR", "1")
+    assert pregunta(editar_pyproject(raiz, temporal, "ignore = []", 'ignore = ["C901"]')) == ""
+    assert pregunta(silenciar("Bash", {"command": "sed -i '' 's/10/30/' ruff.toml"}, raiz, temporal)) == ""
+
+
 # --- notificar.py ---
 
 
