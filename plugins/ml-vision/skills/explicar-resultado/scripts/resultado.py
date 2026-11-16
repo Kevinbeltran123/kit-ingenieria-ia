@@ -8,7 +8,7 @@ Uso:
 Lee `resultado.json` (lo escribe el experimento), `explicacion.json` (lo completa quien explica) y, si el
 veredicto apoya o refuta algo, la hipótesis de `config.json`. Las cifras de `explicacion.md` salen siempre
 de `resultado.json`, y `resultado_sha256` ata la explicación a los bytes exactos de ese archivo.
-`anclar` vuelve a escribir esa huella después de revisar la explicación contra el resultado nuevo.
+`anclar` vuelve a escribir esa huella, solo si la explicación pasa las mismas revisiones que `construir`.
 
 Códigos de salida: 0 bien, 1 falta o sobra algo, 2 hay un error (`bug`) abierto.
 """
@@ -120,7 +120,7 @@ def revisar_alerta(numero: int, alerta: dict) -> list[str]:
     return faltas
 
 
-def revisar_veredicto(explicacion: dict, hipotesis: object) -> list[str]:
+def revisar_veredicto(explicacion: dict, disponibles: dict[str, float], hipotesis: object) -> list[str]:
     """Lista lo que le falta al veredicto sobre la hipótesis prerregistrada."""
     veredicto = explicacion["veredicto"]
     if not isinstance(veredicto, dict):
@@ -144,21 +144,35 @@ def revisar_veredicto(explicacion: dict, hipotesis: object) -> list[str]:
         return faltas
     if not citadas:
         faltas.append("veredicto: el texto debe citar la cifra de al menos una afirmación con {a1}, {a2}...")
-    if not isinstance(hipotesis, dict) or not hipotesis.get("texto") or not hipotesis.get("umbrales"):
+    umbrales = hipotesis.get("umbrales") if isinstance(hipotesis, dict) else None
+    if not isinstance(hipotesis, dict) or not hipotesis.get("texto") or not isinstance(umbrales, dict) or not umbrales:
         faltas.append(
             f"veredicto {estado}: config.json debe traer la hipótesis fijada antes de correr, "
             '{"hipotesis": {"texto": "...", "umbrales": {...}}}; si no la hay, usa no_aplica'
         )
+        umbrales = {}
+    faltas += [
+        f"hipótesis: el umbral {clave} no está en resultado.json" for clave in umbrales if clave not in disponibles
+    ]
+    if estado not in ("se_apoya", "se_refuta"):
+        return faltas
     historicas = [
         n
         for n in citadas
         if 1 <= n <= len(afirmaciones) and afirmaciones[n - 1].get("referencia") == "etiqueta_historica"
     ]
-    if historicas and estado in ("se_apoya", "se_refuta"):
+    if historicas:
         faltas.append(
             f"veredicto {estado}: se apoya en la afirmación {historicas[0]}, medida contra etiqueta_historica; "
             "un registro no es verdad de campo: usa intermedio o no_aplica"
         )
+    censo = {a.get("clave") for a in afirmaciones if a.get("referencia") == "etiqueta_historica"}
+    faltas += [
+        f"veredicto {estado}: el umbral {clave} es una cifra medida contra etiqueta_historica; "
+        "un registro no es verdad de campo: usa intermedio o no_aplica"
+        for clave in umbrales
+        if clave in censo
+    ]
     return faltas
 
 
@@ -174,7 +188,7 @@ def revisar(explicacion: dict, disponibles: dict[str, float], sha: str, hipotesi
     for numero, alerta in enumerate(explicacion.get("alertas") or [], 1):
         faltas += revisar_alerta(numero, alerta)
     if "veredicto" in explicacion:
-        faltas += revisar_veredicto(explicacion, hipotesis)
+        faltas += revisar_veredicto(explicacion, disponibles, hipotesis)
     if "resultado_sha256" in explicacion and explicacion["resultado_sha256"] != sha:
         faltas.append("la explicación es de otro resultado: vuelve a explicar (y luego `resultado.py anclar`)")
     return faltas
@@ -192,21 +206,25 @@ def avisos(explicacion: dict) -> list[str]:
     ]
 
 
+def cifra(afirmacion: dict, disponibles: dict[str, float]) -> str:
+    """La cifra de una afirmación tal como va en explicacion.md, con el aviso si se midió contra el censo."""
+    valor = formato(disponibles[afirmacion["clave"]])
+    return f"{valor} ({AVISO_HISTORICA})" if afirmacion["referencia"] == "etiqueta_historica" else valor
+
+
 def markdown(explicacion: dict, disponibles: dict[str, float]) -> str:
     """Arma la explicación con las cifras de resultado.json."""
-    citadas = [afirmacion["clave"] for afirmacion in explicacion["afirmaciones"]]
+    afirmaciones = explicacion["afirmaciones"]
     lineas = [f"# {explicacion['titulo']}", "", f"**Pregunta:** {explicacion['pregunta']}", ""]
     lineas += ["## Cómo se hizo", "", explicacion["como_se_hizo"], "", "## Qué se puede afirmar", ""]
     for afirmacion in explicacion["afirmaciones"]:
-        texto = afirmacion["texto"].replace("{valor}", formato(disponibles[afirmacion["clave"]]))
+        texto = afirmacion["texto"].replace("{valor}", cifra(afirmacion, disponibles))
         lineas.append(f"- {texto}")
         lineas.append(f"  - Cifra: `{afirmacion['clave']}`. Referencia: {afirmacion['referencia']}.")
         lineas.append(f"  - Alcance: {afirmacion['alcance']['descripcion']}.")
-        if afirmacion["referencia"] == "etiqueta_historica":
-            lineas.append(f"  - Aviso: {AVISO_HISTORICA}.")
     veredicto = explicacion.get("veredicto")
     if veredicto:
-        texto = CITA.sub(lambda cita: formato(disponibles[citadas[int(cita.group(1)) - 1]]), veredicto["texto"])
+        texto = CITA.sub(lambda cita: cifra(afirmaciones[int(cita.group(1)) - 1], disponibles), veredicto["texto"])
         lineas += ["", "## Veredicto", "", f"**{veredicto['estado']}**: {texto}"]
     lineas += ["", "## Lo que no se comprobó", ""]
     for afirmacion in explicacion["afirmaciones"]:
@@ -269,6 +287,10 @@ def main(argumentos: list[str]) -> int:
         return 1
     if argumentos[0] == "anclar":
         explicacion["resultado_sha256"] = huella(contenido)
+        faltas = revisar(explicacion, disponibles, huella(contenido), hipotesis_de(carpeta))
+        if faltas:
+            print("No se ancla; falta:\n" + "\n".join(f"- {falta}" for falta in faltas), file=sys.stderr)
+            return 1
         destino.write_text(json.dumps(explicacion, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"OK: {destino} anclada a resultado.json")
         return 0
