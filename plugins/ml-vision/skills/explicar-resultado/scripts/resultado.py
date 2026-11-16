@@ -3,15 +3,19 @@
 Uso:
     resultado.py plantilla <carpeta del run>
     resultado.py construir <carpeta del run>
+    resultado.py anclar <carpeta del run>
 
-Lee `resultado.json` (lo escribe el experimento) y `explicacion.json` (lo completa quien explica).
-Las cifras de `explicacion.md` salen siempre de `resultado.json`.
+Lee `resultado.json` (lo escribe el experimento), `explicacion.json` (lo completa quien explica) y, si el
+veredicto apoya o refuta algo, la hipótesis de `config.json`. Las cifras de `explicacion.md` salen siempre
+de `resultado.json`, y `resultado_sha256` ata la explicación a los bytes exactos de ese archivo.
+`anclar` vuelve a escribir esa huella después de revisar la explicación contra el resultado nuevo.
 
 Códigos de salida: 0 bien, 1 falta o sobra algo, 2 hay un error (`bug`) abierto.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -21,7 +25,9 @@ REFERENCIAS = ("campo", "experto", "etiqueta_historica", "ninguna")
 TIPOS = ("bug", "riesgo", "duda")
 ESTADOS = ("abierta", "resuelta", "descartada")
 AVISO_HISTORICA = "medida contra una etiqueta histórica: es coincidencia con un registro, no desempeño"
+VEREDICTOS = ("se_apoya", "se_refuta", "intermedio", "no_aplica")
 NUMERO = re.compile(r"\d")
+CITA = re.compile(r"\{a(\d+)\}")
 
 
 def claves(datos: object, prefijo: str = "") -> dict[str, float]:
@@ -45,7 +51,12 @@ def formato(valor: float) -> str:
     return f"{valor:.4g}"
 
 
-def plantilla(disponibles: dict[str, float]) -> dict:
+def huella(contenido: bytes) -> str:
+    """SHA-256 de los bytes exactos de resultado.json."""
+    return hashlib.sha256(contenido).hexdigest()
+
+
+def plantilla(disponibles: dict[str, float], sha: str) -> dict:
     """Devuelve la explicación vacía, con las claves que se pueden citar."""
     return {
         "titulo": "",
@@ -62,7 +73,9 @@ def plantilla(disponibles: dict[str, float]) -> dict:
             }
         ],
         "alertas": [],
+        "veredicto": {"estado": "", "texto": ""},
         "siguiente": "",
+        "resultado_sha256": sha,
     }
 
 
@@ -107,7 +120,49 @@ def revisar_alerta(numero: int, alerta: dict) -> list[str]:
     return faltas
 
 
-def revisar(explicacion: dict, disponibles: dict[str, float]) -> list[str]:
+def revisar_veredicto(explicacion: dict, hipotesis: object) -> list[str]:
+    """Lista lo que le falta al veredicto sobre la hipótesis prerregistrada."""
+    veredicto = explicacion["veredicto"]
+    if not isinstance(veredicto, dict):
+        return ["veredicto debe ser un objeto {estado, texto}"]
+    faltas = []
+    estado = veredicto.get("estado")
+    texto = str(veredicto.get("texto") or "")
+    if estado not in VEREDICTOS:
+        faltas.append(f"veredicto.estado debe ser uno de {', '.join(VEREDICTOS)}")
+    if not texto.strip():
+        faltas.append("falta veredicto.texto (una frase)")
+    if NUMERO.search(CITA.sub("", texto)):
+        faltas.append("veredicto: el texto trae una cifra escrita a mano; cita la afirmación con {a1}, {a2}...")
+    afirmaciones = explicacion.get("afirmaciones") or []
+    citadas = [int(numero) for numero in CITA.findall(texto)]
+    faltas += [f"veredicto: cita la afirmación {n}, que no existe" for n in citadas if not 1 <= n <= len(afirmaciones)]
+    abiertos = [a for a in explicacion.get("alertas") or [] if a.get("tipo") == "bug" and a.get("estado") == "abierta"]
+    if abiertos and estado != "no_aplica":
+        faltas.append("veredicto: con un error (bug) abierto el estado debe ser no_aplica")
+    if estado not in ("se_apoya", "se_refuta", "intermedio"):
+        return faltas
+    if not citadas:
+        faltas.append("veredicto: el texto debe citar la cifra de al menos una afirmación con {a1}, {a2}...")
+    if not isinstance(hipotesis, dict) or not hipotesis.get("texto") or not hipotesis.get("umbrales"):
+        faltas.append(
+            f"veredicto {estado}: config.json debe traer la hipótesis fijada antes de correr, "
+            '{"hipotesis": {"texto": "...", "umbrales": {...}}}; si no la hay, usa no_aplica'
+        )
+    historicas = [
+        n
+        for n in citadas
+        if 1 <= n <= len(afirmaciones) and afirmaciones[n - 1].get("referencia") == "etiqueta_historica"
+    ]
+    if historicas and estado in ("se_apoya", "se_refuta"):
+        faltas.append(
+            f"veredicto {estado}: se apoya en la afirmación {historicas[0]}, medida contra etiqueta_historica; "
+            "un registro no es verdad de campo: usa intermedio o no_aplica"
+        )
+    return faltas
+
+
+def revisar(explicacion: dict, disponibles: dict[str, float], sha: str, hipotesis: object = None) -> list[str]:
     """Lista todo lo que falta en la explicación."""
     obligatorios = ("titulo", "pregunta", "como_se_hizo", "siguiente")
     faltas = [f"falta {campo}" for campo in obligatorios if not explicacion.get(campo)]
@@ -118,11 +173,28 @@ def revisar(explicacion: dict, disponibles: dict[str, float]) -> list[str]:
         faltas += revisar_afirmacion(numero, afirmacion, disponibles)
     for numero, alerta in enumerate(explicacion.get("alertas") or [], 1):
         faltas += revisar_alerta(numero, alerta)
+    if "veredicto" in explicacion:
+        faltas += revisar_veredicto(explicacion, hipotesis)
+    if "resultado_sha256" in explicacion and explicacion["resultado_sha256"] != sha:
+        faltas.append("la explicación es de otro resultado: vuelve a explicar (y luego `resultado.py anclar`)")
     return faltas
+
+
+def avisos(explicacion: dict) -> list[str]:
+    """Campos que una explicación anterior a la versión con veredicto no trae; no bloquean."""
+    return [
+        f"AVISO: explicacion.json no trae {campo}; {motivo}"
+        for campo, motivo in (
+            ("veredicto", "agrega el veredicto sobre la hipótesis (no_aplica si no la hay)"),
+            ("resultado_sha256", "no se puede comprobar que explica este resultado; corre `resultado.py anclar`"),
+        )
+        if campo not in explicacion
+    ]
 
 
 def markdown(explicacion: dict, disponibles: dict[str, float]) -> str:
     """Arma la explicación con las cifras de resultado.json."""
+    citadas = [afirmacion["clave"] for afirmacion in explicacion["afirmaciones"]]
     lineas = [f"# {explicacion['titulo']}", "", f"**Pregunta:** {explicacion['pregunta']}", ""]
     lineas += ["## Cómo se hizo", "", explicacion["como_se_hizo"], "", "## Qué se puede afirmar", ""]
     for afirmacion in explicacion["afirmaciones"]:
@@ -132,6 +204,10 @@ def markdown(explicacion: dict, disponibles: dict[str, float]) -> str:
         lineas.append(f"  - Alcance: {afirmacion['alcance']['descripcion']}.")
         if afirmacion["referencia"] == "etiqueta_historica":
             lineas.append(f"  - Aviso: {AVISO_HISTORICA}.")
+    veredicto = explicacion.get("veredicto")
+    if veredicto:
+        texto = CITA.sub(lambda cita: formato(disponibles[citadas[int(cita.group(1)) - 1]]), veredicto["texto"])
+        lineas += ["", "## Veredicto", "", f"**{veredicto['estado']}**: {texto}"]
     lineas += ["", "## Lo que no se comprobó", ""]
     for afirmacion in explicacion["afirmaciones"]:
         lineas += [f"- {linea}" for linea in afirmacion["no_comprobado"] if str(linea).strip()]
@@ -146,22 +222,31 @@ def markdown(explicacion: dict, disponibles: dict[str, float]) -> str:
     return "\n".join(lineas)
 
 
-def leer(ruta: Path) -> dict:
-    """Lee un JSON que debe ser un objeto."""
-    datos = json.loads(ruta.read_text(encoding="utf-8"))
+def leer(ruta: Path, contenido: bytes | None = None) -> dict:
+    """Lee un JSON que debe ser un objeto (de `contenido` si ya se leyeron los bytes)."""
+    datos = json.loads((ruta.read_bytes() if contenido is None else contenido).decode("utf-8"))
     if not isinstance(datos, dict):
         raise ValueError(f"{ruta.name} debe ser un objeto JSON")
     return datos
 
 
+def hipotesis_de(carpeta: Path) -> object:
+    """La hipótesis prerregistrada de config.json, o None si no hay archivo o no se puede leer."""
+    try:
+        return leer(carpeta / "config.json").get("hipotesis")
+    except (OSError, ValueError):
+        return None
+
+
 def main(argumentos: list[str]) -> int:
     """Punto de entrada."""
-    if len(argumentos) != 2 or argumentos[0] not in ("plantilla", "construir"):
+    if len(argumentos) != 2 or argumentos[0] not in ("plantilla", "construir", "anclar"):
         print(__doc__, file=sys.stderr)
         return 1
     carpeta = Path(argumentos[1])
     try:
-        disponibles = claves(leer(carpeta / "resultado.json"))
+        contenido = (carpeta / "resultado.json").read_bytes()
+        disponibles = claves(leer(carpeta / "resultado.json", contenido))
     except (OSError, ValueError) as error:
         print(f"No se pudo leer resultado.json: {error}", file=sys.stderr)
         return 1
@@ -173,7 +258,8 @@ def main(argumentos: list[str]) -> int:
         if destino.exists():
             print(f"Ya existe {destino}; no se sobrescribe", file=sys.stderr)
             return 1
-        destino.write_text(json.dumps(plantilla(disponibles), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        texto = json.dumps(plantilla(disponibles, huella(contenido)), ensure_ascii=False, indent=2)
+        destino.write_text(texto + "\n", encoding="utf-8")
         print(f"OK: {destino}")
         return 0
     try:
@@ -181,7 +267,14 @@ def main(argumentos: list[str]) -> int:
     except (OSError, ValueError) as error:
         print(f"No se pudo leer explicacion.json: {error}", file=sys.stderr)
         return 1
-    faltas = revisar(explicacion, disponibles)
+    if argumentos[0] == "anclar":
+        explicacion["resultado_sha256"] = huella(contenido)
+        destino.write_text(json.dumps(explicacion, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"OK: {destino} anclada a resultado.json")
+        return 0
+    for aviso in avisos(explicacion):
+        print(aviso, file=sys.stderr)
+    faltas = revisar(explicacion, disponibles, huella(contenido), hipotesis_de(carpeta))
     if faltas:
         print("Falta:\n" + "\n".join(f"- {falta}" for falta in faltas), file=sys.stderr)
         return 1
