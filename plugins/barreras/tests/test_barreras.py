@@ -335,6 +335,82 @@ def test_local_se_puede_desactivar(raiz):
     assert bash("git reset --hard", raiz, env_extra={"BARRERAS_DESACTIVAR": "local"}).returncode == 0
 
 
+# ---------- local: saltarse los hooks de git ----------
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "git -c core.hooksPath=/dev/null commit -m x",
+        "git -c CORE.HOOKSPATH=/dev/null commit -m x",
+        "git -c user.name=x -c core.hooksPath=/dev/null commit -m x",
+        "git --config-env=core.hooksPath=VACIO commit -m x",
+        "git config core.hooksPath /dev/null",
+        "git config --global core.hooksPath /dev/null",
+        "git config --local core.hooksPath .vacio",
+        "git config set core.hooksPath /dev/null",
+        "git config --unset core.hooksPath",
+        "SKIP=ruff-check git commit -m x",
+        "PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit -m x",
+        "PREK_ALLOW_NO_CONFIG=1 git commit -m x",
+        "export SKIP=ruff-check",
+        "env SKIP=ruff-check git commit -m x",
+        "bash -c 'SKIP=ruff-check git commit -m x'",
+        "GIT_CONFIG_PARAMETERS=\"'core.hooksPath'='/dev/null'\" git commit -m x",
+        "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit -m x",
+        "git push --no-verify",
+        "git push --no-verify origin main",
+        "git merge --no-verify feature",
+        "prek uninstall",
+        "pre-commit uninstall",
+        "uvx prek@0.5.9 uninstall",
+        "uvx pre-commit uninstall",
+        "uv run pre-commit uninstall",
+        "rm .git/hooks/pre-commit",
+        "rm -rf .git/hooks",
+        "> .git/hooks/pre-commit",
+        "echo 'exit 0' > .git/hooks/pre-commit",
+        "chmod -x .git/hooks/pre-commit",
+        "mv .git/hooks/pre-commit /tmp/x",
+        "cd .git/hooks && rm pre-commit",
+        "echo '[core] hooksPath = /dev/null' >> .git/config",
+        "sed -i '' 's/x/y/' /repo/.git/config",
+    ],
+)
+def test_local_bloquea_saltarse_los_hooks(cmd, raiz):
+    r = bash(cmd, raiz)
+    assert r.returncode == 2, cmd
+    assert "(local)" in r.stderr
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "git -c user.name=x commit -m y",
+        "git -c user.email=a@b.c -c user.name=x commit -m y",
+        "git config --get core.hooksPath",
+        "git config core.hooksPath",
+        "git config get core.hooksPath",
+        "git config user.name x",
+        "git push",
+        "git push -n origin main",  # en push, -n es --dry-run
+        "git push --dry-run",
+        "git commit -m x",
+        "FOO=1 git commit -m x",
+        "echo SKIP=ruff-check",
+        "prek install",
+        "prek run --all-files",
+        "uvx prek@0.5.9 run --all-files",
+        "pre-commit install",
+        "cat .git/hooks/pre-commit",
+        "ls .git/hooks",
+        "cat .git/config",
+    ],
+)
+def test_local_deja_pasar_el_uso_normal_de_hooks(cmd, raiz):
+    assert bash(cmd, raiz).returncode == 0, cmd
+
+
 # ---------- archivos ----------
 
 
@@ -349,6 +425,7 @@ def test_local_se_puede_desactivar(raiz):
         "package-lock.json",
         "pnpm-lock.yaml",
         ".git/config",
+        ".git/hooks/pre-commit",
     ],
 )
 @pytest.mark.parametrize("herramienta", ["Edit", "Write", "MultiEdit"])
