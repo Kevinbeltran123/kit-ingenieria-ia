@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -133,3 +134,138 @@ def test_resultado_sin_cifras_o_roto(tmp_path):
     assert correr("plantilla", tmp_path).returncode == 1
     (tmp_path / "resultado.json").write_text("{", encoding="utf-8")
     assert correr("construir", tmp_path).returncode == 1
+
+
+HIPOTESIS = {"hipotesis": {"texto": "El AUC medio por lote supera el umbral fijado", "umbrales": {"auc.media": 0.8}}}
+
+
+def explicacion_con_veredicto(carpeta: Path, estado: str = "no_aplica", texto: str = "No había hipótesis.") -> dict:
+    """Explicación con veredicto y ancla, sobre el resultado ya escrito en la carpeta."""
+    explicacion = explicacion_valida()
+    explicacion["veredicto"] = {"estado": estado, "texto": texto}
+    explicacion["resultado_sha256"] = hashlib.sha256((carpeta / "resultado.json").read_bytes()).hexdigest()
+    return explicacion
+
+
+def preparar_con_veredicto(carpeta: Path, estado: str, texto: str, referencia: str = "campo", config=HIPOTESIS) -> None:
+    preparar(carpeta)
+    explicacion = explicacion_con_veredicto(carpeta, estado, texto)
+    explicacion["afirmaciones"][0]["referencia"] = referencia
+    (carpeta / "explicacion.json").write_text(json.dumps(explicacion), encoding="utf-8")
+    if config is not None:
+        (carpeta / "config.json").write_text(json.dumps(config), encoding="utf-8")
+
+
+def test_explicacion_antigua_valida_con_aviso(tmp_path):
+    preparar(tmp_path, explicacion_valida())
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 0, salida.stderr
+    assert "AVISO" in salida.stderr
+    assert "veredicto" in salida.stderr
+    assert "resultado_sha256" in salida.stderr
+
+
+def test_plantilla_ancla_el_resultado_y_pide_veredicto(tmp_path):
+    preparar(tmp_path)
+    correr("plantilla", tmp_path)
+    creada = json.loads((tmp_path / "explicacion.json").read_text(encoding="utf-8"))
+    assert creada["resultado_sha256"] == hashlib.sha256((tmp_path / "resultado.json").read_bytes()).hexdigest()
+    assert creada["veredicto"] == {"estado": "", "texto": ""}
+
+
+def test_veredicto_no_aplica_sin_avisos(tmp_path):
+    preparar(tmp_path)
+    (tmp_path / "explicacion.json").write_text(json.dumps(explicacion_con_veredicto(tmp_path)), encoding="utf-8")
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 0, salida.stderr
+    assert "AVISO" not in salida.stderr
+    texto = (tmp_path / "explicacion.md").read_text(encoding="utf-8")
+    assert "## Veredicto" in texto
+    assert "no_aplica" in texto
+
+
+def test_rechaza_explicacion_de_otro_resultado(tmp_path):
+    preparar(tmp_path)
+    (tmp_path / "explicacion.json").write_text(json.dumps(explicacion_con_veredicto(tmp_path)), encoding="utf-8")
+    (tmp_path / "resultado.json").write_text(json.dumps({**RESULTADO, "n_lotes": 12}), encoding="utf-8")
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "la explicación es de otro resultado: vuelve a explicar" in salida.stderr
+    assert not (tmp_path / "explicacion.md").exists()
+
+
+def test_anclar_reescribe_la_huella(tmp_path):
+    preparar(tmp_path)
+    (tmp_path / "explicacion.json").write_text(json.dumps(explicacion_con_veredicto(tmp_path)), encoding="utf-8")
+    (tmp_path / "resultado.json").write_text(json.dumps({**RESULTADO, "n_lotes": 12}), encoding="utf-8")
+    assert correr("anclar", tmp_path).returncode == 0
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 0, salida.stderr
+
+
+def test_veredicto_apoyado_cita_la_cifra(tmp_path):
+    preparar_con_veredicto(tmp_path, "se_apoya", "Se apoya: el AUC medio es {a1}, sobre el umbral fijado.")
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 0, salida.stderr
+    texto = (tmp_path / "explicacion.md").read_text(encoding="utf-8")
+    assert "Se apoya: el AUC medio es 0.87, sobre el umbral fijado." in texto
+
+
+def test_rechaza_estado_y_texto_invalidos(tmp_path):
+    preparar_con_veredicto(tmp_path, "confirmada", "")
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "veredicto.estado" in salida.stderr
+    assert "veredicto.texto" in salida.stderr
+
+
+def test_veredicto_sin_hipotesis_en_config(tmp_path):
+    preparar_con_veredicto(tmp_path, "se_refuta", "Se refuta: el AUC es {a1}.", config=None)
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "config.json" in salida.stderr
+    preparar_con_veredicto(tmp_path, "se_refuta", "Se refuta: el AUC es {a1}.", config={"hipotesis": {"texto": "x"}})
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "umbrales" in salida.stderr
+
+
+def test_veredicto_debe_citar_una_afirmacion(tmp_path):
+    preparar_con_veredicto(tmp_path, "se_apoya", "Se apoya la hipótesis.")
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "{a1}" in salida.stderr
+    preparar_con_veredicto(tmp_path, "se_apoya", "Se apoya: {a2}.")
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "afirmación 2" in salida.stderr
+
+
+def test_veredicto_rechaza_cifra_escrita_a_mano(tmp_path):
+    preparar_con_veredicto(tmp_path, "intermedio", "El AUC es {a1}, apenas sobre 0.8.")
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "cifra escrita a mano" in salida.stderr
+
+
+def test_etiqueta_historica_no_apoya_ni_refuta(tmp_path):
+    for estado in ("se_apoya", "se_refuta"):
+        preparar_con_veredicto(tmp_path, estado, "El AUC es {a1}.", referencia="etiqueta_historica")
+        salida = correr("construir", tmp_path)
+        assert salida.returncode == 1
+        assert "etiqueta_historica" in salida.stderr
+    preparar_con_veredicto(tmp_path, "intermedio", "El AUC es {a1}.", referencia="etiqueta_historica")
+    assert correr("construir", tmp_path).returncode == 0
+
+
+def test_error_abierto_exige_veredicto_no_aplica(tmp_path):
+    preparar_con_veredicto(tmp_path, "se_apoya", "El AUC es {a1}.")
+    explicacion = json.loads((tmp_path / "explicacion.json").read_text(encoding="utf-8"))
+    explicacion["alertas"] = [{"tipo": "bug", "estado": "abierta", "texto": "Etiquetas corridas."}]
+    (tmp_path / "explicacion.json").write_text(json.dumps(explicacion), encoding="utf-8")
+    salida = correr("construir", tmp_path)
+    assert salida.returncode == 1
+    assert "no_aplica" in salida.stderr
+    explicacion["veredicto"] = {"estado": "no_aplica", "texto": "Hay un error abierto."}
+    (tmp_path / "explicacion.json").write_text(json.dumps(explicacion), encoding="utf-8")
+    assert correr("construir", tmp_path).returncode == 2

@@ -19,7 +19,8 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
    ```bash
    python3 "${CLAUDE_PLUGIN_ROOT}/skills/explicar-resultado/scripts/resultado.py" plantilla runs/<id>
    ```
-   Escribe `runs/<id>/explicacion.json` con los campos vacíos y la lista de claves disponibles.
+   Escribe `runs/<id>/explicacion.json` con los campos vacíos, la lista de claves disponibles y
+   `resultado_sha256`: la huella SHA-256 de los bytes exactos de `resultado.json`. No la edites a mano.
 
 3. Completa `explicacion.json`:
    - `titulo` y `pregunta`: qué se quería saber, en una frase cada uno.
@@ -34,6 +35,18 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
    - `alertas`: lo raro que veas al explicar, con el mismo esquema de `explicar-cambios`:
      `{"tipo": "bug" | "riesgo" | "duda", "estado": "abierta" | "resuelta" | "descartada", "texto": "...", "motivo": "..."}`.
      Un error solo se descarta si lo decidió la persona: `motivo` dice quién y por qué.
+   - `veredicto`: `{"estado": "se_apoya" | "se_refuta" | "intermedio" | "no_aplica", "texto": "<una frase>"}`,
+     qué dice el run sobre la hipótesis fijada antes de correrlo. Es obligatorio:
+     - `no_aplica` si el run no tenía hipótesis ni umbrales fijados de antemano, o si hay un `bug` abierto (con
+       un error abierto no se reporta).
+     - Para cualquier otro estado, `runs/<id>/config.json` trae
+       `{"hipotesis": {"texto": "...", "umbrales": {"auc.media": 0.8}}}`, escrito antes de correr el experimento.
+     - `texto` cita la cifra de al menos una afirmación con `{a1}`, `{a2}`... (el número de la afirmación, desde 1),
+       sin escribir números a mano: el umbral se nombra ("sobre el umbral fijado"), no se copia.
+     - Nunca `se_apoya` ni `se_refuta` si alguna afirmación citada tiene referencia `etiqueta_historica`: el
+       censo no es verdad de campo. Usa `intermedio`.
+     - `se_apoya` o `se_refuta` solo si las cifras citadas cumplen o incumplen todos los umbrales de
+       `config.json`; si unas sí y otras no, o la diferencia cae dentro del ruido entre grupos, `intermedio`.
    - `siguiente`: qué habría que hacer para cerrar lo no comprobado.
 
 4. Valida y arma la explicación:
@@ -43,8 +56,25 @@ del archivo que escribió el experimento, así la explicación no puede mostrar 
    Si falta algo lo lista y sale con 1. Si todo está, escribe `runs/<id>/explicacion.md` con las cifras ya
    puestas y sale con 0. Sale con 2 si queda un `bug` abierto: corrígelo y vuelve a correr el experimento, o
    pregúntale a la persona.
+   Si `resultado.json` cambió después de la plantilla, sale con 1: "la explicación es de otro resultado: vuelve
+   a explicar". Revisa cada afirmación y el veredicto contra el resultado nuevo y después ancla la explicación:
+   ```bash
+   python3 "${CLAUDE_PLUGIN_ROOT}/skills/explicar-resultado/scripts/resultado.py" anclar runs/<id>
+   ```
 
 5. Dale a la persona la ruta de `explicacion.md` y resume en dos líneas qué se puede afirmar y qué no.
+
+## Qué comprueba el script del veredicto y qué no
+El script comprueba el estado, que el texto cite una afirmación existente sin cifras a mano, que haya hipótesis
+con umbrales en `config.json` cuando el estado no es `no_aplica`, la regla de `etiqueta_historica` y la del
+`bug` abierto. No comprueba que `config.json` se haya escrito antes de correr (las fechas de los archivos no son
+fiables) ni que el estado concuerde con los umbrales (su sentido, mayor o menor, depende de la métrica): eso
+lo revisas tú con las reglas del paso 3.
+
+## Explicaciones anteriores al veredicto
+Un `explicacion.json` sin `veredicto` o sin `resultado_sha256` sigue validando: el script imprime un `AVISO` por
+cada campo y sale con 0. Para ponerla al día, agrega el `veredicto` (casi siempre `no_aplica` en runs viejos sin
+hipótesis), revisa que las afirmaciones sigan valiendo con el `resultado.json` actual y corre `resultado.py anclar`.
 
 ## Preguntas que debes hacerte al escribir cada afirmación
 
@@ -66,6 +96,7 @@ Son las que destapan errores. Si alguna respuesta es "no sé", es una alerta de 
 - Exploraciones rápidas que no se van a reportar ni a usar para decidir.
 
 ## Verificación
-- `resultado.py construir` termina con `OK: runs/<id>/explicacion.md`.
+- `resultado.py construir` termina con `OK: runs/<id>/explicacion.md` y sin ningún `AVISO`.
+- La sección "Veredicto" de `explicacion.md` tiene el estado y una frase con la cifra puesta.
 - En `explicacion.md` no hay ninguna cifra que no esté en `resultado.json`.
 - La sección "Lo que no se comprobó" tiene al menos una línea por afirmación.
