@@ -62,10 +62,19 @@ if (g, c) in (("agent", "send-keys"), ("agent", "prompt"), ("agent", "focus")):
     ok({"type": "ok"})
 if (g, c) == ("worktree", "create"):
     ok({"root_pane": {"pane_id": "w2:p1"}, "workspace": {"workspace_id": "w2"}})
+espacios = estado.setdefault("espacios", [])
 if (g, c) == ("workspace", "create"):
-    ok({"root_pane": {"pane_id": "w3:p1"}, "workspace": {"workspace_id": "w3"}})
-if (g, c) in (("workspace", "list"), ("workspace", "close")):
-    ok({"workspaces": []})
+    wid = "w%d" % (len(espacios) + 3)
+    cwd = args[args.index("--cwd") + 1]
+    espacios.append({"workspace_id": wid, "label": args[args.index("--label") + 1]})  # herdr 0.9.5: sin "worktree"
+    guardar()
+    ok({"root_pane": {"pane_id": wid + ":p1"}, "workspace": {"workspace_id": wid}})
+if (g, c) == ("tab", "create"):
+    ok({"root_pane": {"pane_id": args[args.index("--workspace") + 1] + ":p9"}, "tab": {"tab_id": "t9"}})
+if (g, c) == ("workspace", "list"):
+    ok({"workspaces": espacios})
+if (g, c) == ("workspace", "close"):
+    ok({"type": "ok"})
 error("no_soportado", " ".join(args))
 """
 
@@ -91,6 +100,7 @@ def preparar_falsos(tmp: Path, estado: dict | None = None) -> dict:
         FALSO_CMUX=str(tmp / "cmux.log"),
         FLOTA_EVENTOS_DIR=str(tmp / "eventos"),
         FLOTA_HERDR=str(bin_dir / "herdr"),
+        FLOTA_REGISTRO=str(tmp / "corridas.json"),
     )
     return env
 

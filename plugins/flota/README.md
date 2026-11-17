@@ -24,13 +24,17 @@ puerta por tandas, reglas de permiso) y reescrito con lo que se comprobó en est
 2. El puente de herdr, una vez por usuario: `herdr plugin link <kit>/plugins/flota/herdr`. Opcional:
    `<config del plugin>/config.json` con `{"avisos": "sin-claude"}` si cmux ya te avisa de Claude por sus hooks.
 3. Si Claude Code corre con sandbox en el repo, agrega el socket de la sesión en `.claude/settings.local.json`:
-   `"sandbox": {"network": {"allowUnixSockets": ["~/.config/herdr/sessions/<sesión>/herdr.sock"]}}`.
+   `"sandbox": {"network": {"allowUnixSockets": ["~/.config/herdr/sessions/flota/herdr.sock"]}}` y en
+   `sandbox.filesystem.allowWrite` el directorio de la corrida, `~/.local/state/flota` y el estado del puente.
 
 ## Usar
-Abre la sesión de herdr (`herdr --session <sesión>`) y, en otra terminal, el tablero:
-`python3 -I <kit>/plugins/flota/skills/flota/scripts/tablero.py --run ../<repo>-flota --sesion <sesión> --repo . --abrir`.
-Luego pídele a Claude: «Eres el coordinador de esta corrida. Meta: <qué es terminar y cómo se comprueba>. Usa la flota
-con la sesión <sesión>». Empieza con un carril Claude y uno Codex con una tarea de una línea.
+Todo vive en un solo espacio: una sesión de herdr (`flota`) con un espacio por proyecto y sus carriles debajo, y un
+tablero que junta todos los proyectos.
+1. Registra cada proyecto una vez: `python3 -I <kit>/plugins/flota/skills/flota/scripts/carril.py preparar --repo <repo>`.
+2. Abre la sesión y el tablero: `herdr --session flota` y, en otra terminal,
+   `python3 -I <scripts>/tablero.py --sesion flota --abrir` (en cmux, un comando global «Flota» deja las dos cosas).
+3. En el tablero, «▶ coordinador» junto a un proyecto arranca su coordinador (`coord-<proyecto>`, Claude Opus con esta
+   skill). Dile la meta: qué es terminar y cómo se comprueba. Empieza con dos carriles Claude de una línea.
 
 ## Límites
 - Codex en el nivel `auto` no puede hacer commit (su sandbox protege `.git`): el commit lo hace el coordinador.

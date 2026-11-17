@@ -13,6 +13,14 @@ def repo(tmp_path):
 def falsos(tmp_path, monkeypatch):
     """Entorno con herdr y cmux falsos, también aplicado al proceso de la prueba (para importar los módulos)."""
     env = preparar_falsos(tmp_path)
-    for clave in ("PATH", "FALSO_ESTADO", "FALSO_LLAMADAS", "FALSO_CMUX", "FLOTA_EVENTOS_DIR", "FLOTA_HERDR"):
+    for clave in (
+        "PATH",
+        "FALSO_ESTADO",
+        "FALSO_LLAMADAS",
+        "FALSO_CMUX",
+        "FLOTA_EVENTOS_DIR",
+        "FLOTA_HERDR",
+        "FLOTA_REGISTRO",
+    ):
         monkeypatch.setenv(clave, env[clave])
     return env

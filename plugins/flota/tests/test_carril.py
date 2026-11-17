@@ -168,3 +168,35 @@ def test_nunca_acepta_la_confirmacion_de_bypass(tmp_path, repo):
     assert r.returncode == 3
     assert "lo confirma la persona" in r.stderr
     assert not [x for x in llamadas(tmp_path) if x[:2] == ["agent", "send-keys"]]
+
+
+def test_preparar_registra_el_proyecto(tmp_path, repo):
+    env = preparar_falsos(tmp_path)
+    assert correr(CARRIL, "preparar", "--repo", str(repo), env=env).returncode == 0
+    registro = json.loads((tmp_path / "corridas.json").read_text())
+    assert registro == {"repo": {"repo": str(repo.resolve()), "run": str(repo.resolve().parent / "repo-flota")}}
+
+
+def test_espacios_crea_uno_por_proyecto_sin_duplicar(tmp_path, repo):
+    env = preparar_falsos(tmp_path)
+    correr(CARRIL, "preparar", "--repo", str(repo), env=env)
+    assert correr(CARRIL, "espacios", "--sesion", "s", env=env).returncode == 0
+    assert correr(CARRIL, "espacios", "--sesion", "s", env=env).returncode == 0
+    creados = [x for x in llamadas(tmp_path) if x[:2] == ["workspace", "create"]]
+    assert len(creados) == 1
+    assert creados[0][creados[0].index("--label") + 1] == "repo"
+
+
+def test_coordinador_en_una_pestana_del_proyecto(tmp_path, repo):
+    env = preparar_falsos(tmp_path)
+    r = correr(CARRIL, "coordinador", "--sesion", "s", "--repo", str(repo), env=env)
+    assert r.returncode == 0, r.stderr
+    hechas = llamadas(tmp_path)
+    pestana = next(x for x in hechas if x[:2] == ["tab", "create"])
+    assert pestana[pestana.index("--label") + 1] == "coordinador"
+    inicio = next(x for x in hechas if x[:2] == ["agent", "start"])
+    assert inicio[2] == "coord-repo"
+    assert "--plugin-dir" in inicio
+    assert (repo.resolve().parent / "repo-flota" / "STATE.md").exists(), "prepara la corrida si no existe"
+    r = correr(CARRIL, "coordinador", "--sesion", "s", "--repo", str(repo), env=env)
+    assert "ya está corriendo" in r.stdout

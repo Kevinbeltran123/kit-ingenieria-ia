@@ -63,6 +63,13 @@ button { cursor: pointer; }
 .punto.giro { border: 2px solid currentColor; border-right-color: transparent; background: none !important; width: 11px; height: 11px; animation: giro 1s linear infinite; }
 @keyframes giro { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .punto.giro { animation: none; } }
+.proyecto { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 8px; padding: 10px 8px 4px; }
+.proyecto .nom { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proyecto .sub { color: var(--suave); font-size: 12px; }
+.fila.sangria { padding-left: 22px; }
+.vacio-col.sangria { padding: 4px 8px 6px 52px; }
+.btn.mini { font-size: 12px; padding: 1px 7px; }
+.btn:disabled { opacity: .6; cursor: progress; }
 .lat-pie { border-top: 1px solid var(--borde); padding: 10px 14px; color: var(--tenue); font-size: 12px; display: grid; gap: 4px; }
 .lat-pie .commit { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -105,7 +112,7 @@ svg text { font-family: inherit; }
 .caja h3 { font-size: 12px; color: var(--suave); font-weight: 400; margin: 0 0 8px; }
 .lista { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 12px; }
 .lista li { overflow-wrap: anywhere; }
-.lista .k { color: var(--suave); }
+.lista .k, .k { color: var(--suave); }
 
 /* detalle */
 .detalle[hidden] { display: none; }
@@ -177,7 +184,7 @@ svg text { font-family: inherit; }
 
   <main class="principal">
     <div class="barra">
-      <h1>Flujo de la corrida</h1>
+      <h1>Flujo de la flota</h1>
       <span class="ruta" id="ruta"></span>
       <div class="der">
         <span id="actualizado">—</span>
@@ -245,7 +252,7 @@ svg text { font-family: inherit; }
   <div class="paleta" role="dialog" aria-modal="true" aria-label="Buscar en la flota">
     <div class="pal-cab">
       <div class="ic">≡</div>
-      <div><div class="titulo">Carriles</div><div class="sub" id="pal-sub">—</div></div>
+      <div><div class="titulo">Proyectos y carriles</div><div class="sub" id="pal-sub">—</div></div>
       <div class="der"><span class="tecla">Alt+F</span><span class="tecla">Esc</span></div>
     </div>
     <label class="pal-busca"><span aria-hidden="true">⌕</span><input id="pal-input" placeholder="Buscar carriles, agentes, ramas…" autocomplete="off" aria-label="Buscar"></label>
@@ -315,29 +322,51 @@ function pintarResumen() {
       h("b", {}, datos.resumen[k] || 0), h("span", {}, h("span", { class: "punto", style: `background:${color(k)}` }), txt)));
   }
 }
-function filaArbol(x) {
+function filaArbol(x, sangria) {
   const vivo = x.vivo;
   const sub = x.otro ? (x.agente || "") + (x.cwd ? " · " + x.cwd.split("/").slice(-1)[0] : "") : `${x.tipo} · ${x.rama || ""}`;
-  return h("button", { class: "fila", "aria-current": String(sel === x.nombre), onclick: () => abrir(x.nombre) },
+  return h("button", { class: "fila" + (sangria ? " sangria" : ""), "aria-current": String(sel === x.nombre), onclick: () => abrir(x.nombre) },
     avatar(x.nombre),
     h("div", { style: "min-width:0" }, h("div", { class: "nom" }, x.nombre), h("div", { class: "sub" }, sub)),
     h("span", { class: "t" }, hace(x.desde || 0), punto(vivo)));
 }
+function cabezaProyecto(p) {
+  const r = p.resumen || {};
+  const total = Object.values(r).reduce((a, b) => a + b, 0);
+  const boton = p.coordinador ? h("span", { class: "chip", title: "coordinador: " + (ESTADO_TXT[p.coordinador] || p.coordinador) }, punto(p.coordinador), " coord")
+    : h("button", { class: "btn mini", title: `Arrancar el coordinador de ${p.nombre} (Claude Opus con la skill flota)`, onclick: (ev) => { ev.stopPropagation(); arrancarCoordinador(p.nombre, ev.target); } }, "▶ coordinador");
+  return h("div", { class: "proyecto" }, avatar(p.nombre), h("div", { style: "min-width:0" }, h("div", { class: "nom" }, p.nombre),
+    h("div", { class: "sub" }, `${total} carriles · ${(p.git || {}).rama || ""}`)), boton);
+}
 function pintarArbol() {
   const cont = $("arbol"); cont.replaceChildren();
-  const carriles = datos.carriles.filter((c) => !filtro || c.columna === filtro);
-  if (datos.otros.length && !filtro) {
-    cont.append(h("div", { class: "grupo" }, "Coordinador y otros", h("span", { class: "n" }, datos.otros.length)));
-    datos.otros.forEach((o) => cont.append(filaArbol({ ...o, otro: true })));
+  const visibles = (lista) => lista.filter((c) => !filtro || c.columna === filtro);
+  if (!datos.proyectos.length) cont.append(h("div", { class: "vacio-col", style: "padding:6px 14px" }, "Sin proyectos registrados: carril.py preparar --repo <repo>"));
+  for (const p of datos.proyectos) {
+    cont.append(cabezaProyecto(p));
+    const otros = filtro ? [] : datos.otros.filter((o) => o.proyecto === p.nombre);
+    const carriles = visibles(datos.carriles.filter((c) => c.proyecto === p.nombre));
+    otros.forEach((o) => cont.append(filaArbol({ ...o, otro: true }, true)));
+    carriles.forEach((c) => cont.append(filaArbol(c, true)));
+    if (!otros.length && !carriles.length) cont.append(h("div", { class: "vacio-col sangria" }, filtro ? "Nada en esta etapa." : "Sin agentes todavía."));
   }
-  cont.append(h("div", { class: "grupo" }, filtro ? `Carriles · ${COLS.find((c) => c[0] === filtro)[1]}` : "Carriles", h("span", { class: "n" }, carriles.length)));
-  if (!carriles.length) cont.append(h("div", { class: "vacio-col", style: "padding:6px 14px" }, filtro ? "Nada en esta etapa." : "Sin carriles todavía. El coordinador los crea con carril.py iniciar."));
-  carriles.forEach((c) => cont.append(filaArbol(c)));
+  const sueltos = filtro ? [] : datos.otros.filter((o) => !o.proyecto);
+  if (sueltos.length) {
+    cont.append(h("div", { class: "grupo" }, "Otros agentes", h("span", { class: "n" }, sueltos.length)));
+    sueltos.forEach((o) => cont.append(filaArbol({ ...o, otro: true })));
+  }
+}
+async function arrancarCoordinador(proyecto, boton) {
+  boton.disabled = true; boton.textContent = "arrancando…";
+  try { await api("/api/coordinador", { proyecto }); boton.textContent = "listo"; refrescar(); }
+  catch (e) { boton.textContent = "falló"; boton.title = String(e.message || e); boton.disabled = false; }
 }
 function pintarPie() {
-  const g = datos.git || {}; const pie = $("pie"); pie.replaceChildren();
-  if (g.head) pie.append(h("div", {}, `${g.rama || "(sin rama)"} @ ${g.head} · ${g.worktrees || 0} worktrees`));
-  (g.commits || []).slice(0, 3).forEach((c) => pie.append(h("div", { class: "commit" }, c)));
+  const pie = $("pie"); pie.replaceChildren();
+  for (const p of datos.proyectos) {
+    const g = p.git || {};
+    if (g.head) pie.append(h("div", { class: "commit" }, `${p.nombre}: ${g.rama || "(sin rama)"} @ ${g.head} · ${g.worktrees || 0} worktrees`));
+  }
   pie.append(h("div", {}, datos.servidor_herdr ? `herdr · sesión ${datos.sesion}` : "herdr: la sesión no está corriendo"));
 }
 function pintarColumnas() {
@@ -349,7 +378,7 @@ function pintarColumnas() {
     for (const c of items) {
       cuerpo.append(h("button", { class: "tarjeta", "aria-current": String(sel === c.nombre), onclick: () => abrir(c.nombre) },
         h("div", { class: "l1" }, punto(c.vivo), c.nombre, h("span", { class: "t" }, hace(c.desde))),
-        h("div", { class: "l2" }, h("span", { class: "chip" }, c.tipo), h("span", { class: "chip" }, c.modelo || "modelo por defecto"), c.esfuerzo ? h("span", { class: "chip" }, c.esfuerzo) : null),
+        h("div", { class: "l2" }, datos.proyectos.length > 1 ? h("span", { class: "chip" }, c.proyecto) : null, h("span", { class: "chip" }, c.tipo), h("span", { class: "chip" }, c.modelo || "modelo por defecto"), c.esfuerzo ? h("span", { class: "chip" }, c.esfuerzo) : null),
         h("div", { class: "l2" }, c.rama || ""),
         c.listo ? h("div", { class: "listo", title: c.listo.resto }, "READY " + c.listo.resto) : null,
         c.head ? h("div", { class: "l2" }, "commit del coordinador " + c.head) : null));
@@ -399,11 +428,14 @@ function pintarTiempo() {
 function pintarCajas() {
   const ent = $("entregas"); ent.replaceChildren();
   if (!datos.entregas.length) ent.append(h("li", { class: "k" }, "Ninguna todavía. Cada carril termina con <NOMBRE>-READY en su handover."));
-  datos.entregas.slice().reverse().forEach((e) => ent.append(h("li", {}, h("span", { style: `color:${color(e.tipo === "revision" ? "puerta" : "listo")}` }, e.tipo === "revision" ? "REVIEW " : "READY "), h("b", {}, e.carril), " ", e.resto)));
+  datos.entregas.slice().reverse().forEach((e) => ent.append(h("li", {}, h("span", { style: `color:${color(e.tipo === "revision" ? "puerta" : "listo")}` }, e.tipo === "revision" ? "REVIEW " : "READY "), h("b", {}, e.carril), " ", e.resto, h("span", { class: "k" }, " · " + e.proyecto))));
   const pu = $("puerta"); pu.replaceChildren();
-  const secs = Object.entries(datos.puerta || {});
-  if (!secs.length) pu.append(h("div", { class: "k" }, "gate/queue.md vacío."));
-  secs.forEach(([nom, lineas]) => { pu.append(h("h3", {}, `${nom} · ${lineas.length}`)); const ul = h("ul", { class: "lista" }); lineas.forEach((l) => ul.append(h("li", {}, l))); pu.append(ul); });
+  const conLineas = Object.entries(datos.puerta || {}).filter(([, secs]) => Object.values(secs).some((l) => l.length));
+  if (!conLineas.length) pu.append(h("div", { class: "k" }, "Ninguna tanda en la puerta todavía."));
+  conLineas.forEach(([proyecto, secs]) => Object.entries(secs).forEach(([nom, lineas]) => {
+    if (!lineas.length) return;
+    pu.append(h("h3", {}, `${proyecto} · ${nom} · ${lineas.length}`)); const ul = h("ul", { class: "lista" }); lineas.forEach((l) => ul.append(h("li", {}, l))); pu.append(ul);
+  }));
   const bi = $("bitacora"); bi.replaceChildren();
   if (!datos.bitacora.length) bi.append(h("li", { class: "k" }, "STATE.md sin bitácora."));
   datos.bitacora.slice().reverse().slice(0, 18).forEach((l) => { const m = l.match(/^(\S+ \S+) (.*)$/); bi.append(h("li", {}, m ? [h("span", { class: "k" }, m[1].slice(11) + " "), m[2]] : l)); });
@@ -416,9 +448,9 @@ function pintarDetalleMeta() {
   $("det-estado").textContent = ESTADO_TXT[x.vivo] || x.vivo || "—";
   const p = $("det-punto"); p.replaceWith(Object.assign(punto(x.vivo), { id: "det-punto" }));
   const meta = $("det-meta"); meta.replaceChildren();
-  const filas = x.otro ? [["agente", x.agente], ["pane", x.pane], ["cwd", x.cwd], ["en este estado", hace(x.desde)]] :
+  const filas = x.otro ? [["proyecto", x.proyecto || "—"], ["agente", x.agente], ["pane", x.pane], ["cwd", x.cwd], ["en este estado", hace(x.desde)]] :
     [["tipo", x.tipo], ["modelo", x.modelo || "el de su config"], ["esfuerzo", x.esfuerzo || "—"], ["permisos", x.permisos],
-     ["rama", x.rama], ["head", x.head ? x.head + " (commit del coordinador)" : null], ["base", (x.base || "").slice(0, 9) + (x.nota_base ? " · " + x.nota_base : "")], ["worktree", x.worktree],
+     ["proyecto", x.proyecto], ["rama", x.rama], ["head", x.head ? x.head + " (commit del coordinador)" : null], ["base", (x.base || "").slice(0, 9) + (x.nota_base ? " · " + x.nota_base : "")], ["worktree", x.worktree],
      ["pane", x.pane_actual || x.pane], ["etapa", COLS.find((c) => c[0] === x.columna)?.[1]], ["en este estado", hace(x.desde)]];
   filas.forEach(([k, v]) => meta.append(h("dt", {}, k), h("dd", {}, v || "—")));
   document.querySelectorAll("#pestanas button").forEach((b) => { b.hidden = x.otro && b.dataset.p !== "pantalla"; });
@@ -449,7 +481,7 @@ function marcarPestana() { document.querySelectorAll("#pestanas button").forEach
 function pintar() {
   if (!datos) return;
   $("sesion").textContent = datos.sesion;
-  $("ruta").textContent = datos.run;
+  $("ruta").textContent = `${datos.proyectos.length} proyecto${datos.proyectos.length === 1 ? "" : "s"} · sesión ${datos.sesion}`;
   $("actualizado").textContent = "actualizado " + new Date(datos.ahora * 1000).toLocaleTimeString();
   const av = $("aviso");
   av.style.display = datos.servidor_herdr ? "none" : "block";
@@ -482,7 +514,7 @@ function abrirPaleta() { $("velo").classList.add("abierto"); $("pal-input").valu
 function cerrarPaleta() { $("velo").classList.remove("abierto"); }
 function filtrarPaleta() {
   const q = $("pal-input").value.toLowerCase().trim();
-  const items = todos().filter((x) => !q || [x.nombre, x.rama, x.tipo, x.agente, x.modelo, x.columna].join(" ").toLowerCase().includes(q));
+  const items = todos().filter((x) => !q || [x.nombre, x.proyecto, x.rama, x.tipo, x.agente, x.modelo, x.columna].join(" ").toLowerCase().includes(q));
   paleta = { items, i: 0 }; pintarPaleta();
 }
 function pintarPaleta() {

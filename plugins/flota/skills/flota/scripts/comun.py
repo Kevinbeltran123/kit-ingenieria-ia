@@ -165,6 +165,40 @@ def anotar(run: Path, texto: str) -> None:
         f.write(f"- {marca} {texto}\n")
 
 
+# --- Registro de proyectos (una sola sesión de herdr para todos) -----------------------------------------------------
+
+
+def archivo_registro() -> Path:
+    return Path(os.environ.get("FLOTA_REGISTRO") or Path.home() / ".local" / "state" / "flota" / "corridas.json")
+
+
+def nombre_proyecto(repo: str) -> str:
+    """Nombre corto del proyecto a partir de la carpeta del repo: minúsculas, dígitos y guiones."""
+    nombre = re.sub(r"[^a-z0-9-]+", "-", Path(repo).name.lower()).strip("-")
+    return (nombre or "proyecto")[:24]
+
+
+def corridas() -> dict[str, dict]:
+    """Proyectos registrados: {proyecto: {"repo": ..., "run": ...}}."""
+    try:
+        datos = json.loads(archivo_registro().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return datos if isinstance(datos, dict) else {}
+
+
+def registrar_corrida(proyecto: str, repo: str, run: str) -> None:
+    ruta = archivo_registro()
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    datos = corridas()
+    datos[proyecto] = {"repo": repo, "run": run}
+    fd, tmp = tempfile.mkstemp(dir=str(ruta.parent), prefix=".corridas-", suffix=".json")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    Path(tmp).replace(ruta)
+
+
 def dir_eventos(sesion: str) -> Path:
     """Dónde escribe el puente de herdr los cambios de estado (uno por línea, JSON) de una sesión."""
     base = os.environ.get("FLOTA_EVENTOS_DIR")
