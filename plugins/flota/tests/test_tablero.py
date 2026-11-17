@@ -54,12 +54,14 @@ def test_estado_reune_todo(tmp_path, falsos):
     escribir_estado(
         tmp_path, {"api": {"status": "blocked"}, "ui": {"status": "idle"}, "coordinador": {"status": "working"}}
     )
-    d = tablero.estado(run, "s", None)
+    d = tablero.estado({"demo": {"repo": "", "run": str(run)}}, "s")
     cols = {f["nombre"]: f["columna"] for f in d["carriles"]}
     assert cols == {"api": "espera", "ui": "listo", "docs": "puerta"}
     assert [o["nombre"] for o in d["otros"]] == ["coordinador"]
+    assert {f["proyecto"] for f in d["carriles"]} == {"demo"}
+    assert d["proyectos"][0]["resumen"]["listo"] == 1
     assert d["resumen"]["espera"] == 1
-    assert d["bitacora"] == ["2026-11-17 09:00 carril api iniciado"]
+    assert d["bitacora"] == ["2026-11-17 09:00 demo · carril api iniciado"]
     assert "TITULO" not in tablero.vista_terminal(d)
     assert "api" in tablero.vista_terminal(d)
 
@@ -74,7 +76,7 @@ def test_la_pagina_no_carga_nada_de_internet():
 def servidor(tmp_path, falsos):
     run = preparar_run(tmp_path)
     escribir_estado(tmp_path, {"api": {"status": "blocked", "pantallas": ["¿Continuar? (y/n)"]}})
-    tablero.Tablero.ctx = {"run": run, "sesion": "s", "repo": None, "token": "secreto"}
+    tablero.Tablero.ctx = {"fijos": {"demo": {"repo": "", "run": str(run)}}, "sesion": "s", "token": "secreto"}
     srv = ThreadingHTTPServer(("127.0.0.1", 0), tablero.Tablero)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{srv.server_address[1]}"
@@ -153,3 +155,30 @@ def test_post_exige_token_en_cabecera_json_y_origen(servidor, tmp_path):
     assert ["agent", "send-keys", "api", "y"] in hechas
     assert ["agent", "prompt", "api", "sigue"] in hechas
     assert ["agent", "focus", "api"] in hechas
+
+
+def test_estado_junta_varios_proyectos(tmp_path, falsos):
+    a, b = tmp_path / "a-flota", tmp_path / "b-flota"
+    for run, carril in ((a, "uno"), (b, "dos")):
+        run.mkdir()
+        (run / "STATE.md").write_text(f"- 2026-11-17 09:0{len(carril)} {carril} iniciado\n")
+        (run / "carriles.json").write_text(json.dumps({carril: {"nombre": carril, "tipo": "claude"}}))
+    escribir_estado(tmp_path, {"uno": {"status": "working"}, "coord-b": {"status": "idle"}})
+    d = tablero.estado(
+        {"a": {"repo": str(tmp_path / "a"), "run": str(a)}, "b": {"repo": str(tmp_path / "b"), "run": str(b)}}, "s"
+    )
+    assert {(f["nombre"], f["proyecto"], f["columna"]) for f in d["carriles"]} == {
+        ("uno", "a", "trabajando"),
+        ("dos", "b", "quieto"),
+    }
+    assert [(o["nombre"], o["proyecto"]) for o in d["otros"]] == [("coord-b", "b")]
+    assert {p["nombre"]: p["coordinador"] for p in d["proyectos"]} == {"a": None, "b": "idle"}
+    assert [x.split(" · ")[0][-1] for x in d["bitacora"]] == ["a", "b"], "bitácora mezclada y en orden de hora"
+
+
+def test_boton_coordinador_solo_para_proyectos_registrados(servidor, tmp_path):
+    json_tok = {"Content-Type": "application/json", "X-Flota-Token": "secreto"}
+    assert pedir(f"{servidor}/api/coordinador", {"proyecto": "otro"}, json_tok)[0] == 404
+    codigo, cuerpo = pedir(f"{servidor}/api/coordinador", {"proyecto": "demo"}, json_tok)
+    assert codigo == 200, cuerpo
+    assert any(x[:3] == ["agent", "start", "coord-demo"] for x in llamadas(tmp_path))

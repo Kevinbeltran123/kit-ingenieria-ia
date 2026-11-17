@@ -1,7 +1,8 @@
 """Carriles de la flota sobre herdr: preparar la corrida, iniciar un trabajador, hablarle, entregar y cerrar.
 
 Uso (todas las rutas absolutas o relativas al directorio actual):
-  carril.py preparar   --run DIR --repo REPO
+  carril.py preparar   --repo REPO [--run DIR] [--proyecto NOMBRE]   (registra el proyecto para el tablero)
+  carril.py espacios   --sesion S                                    (un espacio de herdr por proyecto registrado)
   carril.py iniciar    --run DIR --sesion S --nombre N --tipo claude|codex --repo REPO [--modelo M] [--esfuerzo E]
                        [--permisos auto|abierto|preguntar] [--base REF] [--rama B] [--brief ARCHIVO] [--sin-worktree]
   carril.py enviar     --run DIR --sesion S --nombre N --texto "..."
@@ -10,7 +11,7 @@ Uso (todas las rutas absolutas o relativas al directorio actual):
   carril.py marcar     --run DIR --nombre N --estado activo|gate|enviado|cerrado
   carril.py cerrar     --run DIR --sesion S --nombre N
   carril.py lista      --run DIR --sesion S
-  carril.py coordinador --run DIR --sesion S --repo REPO [--modelo M] [--permisos auto|preguntar]
+  carril.py coordinador --sesion S --repo REPO [--run DIR] [--modelo M] [--permisos auto|preguntar]
 
 Niveles de permisos (--permisos):
   auto       Claude en modo auto (un clasificador aprueba lo seguro); Codex con sandbox workspace-write y sin preguntas:
@@ -41,10 +42,13 @@ from comun import (
     agentes,
     anotar,
     cargar_carriles,
+    corridas,
     guardar_carriles,
     herdr,
     lineas_listo,
+    nombre_proyecto,
     pantalla,
+    registrar_corrida,
 )
 
 NOMBRE = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
@@ -196,9 +200,20 @@ def mensaje_inicio(run: Path, nombre: str, tipo: str, permisos: str, brief: str)
     return " ".join(partes)
 
 
+def run_por_defecto(repo: str) -> Path:
+    return Path(repo).parent / f"{Path(repo).name}-flota"
+
+
 def cmd_preparar(a: argparse.Namespace) -> int:
-    run = Path(a.run).expanduser().resolve()
     repo = str(Path(a.repo).expanduser().resolve())
+    run = Path(a.run).expanduser().resolve() if a.run else run_por_defecto(repo)
+    preparar(run, repo, a.proyecto or nombre_proyecto(repo))
+    print(f"corrida lista en {run}")
+    return 0
+
+
+def preparar(run: Path, repo: str, proyecto: str) -> None:
+    """Crea el directorio de la corrida (sin pisar lo que ya hay) y registra el proyecto para el tablero."""
     scripts = Path(__file__).resolve().parent
     (run / "gate").mkdir(parents=True, exist_ok=True)
     (run / "briefs").mkdir(exist_ok=True)
@@ -213,8 +228,7 @@ def cmd_preparar(a: argparse.Namespace) -> int:
             ruta.write_text(texto, encoding="utf-8")
     if not (run / "carriles.json").exists():
         guardar_carriles(run, {})
-    print(f"corrida lista en {run}")
-    return 0
+    registrar_corrida(proyecto, repo, str(run))
 
 
 def cmd_iniciar(a: argparse.Namespace) -> int:
@@ -245,6 +259,7 @@ def cmd_iniciar(a: argparse.Namespace) -> int:
     modelo = a.modelo or modelo_por_defecto(a.tipo)
     registro = {
         "nombre": a.nombre,
+        "proyecto": nombre_proyecto(repo),
         "tipo": a.tipo,
         "modelo": modelo,
         "esfuerzo": a.esfuerzo,
@@ -262,6 +277,7 @@ def cmd_iniciar(a: argparse.Namespace) -> int:
             )
             registro["nota_base"] = "sin worktree: trabaja en el checkout del repo"
         else:
+            asegurar_espacio(a.sesion, repo, registro["proyecto"])
             base, nota = resolver_base(repo, a.base)
             rama = a.rama or f"flota/{a.nombre}"
             ruta = run / "wt" / a.nombre
@@ -447,51 +463,85 @@ def cmd_lista(a: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_coordinador(a: argparse.Namespace) -> int:
-    """Deja un agente `coordinador` (Claude con la skill flota cargada) en su propio espacio de la sesión."""
-    repo = str(Path(a.repo).expanduser().resolve())
-    fin = time.time() + a.espera
+def esperar_servidor(sesion: str, espera: float) -> bool:
+    fin = time.time() + espera
     while True:
         try:
-            herdr(a.sesion, "workspace", "list", timeout=5)
-            break
+            herdr(sesion, "workspace", "list", timeout=5)
+            return True
         except HerdrError:
             if time.time() > fin:
-                print(f"el servidor de herdr de la sesión {a.sesion} no respondió en {a.espera:.0f} s", file=sys.stderr)
-                return 1
+                return False
             time.sleep(1)
-    if any(ag.get("name") == "coordinador" for ag in agentes(a.sesion)):
-        print("coordinador ya está corriendo")
+
+
+def espacio_de(sesion: str, repo: str, proyecto: str) -> str | None:
+    """Id del espacio principal del proyecto: por su repo (si herdr ya lo detectó) o por su nombre."""
+    for w in herdr(sesion, "workspace", "list").get("result", {}).get("workspaces", []):
+        arbol = w.get("worktree") or {}
+        if arbol.get("is_linked_worktree"):
+            continue
+        if arbol.get("repo_root") == repo or w.get("label") == proyecto:
+            return w.get("workspace_id")
+    return None
+
+
+def asegurar_espacio(sesion: str, repo: str, proyecto: str) -> str:
+    """Un espacio por proyecto en la barra de herdr; sus carriles (worktrees del mismo repo) se agrupan debajo."""
+    existente = espacio_de(sesion, repo, proyecto)
+    if existente:
+        return existente
+    r = herdr(sesion, "workspace", "create", "--cwd", repo, "--label", proyecto, "--no-focus")
+    return r["result"]["workspace"]["workspace_id"]
+
+
+def cmd_espacios(a: argparse.Namespace) -> int:
+    """Deja en la sesión un espacio por cada proyecto registrado (lo corre el comando «Flota» de cmux al abrir)."""
+    if not esperar_servidor(a.sesion, a.espera):
+        print(f"el servidor de herdr de la sesión {a.sesion} no respondió en {a.espera:.0f} s", file=sys.stderr)
+        return 1
+    for proyecto, datos in sorted(corridas().items()):
+        if not Path(datos["repo"]).is_dir():
+            print(f"{proyecto}: no existe {datos['repo']}, lo salto", file=sys.stderr)
+            continue
+        print(f"{proyecto}: espacio {asegurar_espacio(a.sesion, datos['repo'], proyecto)}")
+    return 0
+
+
+def cmd_coordinador(a: argparse.Namespace) -> int:
+    """Deja un coordinador (Claude con la skill flota) en una pestaña del espacio de su proyecto."""
+    repo = str(Path(a.repo).expanduser().resolve())
+    proyecto = a.proyecto or nombre_proyecto(repo)
+    run = Path(a.run).expanduser().resolve() if a.run else run_por_defecto(repo)
+    nombre = f"coord-{proyecto}"[:32]
+    if not esperar_servidor(a.sesion, a.espera):
+        print(f"el servidor de herdr de la sesión {a.sesion} no respondió en {a.espera:.0f} s", file=sys.stderr)
+        return 1
+    preparar(run, repo, proyecto)
+    if any(ag.get("name") == nombre for ag in agentes(a.sesion)):
+        print(f"{nombre} ya está corriendo")
         return 0
-    r = herdr(a.sesion, "workspace", "create", "--cwd", repo, "--label", "coordinador", "--focus")
+    espacio = asegurar_espacio(a.sesion, repo, proyecto)
+    r = herdr(a.sesion, "tab", "create", "--workspace", espacio, "--cwd", repo, "--label", "coordinador", "--focus")
     pane = r.get("result", {}).get("root_pane", {}).get("pane_id")
     nativos = ["--model", a.modelo, "--plugin-dir", str(PLUGIN)]
     if a.permisos == "auto":
         nativos += ["--permission-mode", "auto"]
     try:
-        herdr(
-            a.sesion,
-            "agent",
-            "start",
-            "coordinador",
-            "--kind",
-            "claude",
-            "--pane",
-            pane,
-            "--timeout",
-            "60000",
-            "--",
-            *nativos,
-            timeout=90,
-        )
+        herdr(a.sesion, "agent", "start", nombre, "--kind", "claude", "--pane", pane, "--timeout", "60000", "--",
+              *nativos, timeout=90)  # fmt: skip
     except HerdrError as e:
         if e.codigo != "agent_not_ready":
-            print(f"no se pudo iniciar el coordinador: {e}", file=sys.stderr)
+            print(f"no se pudo iniciar {nombre}: {e}", file=sys.stderr)
             return 1
-    print(f"coordinador: {aceptar_dialogos(a.sesion, 'coordinador')} (pane {pane})")
-    if a.run:
-        anotar(Path(a.run).expanduser().resolve(), f"coordinador iniciado en la sesión {a.sesion}")
-    return 0
+    estado = aceptar_dialogos(a.sesion, nombre)
+    print(f"{nombre}: {estado} (pane {pane})")
+    anotar(run, f"{nombre} iniciado en la sesión {a.sesion}")
+    if estado == "listo":
+        texto = (f"Eres el coordinador del proyecto {proyecto} en la sesión de herdr {a.sesion}; la corrida está en "
+                 f"{run}. Usa la skill flota. Espera a que la persona te diga la meta.")  # fmt: skip
+        herdr(a.sesion, "agent", "prompt", nombre, texto, timeout=20)
+    return 0 if estado == "listo" else 3
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -499,8 +549,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("preparar")
-    s.add_argument("--run", required=True)
+    s.add_argument("--run", help="por defecto, <repo>-flota junto al repo")
     s.add_argument("--repo", required=True)
+    s.add_argument("--proyecto", help="nombre en el tablero; por defecto, la carpeta del repo")
 
     s = sub.add_parser("iniciar")
     s.add_argument("--run", required=True)
@@ -547,10 +598,15 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--run", required=True)
     s.add_argument("--sesion", required=True)
 
+    s = sub.add_parser("espacios")
+    s.add_argument("--sesion", required=True)
+    s.add_argument("--espera", type=float, default=30)
+
     s = sub.add_parser("coordinador")
-    s.add_argument("--run")
+    s.add_argument("--run", help="por defecto, <repo>-flota junto al repo")
     s.add_argument("--sesion", required=True)
     s.add_argument("--repo", required=True)
+    s.add_argument("--proyecto")
     s.add_argument("--modelo", default="claude-opus-5-5")
     s.add_argument("--permisos", default="auto", choices=("auto", "preguntar"))
     s.add_argument("--espera", type=float, default=20)
@@ -565,6 +621,7 @@ def main(argv: list[str] | None = None) -> int:
         "marcar": cmd_marcar,
         "cerrar": cmd_cerrar,
         "lista": cmd_lista,
+        "espacios": cmd_espacios,
         "coordinador": cmd_coordinador,
     }[a.cmd](a)
 

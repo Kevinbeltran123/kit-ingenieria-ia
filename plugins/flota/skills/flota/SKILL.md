@@ -14,11 +14,12 @@ comprobaciones, nunca como carriles.
 `python3 -I S/<script>.py`.
 
 ## Antes de empezar
-1. Comprueba herdr: `herdr status`. La sesión de la corrida (por ejemplo `appalma`) la abre la persona en cmux con el
-   comando «<repo>: flota», que deja el tablero a la vista; si no existe, dile que la abra o que corra
-   `herdr --session <sesión>` en una terminal.
-2. Directorio de la corrida fuera del repo: `../<repo>-flota`. Si es nueva: `python3 -I S/carril.py preparar --run
-   <run> --repo <repo>`; crea `STATE.md`, `common.md`, `gate/queue.md`, `briefs/`, `wt/` y `carriles.json`.
+1. Hay una sola sesión de herdr para todos los proyectos, `flota`: la abre la persona en cmux con el comando «Flota»,
+   que deja el tablero a la vista; cada proyecto es un espacio en la barra de herdr y sus carriles van debajo. Tú eres
+   `coord-<proyecto>` y solo tocas lo de tu proyecto. Si la sesión no existe, dile que abra «Flota».
+2. Directorio de la corrida fuera del repo: `../<repo>-flota`. Si es nueva: `python3 -I S/carril.py preparar --repo
+   <repo>`; crea `STATE.md`, `common.md`, `gate/queue.md`, `briefs/`, `wt/` y `carriles.json`, y registra el proyecto
+   para el tablero. Los nombres de carril son únicos en toda la sesión: empiézalos con algo de tu proyecto.
 3. Lee `STATE.md` y mira lo que ya corre antes de crear nada: `python3 -I S/carril.py lista --run <run> --sesion
    <sesión>`. Reúsa lo que sirva; nunca toques carriles, servidores ni paneles de otra corrida.
 4. Escribe en `STATE.md` la meta (qué es terminar y la comprobación que lo demuestra) y los permisos que la persona
@@ -90,10 +91,11 @@ solo para lo que cubrió (misma meta, destino y efectos); el silencio no es un s
 el resto. Nunca imprimas ni pidas un secreto en el chat.
 
 ## La interfaz
-- **Tablero web**: `python3 -I S/tablero.py --run <run> --sesion <sesión> --repo <repo> --abrir` (lo abre en cmux;
-  la URL queda en `<run>/.tablero-url`). Columnas de flujo, línea de tiempo de estados, entregas, puerta, bitácora y
-  un panel por carril con su pantalla en vivo, brief y entrega; desde ahí se le escribe, se responden diálogos y se
-  enfoca en herdr. Atajos: Alt+F o Cmd+K busca, J/K cambia de carril, F enfoca, Esc cierra.
+- **Tablero web**: ya está abierto en el espacio «Flota» de cmux (`python3 -I S/tablero.py --sesion flota --abrir`;
+  la URL queda en `~/.local/state/flota/tablero-url`). Junta todos los proyectos registrados: columnas de flujo, línea
+  de tiempo de estados, entregas, puerta, bitácora y un panel por carril con su pantalla en vivo, brief y entrega;
+  desde ahí se le escribe, se responden diálogos, se enfoca en herdr y se arranca el coordinador de un proyecto.
+  Atajos: Alt+F o Cmd+K busca, J/K cambia de carril, F enfoca, Esc cierra.
 - **Vista de terminal**: el mismo script con `--terminal`.
 - **cmux**: el plugin de herdr `kit.flota.puente` (carpeta `herdr/` del plugin) pone el estado de cada agente en la
   barra del espacio, una línea en su log y un aviso cuando alguien te espera o termina. Instálalo una vez con
