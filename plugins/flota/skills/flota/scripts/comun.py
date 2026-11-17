@@ -149,12 +149,20 @@ def puerta(run: Path) -> dict[str, list[str]]:
     return secciones
 
 
+ENTRADA_BITACORA = re.compile(r"^- (\d{4}-\d{2}-\d{2} \d{2}:\d{2} .*)$")
+
+
 def bitacora(run: Path, ultimas: int = 12) -> list[str]:
+    """Entradas fechadas de la sección «## Bitácora» de STATE.md (otras listas del archivo no cuentan)."""
     try:
-        lineas = (run / "STATE.md").read_text(encoding="utf-8").splitlines()
+        texto = (run / "STATE.md").read_text(encoding="utf-8")
     except OSError:
         return []
-    return [linea[2:] for linea in lineas if linea.startswith("- ")][-ultimas:]
+    _, encontrada, resto = texto.partition("## Bitácora")
+    if not encontrada:
+        resto = texto
+    entradas = [m.group(1) for linea in resto.splitlines() if (m := ENTRADA_BITACORA.match(linea))]
+    return entradas[-ultimas:]
 
 
 def anotar(run: Path, texto: str) -> None:

@@ -61,3 +61,11 @@ def test_herdr_traduce_errores(falsos, tmp_path):
     else:
         raise AssertionError("debía fallar")
     assert comun.agentes("s") == []
+
+
+def test_bitacora_ignora_otras_listas_del_state(tmp_path):
+    (tmp_path / "STATE.md").write_text(
+        "# Corrida\n\n## Modelos\n- Planear y revisar: Fable 5.2\n- Haiku no se usa\n\n"
+        "## Bitácora\n- 2026-11-17 10:36 coord iniciado\n- nota suelta sin fecha\n"
+    )
+    assert comun.bitacora(tmp_path) == ["2026-11-17 10:36 coord iniciado"]
