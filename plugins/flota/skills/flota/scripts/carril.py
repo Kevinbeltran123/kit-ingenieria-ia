@@ -3,6 +3,7 @@
 Uso (todas las rutas absolutas o relativas al directorio actual):
   carril.py preparar   --repo REPO [--run DIR] [--proyecto NOMBRE]   (registra el proyecto para el tablero)
   carril.py espacios   --sesion S                                    (un espacio de herdr por proyecto registrado)
+  carril.py tablero    --sesion S                                    (servidor del tablero dentro de herdr)
   carril.py iniciar    --run DIR --sesion S --nombre N --tipo claude|codex --repo REPO [--modelo M] [--esfuerzo E]
                        [--permisos auto|abierto|preguntar] [--base REF] [--rama B] [--brief ARCHIVO] [--sin-worktree]
   carril.py enviar     --run DIR --sesion S --nombre N --texto "..."
@@ -28,6 +29,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import socket
 import subprocess
 import sys
 import time
@@ -510,6 +512,37 @@ def cmd_espacios(a: argparse.Namespace) -> int:
     return 0
 
 
+def puerto_ocupado(puerto: int) -> bool:
+    with socket.socket() as s:
+        s.settimeout(0.5)
+        return s.connect_ex(("127.0.0.1", puerto)) == 0
+
+
+def cmd_tablero(a: argparse.Namespace) -> int:
+    """Deja el servidor del tablero corriendo dentro de herdr (pestaña «tablero» del primer espacio).
+
+    Así sobrevive a cerrar cmux: el servidor de herdr sigue vivo y el panel de navegador lo encuentra al reabrir.
+    """
+    puerto = int(os.environ.get("FLOTA_PUERTO_TABLERO", "8790"))
+    if puerto_ocupado(puerto):
+        print(f"el tablero ya corre en el puerto {puerto}")
+        return 0
+    if not esperar_servidor(a.sesion, a.espera):
+        print(f"el servidor de herdr de la sesión {a.sesion} no respondió en {a.espera:.0f} s", file=sys.stderr)
+        return 1
+    espacios = herdr(a.sesion, "workspace", "list").get("result", {}).get("workspaces", [])
+    if not espacios:
+        r = herdr(a.sesion, "workspace", "create", "--cwd", str(Path.home()), "--label", "flota", "--no-focus")
+        espacios = [r["result"]["workspace"]]
+    r = herdr(a.sesion, "tab", "create", "--workspace", espacios[0]["workspace_id"], "--cwd", str(Path.home()),
+              "--label", "tablero")  # fmt: skip
+    pane = r["result"]["root_pane"]["pane_id"]
+    tablero = Path(__file__).resolve().parent / "tablero.py"
+    herdr(a.sesion, "pane", "run", pane, f"python3 -I {tablero} --sesion {a.sesion} --fijo --puerto {puerto}")
+    print(f"tablero iniciado en herdr (pane {pane}, puerto {puerto})")
+    return 0
+
+
 def cmd_coordinador(a: argparse.Namespace) -> int:
     """Deja un coordinador (Claude con la skill flota) en una pestaña del espacio de su proyecto."""
     repo = str(Path(a.repo).expanduser().resolve())
@@ -614,6 +647,10 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--sesion", required=True)
     s.add_argument("--espera", type=float, default=30)
 
+    s = sub.add_parser("tablero")
+    s.add_argument("--sesion", required=True)
+    s.add_argument("--espera", type=float, default=30)
+
     s = sub.add_parser("coordinador")
     s.add_argument("--run", help="por defecto, <repo>-flota junto al repo")
     s.add_argument("--sesion", required=True)
@@ -639,6 +676,7 @@ def main(argv: list[str] | None = None) -> int:
         "cerrar": cmd_cerrar,
         "lista": cmd_lista,
         "espacios": cmd_espacios,
+        "tablero": cmd_tablero,
         "coordinador": cmd_coordinador,
     }[a.cmd](a)
 

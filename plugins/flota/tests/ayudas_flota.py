@@ -71,6 +71,8 @@ if (g, c) == ("workspace", "create"):
     ok({"root_pane": {"pane_id": wid + ":p1"}, "workspace": {"workspace_id": wid}})
 if (g, c) == ("tab", "create"):
     ok({"root_pane": {"pane_id": args[args.index("--workspace") + 1] + ":p9"}, "tab": {"tab_id": "t9"}})
+if (g, c) == ("pane", "run"):
+    ok({"type": "ok"})
 if (g, c) == ("workspace", "list"):
     ok({"workspaces": espacios})
 if (g, c) == ("workspace", "close"):

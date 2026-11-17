@@ -211,3 +211,35 @@ def test_modelo_del_coordinador_por_proyecto(tmp_path, repo):
     inicio = next(x for x in llamadas(tmp_path) if x[:2] == ["agent", "start"])
     assert inicio[inicio.index("--model") + 1] == "claude-fable-5-2"
     assert inicio[inicio.index("--effort") + 1] == "high", "el coordinador razona en high por defecto"
+
+
+def puerto_libre():
+    import socket
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def test_tablero_dentro_de_herdr(tmp_path):
+    env = {**preparar_falsos(tmp_path), "FLOTA_PUERTO_TABLERO": str(puerto_libre())}
+    r = correr(CARRIL, "tablero", "--sesion", "s", env=env)
+    assert r.returncode == 0, r.stderr
+    hechas = llamadas(tmp_path)
+    pestana = next(x for x in hechas if x[:2] == ["tab", "create"])
+    assert pestana[pestana.index("--label") + 1] == "tablero"
+    corrida = next(x for x in hechas if x[:2] == ["pane", "run"])
+    assert "tablero.py --sesion s --fijo --puerto" in corrida[3]
+
+
+def test_tablero_no_duplica_si_el_puerto_ya_responde(tmp_path):
+    import socket
+
+    with socket.socket() as ocupado:
+        ocupado.bind(("127.0.0.1", 0))
+        ocupado.listen()
+        env = {**preparar_falsos(tmp_path), "FLOTA_PUERTO_TABLERO": str(ocupado.getsockname()[1])}
+        r = correr(CARRIL, "tablero", "--sesion", "s", env=env)
+    assert r.returncode == 0
+    assert "ya corre" in r.stdout
+    assert not llamadas(tmp_path)

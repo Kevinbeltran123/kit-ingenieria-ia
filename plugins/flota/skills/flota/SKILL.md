@@ -93,7 +93,7 @@ solo para lo que cubrió (misma meta, destino y efectos); el silencio no es un s
 el resto. Nunca imprimas ni pidas un secreto en el chat.
 
 ## La interfaz
-- **Tablero web**: ya está abierto en el espacio «Flota» de cmux (`python3 -I S/tablero.py --sesion flota --fijo`, puerto 8790;
+- **Tablero web**: ya está abierto en el espacio «Flota» de cmux; su servidor corre dentro de herdr (`carril.py tablero --sesion flota`, puerto 8790; sobrevive a cerrar cmux;
   la URL queda en `~/.local/state/flota/tablero-url`). Junta todos los proyectos registrados: columnas de flujo, línea
   de tiempo de estados, entregas, puerta, bitácora y un panel por carril con su pantalla en vivo, brief y entrega;
   desde ahí se le escribe, se responden diálogos, se enfoca en herdr y se arranca el coordinador de un proyecto.

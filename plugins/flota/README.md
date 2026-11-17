@@ -32,7 +32,9 @@ Todo vive en un solo espacio: una sesión de herdr (`flota`) con un espacio por 
 tablero que junta todos los proyectos.
 1. Registra cada proyecto una vez: `python3 -I <kit>/plugins/flota/skills/flota/scripts/carril.py preparar --repo <repo>`.
 2. Abre la sesión y el tablero: `herdr --session flota` y, en otra terminal,
-   `python3 -I <scripts>/tablero.py --sesion flota --abrir` (en cmux, un comando global «Flota» deja las dos cosas).
+   `python3 -I <scripts>/tablero.py --sesion flota --abrir`. En cmux, el comando global «Flota» corre `flota.py`, que deja
+   los espacios, el servidor del tablero dentro de herdr (sobrevive a cerrar cmux) y el cliente de herdr; aprueba su
+   comando en Settings > Terminal > Resume Commands para que cmux lo reanude al reabrir la app.
 3. En el tablero, «▶ coordinador» junto a un proyecto arranca su coordinador (`coord-<proyecto>`, Claude Opus con esta
    skill). Dile la meta: qué es terminar y cómo se comprueba. Empieza con dos carriles Claude de una línea.
 
