@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "flota",
+  "description": "Coordinador de varios trabajadores Claude y Codex en carriles de herdr, con tablero interactivo y avisos en cmux",
+  "author": { "name": "Kevin Beltran" },
+  "license": "MIT",
+  "keywords": ["herdr", "cmux", "coordinador", "multiagente", "carriles", "tablero"]
+}

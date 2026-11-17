@@ -46,6 +46,11 @@
       "description": "Explica cada cambio línea por línea en un HTML local (código y terminal lado a lado) y lo exige antes de abrir un PR"
     },
     {
+      "name": "flota",
+      "source": "./plugins/flota",
+      "description": "Coordinador de varios trabajadores Claude y Codex en carriles de herdr, con tablero interactivo y avisos en cmux"
+    },
+    {
       "name": "aws-core",
       "source": {
         "source": "git-subdir",

@@ -18,3 +18,4 @@ allowed-confusables = ["–", "−"]  # tipografía intencional: rangos y línea
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["ARG", "FBT", "E501"]  # fixtures que no se usan, bools de parametrize, comandos largos de prueba
+"plugins/flota/skills/flota/scripts/*.py" = ["E402"]  # corren con `python3 -I` (sin su carpeta en sys.path): la agregan antes de importar comun

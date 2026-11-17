@@ -17,6 +17,7 @@ Se instala **por repo**, nunca global.
 | `datos-optimizacion` | Formular modelos de optimización con verificador, ingesta idempotente, contratos de datos, migraciones Alembic | datos |
 | `ml-vision` | División sin fuga (con verificador), receta de entrenamiento, carga segura, licencias, fichas, despliegue en AWS; hooks de evaluador bloqueado y licencias | ml |
 | `explicador` | Explica cada cambio línea por línea en un HTML local (código y terminal lado a lado); el hook lo exige antes de `gh pr create` | base |
+| `flota` | Coordinador de varios trabajadores Claude y Codex en carriles de herdr: briefs, entregas READY, puerta por tandas, tablero interactivo y avisos en cmux | opcional |
 
 ### Terceros (fijados por SHA, auditados en `terceros/AUDITORIA.md`)
 aws-core, pr-review-toolkit, commit-commands, security-guidance, skill-creator, pyright-lsp,
