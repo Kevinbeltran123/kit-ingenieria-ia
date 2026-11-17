@@ -43,7 +43,9 @@ cierra el carril y vuelve a iniciarlo con `--modelo`. `max` solo si la persona l
 - `auto` (por defecto): Claude en modo auto; Codex con sandbox `workspace-write` y sin preguntas. Codex no puede hacer
   commit (su sandbox deja `.git` en solo lectura): tú lo haces con `carril.py commit` después de revisar el diff.
 - `preguntar`: cada acción sensible se detiene; lees el pane y respondes dentro del alcance del brief.
-- `abierto`: sin sandbox ni preguntas. Solo si la persona lo pidió para esta corrida; anótalo en `STATE.md`.
+- `abierto`: sin sandbox ni preguntas. Solo si la persona lo pidió para esta corrida: ella exporta
+  `FLOTA_PERMITIR_ABIERTO=1` y confirma en herdr el diálogo de Claude para ese modo (el script nunca lo acepta). Nunca
+  lo exportes tú. Anótalo en `STATE.md`.
 Los hooks del repo siguen corriendo en todos los niveles. Si tu propio clasificador de permisos rechaza lanzar un
 carril, díselo a la persona en lugar de buscar otro camino.
 

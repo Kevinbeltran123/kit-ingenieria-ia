@@ -140,3 +140,31 @@ def test_commit_del_coordinador(tmp_path, repo):
     assert "b.txt" in r.stdout
     assert git(wt, "log", "-1", "--format=%s") == "api: agrega b"
     assert json.loads((run / "carriles.json").read_text())["api"]["head"] == r.stdout.strip().splitlines()[-1]
+
+
+def test_abierto_exige_decision_humana(tmp_path, repo):
+    env = preparar_falsos(tmp_path)
+    env.pop("FLOTA_PERMITIR_ABIERTO", None)
+    run = tmp_path / "run"
+    correr(CARRIL, "preparar", "--run", str(run), "--repo", str(repo), env=env)
+    args = ("iniciar", "--run", str(run), "--sesion", "s", "--nombre", "api", "--tipo", "claude", "--repo", str(repo),
+            "--permisos", "abierto")  # fmt: skip
+    r = correr(CARRIL, *args, env=env)
+    assert r.returncode == 2
+    assert "FLOTA_PERMITIR_ABIERTO" in r.stderr
+    assert not llamadas(tmp_path), "no toca herdr"
+
+
+def test_nunca_acepta_la_confirmacion_de_bypass(tmp_path, repo):
+    estado = {
+        "agentes": {},
+        "arranque_pantallas": ["WARNING: Bypass Permissions mode\n 1. No, exit\n 2. Yes, I accept"],
+    }
+    env = {**preparar_falsos(tmp_path, estado), "FLOTA_PERMITIR_ABIERTO": "1"}
+    run = tmp_path / "run"
+    correr(CARRIL, "preparar", "--run", str(run), "--repo", str(repo), env=env)
+    r = correr(CARRIL, "iniciar", "--run", str(run), "--sesion", "s", "--nombre", "api", "--tipo", "claude",
+               "--repo", str(repo), "--permisos", "abierto", env=env)  # fmt: skip
+    assert r.returncode == 3
+    assert "lo confirma la persona" in r.stderr
+    assert not [x for x in llamadas(tmp_path) if x[:2] == ["agent", "send-keys"]]

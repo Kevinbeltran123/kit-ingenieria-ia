@@ -17,7 +17,8 @@ Niveles de permisos (--permisos):
              escribe solo en su worktree y no puede hacer commit (.git queda de solo lectura), así que el commit lo hace
              el coordinador con `carril.py commit`. Es el valor por defecto.
   abierto    sin preguntas ni sandbox (bypassPermissions / danger-full-access). Solo en máquinas y repos donde aceptes
-             que el trabajador haga cualquier cosa que tu usuario puede hacer.
+             que el trabajador haga cualquier cosa que tu usuario puede hacer. Exige FLOTA_PERMITIR_ABIERTO=1, que
+             exporta la persona; la confirmación de Claude para ese modo la responde ella en herdr.
   preguntar  cada acción sensible se detiene en un diálogo; el coordinador o tú la responden.
 """
 
@@ -52,7 +53,7 @@ PLUGIN = Path(__file__).resolve().parents[3]  # plugins/flota
 # Diálogos de arranque que el script responde solo, y el que nunca responde.
 CONFIANZA_CLAUDE = "trust this folder"  # "Yes, I trust this folder" es la segunda opción: abajo + Enter
 CONFIANZA_CODEX = "Trust this folder?"  # "1. Trust and continue" ya está marcada: Enter
-BYPASS_CLAUDE = "Bypass Permissions mode"  # confirmación única de bypassPermissions: "Yes, I accept" es la segunda
+BYPASS_CLAUDE = "Bypass Permissions mode"  # confirmación de bypassPermissions: siempre la responde la persona
 HOOKS_CODEX = "need review"  # hooks de Codex sin confianza: lo decide la persona, no el script
 
 ESTADO_INICIAL = """# Corrida de la flota
@@ -159,9 +160,8 @@ def aceptar_dialogos(sesion: str, nombre: str, espera: float = 45) -> str:
             herdr(sesion, "agent", "send-keys", nombre, "enter")
         elif CONFIANZA_CODEX in texto:
             herdr(sesion, "agent", "send-keys", nombre, "enter")
-        elif BYPASS_CLAUDE in texto and "Yes, I accept" in texto:
-            herdr(sesion, "agent", "send-keys", nombre, "down")
-            herdr(sesion, "agent", "send-keys", nombre, "enter")
+        elif BYPASS_CLAUDE in texto:
+            return "Claude pide confirmar el modo sin permisos: eso lo confirma la persona en herdr, no el script"
         else:
             estado = herdr(sesion, "agent", "get", nombre).get("result", {}).get("agent", {}).get("agent_status")
             if estado in ("idle", "done"):
@@ -223,6 +223,13 @@ def cmd_iniciar(a: argparse.Namespace) -> int:
     if not NOMBRE.match(a.nombre):
         print(
             f"nombre inválido: {a.nombre!r} (minúsculas, dígitos, - o _, hasta 32, empieza con letra)", file=sys.stderr
+        )
+        return 2
+    if a.permisos == "abierto" and os.environ.get("FLOTA_PERMITIR_ABIERTO") != "1":
+        print(
+            "--permisos abierto quita sandbox y preguntas: lo decide la persona exportando FLOTA_PERMITIR_ABIERTO=1 en "
+            "la terminal donde corre el coordinador (y confirmando el diálogo de Claude en herdr)",
+            file=sys.stderr,
         )
         return 2
     if not (run / "STATE.md").exists():

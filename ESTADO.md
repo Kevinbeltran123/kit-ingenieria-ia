@@ -5,7 +5,7 @@ Plugin nuevo `flota` (rama `feat/flota`): coordinador de varios trabajadores Cla
 de la skill «coordinator» de copybook.page. Trae `carril.py` (worktree, agente, diálogos de confianza, brief, commit del
 coordinador para Codex), `vigilar.py`, `pesado.py`, un tablero web local con token (`tablero.py` + `tablero.html`) y el
 plugin de herdr `kit.flota.puente` que refleja cada estado en cmux. Probado de punta a punta con herdr 0.9.5, un carril
-Claude Haiku y uno Codex gpt-6-luna, incluida una puerta que encontró un conflicto real y luego dio PASS. 52 pruebas en
+Claude Haiku y uno Codex gpt-6-luna, incluida una puerta que encontró un conflicto real y luego dio PASS. 54 pruebas en
 Python 3.9 y 3.12. Falta: ver el puente con cmux real (cmux solo acepta procesos nacidos dentro de cmux).
 
 ## Dónde quedamos (2026-11-09)
