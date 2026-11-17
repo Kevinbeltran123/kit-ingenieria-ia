@@ -1,0 +1,16 @@
+{
+  "description": "Afinar: recuerda al agente pedir o proponer una comprobación, y confirmar lo irreversible, cuando un pedido de trabajo no lo dice",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/aviso.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

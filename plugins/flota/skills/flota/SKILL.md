@@ -26,7 +26,9 @@ comprobaciones, nunca como carriles.
    dio, con sus palabras. Revisa `common.md` y ajústalo al proyecto (comandos de prueba, qué carril es dueño de qué).
 
 ## Modelos y esfuerzo
-La elección explícita de la persona manda. Por defecto:
+La elección explícita de la persona manda; después, la sección `## Modelos` del `STATE.md` de la corrida o del
+`CLAUDE.md` del proyecto (un proyecto puede pedir Fable, `claude-fable-5-2`, para planear, diseñar y revisar, y prohibir
+modelos chicos en su código). Sin esa sección, por defecto:
 
 | Trabajo | Trabajador |
 | --- | --- |

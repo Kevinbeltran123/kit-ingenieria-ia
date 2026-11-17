@@ -51,6 +51,11 @@
       "description": "Coordinador de varios trabajadores Claude y Codex en carriles de herdr, con tablero interactivo y avisos en cmux"
     },
     {
+      "name": "afinar",
+      "source": "./plugins/afinar",
+      "description": "Afina los pedidos a los agentes: meta, comprobación, límites, contexto y riesgos; revisa lo que falta y avisa cuando un pedido no dice cómo se comprueba"
+    },
+    {
       "name": "aws-core",
       "source": {
         "source": "git-subdir",
