@@ -192,6 +192,7 @@ svg text { font-family: inherit; }
       <div class="sistema" id="sistema" aria-label="Uso del Mac"></div>
       <div class="der">
         <span id="actualizado">—</span>
+        <a class="btn" id="btn-vivo" href="#">En vivo (beta)</a>
         <button class="btn" id="btn-pausa" aria-pressed="false">Pausar</button>
         <span class="tecla">Alt+F</span>
       </div>
@@ -566,6 +567,7 @@ document.addEventListener("keydown", (ev) => {
   if (ev.key === "f" && sel) enfocar(sel);
 });
 $("btn-buscar").addEventListener("click", abrirPaleta);
+$("btn-vivo").href = "/vivo?t=" + encodeURIComponent(TOKEN);
 $("velo").addEventListener("click", (ev) => { if (ev.target.id === "velo") cerrarPaleta(); });
 $("pal-input").addEventListener("input", filtrarPaleta);
 $("det-cerrar").addEventListener("click", cerrarDetalle);

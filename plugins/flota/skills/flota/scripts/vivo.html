@@ -267,7 +267,7 @@ const $ = (id) => document.getElementById(id);
 $("det-cerrar").addEventListener("click", cerrar);
 $("pausa").addEventListener("click", (ev) => { pausado = !pausado; ev.target.textContent = pausado ? "Reanudar" : "Pausar";
   ev.target.setAttribute("aria-pressed", String(pausado)); $("latido").classList.toggle("pausa", pausado); if (!pausado) refrescar(); });
-$("flujo").href = "/flujo?t=" + encodeURIComponent(TOKEN);
+$("flujo").href = "/?t=" + encodeURIComponent(TOKEN);
 document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && sel && !document.querySelector(".lightbox")) cerrar(); });
 window.addEventListener("load", () => { refrescar(); refrescarAtencion(); setInterval(refrescar, 2000); setInterval(refrescarAtencion, 5000); });
 </script>
