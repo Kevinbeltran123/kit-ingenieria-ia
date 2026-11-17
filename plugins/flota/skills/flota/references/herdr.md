@@ -27,7 +27,7 @@ más tu propia revisión. Un tiempo agotado no cancela nada ni prueba que el tex
 | --- | --- | --- |
 | Claude: «Is this a project you ... trust?» | `blocked` | abajo + Enter («Yes, I trust this folder») |
 | Codex: «Trust this folder?» | `idle` (detección equivocada) | Enter («Trust and continue») |
-| Claude con bypassPermissions: confirmación única | `blocked` | abajo + Enter («Yes, I accept») |
+| Claude con bypassPermissions: confirmación | `blocked` | ninguna: la confirma la persona en herdr |
 | Codex: «N hooks need review» | variable | ninguna: que la persona revise los hooks y confíe en una sesión de Codex |
 
 Por eso `aceptar_dialogos` lee la pantalla además del estado. Cada worktree nuevo es una carpeta nueva: los diálogos de
