@@ -299,10 +299,10 @@ class Tablero(BaseHTTPRequestHandler):
             aviso = "Abre la URL completa que imprimió tablero.py (lleva ?t=...)."
             return self._enviar(403, aviso.encode(), "text/plain; charset=utf-8")
         sesion = self.ctx["sesion"]
-        if url.path == "/":
-            return self._enviar(200, (AQUI / "vivo.html").read_bytes(), "text/html; charset=utf-8")
-        if url.path == "/flujo":
+        if url.path in ("/", "/flujo"):
             return self._enviar(200, (AQUI / "tablero.html").read_bytes(), "text/html; charset=utf-8")
+        if url.path == "/vivo":  # en rediseño: se llega desde el botón «En vivo» del tablero
+            return self._enviar(200, (AQUI / "vivo.html").read_bytes(), "text/html; charset=utf-8")
         if url.path == "/api/vivo":
             return self._json(200, vivo.recolectar(vivo.contexto(sesion, self.proyectos())))
         if url.path == "/api/vivo/archivo":

@@ -97,7 +97,7 @@ def test_sin_token_no_hay_nada(servidor):
     assert pedir(f"{servidor}/")[0] == 403
     assert pedir(f"{servidor}/api/estado")[0] == 403
     assert pedir(f"{servidor}/api/estado?t=otro")[0] == 403
-    codigo, cuerpo = pedir(f"{servidor}/flujo?t=secreto")
+    codigo, cuerpo = pedir(f"{servidor}/?t=secreto")
     assert codigo == 200
     assert "<title>Flota</title>" in cuerpo
 

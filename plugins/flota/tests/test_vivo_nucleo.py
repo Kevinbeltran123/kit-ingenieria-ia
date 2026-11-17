@@ -93,8 +93,8 @@ def test_paginas_y_vistas(servidor):
     base, _repo = servidor
     codigo, _, cuerpo = pedir(f"{base}/?t=secreto")
     assert codigo == 200
-    assert b"<title>En vivo</title>" in cuerpo
-    assert b"<title>Flota</title>" in pedir(f"{base}/flujo?t=secreto")[2]
+    assert b"<title>Flota</title>" in cuerpo, "la portada es el tablero de carriles"
+    assert b"<title>En vivo</title>" in pedir(f"{base}/vivo?t=secreto")[2]
     codigo, cab, _ = pedir(f"{base}/vivo/vivo-noexiste.js")
     assert codigo == 200
     assert cab["Content-Type"].startswith("text/javascript")
