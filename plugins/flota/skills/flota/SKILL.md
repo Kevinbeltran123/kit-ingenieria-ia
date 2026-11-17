@@ -93,6 +93,11 @@ solo para lo que cubrió (misma meta, destino y efectos); el silencio no es un s
 el resto. Nunca imprimas ni pidas un secreto en el chat.
 
 ## La interfaz
+- **En vivo** (la página principal del tablero): lo que producen los carriles mientras lo producen. Imágenes nuevas
+  (recortes, figuras, capturas) en galería, entrenamientos con su barra y sus curvas (`metrics.csv`, log, pueue), la
+  página web que se modifica en su servidor de desarrollo, los documentos que se escriben (renderizados y siguiendo
+  lo nuevo), y el código y los comandos de cada agente (de su registro de Claude). Contrato y piezas:
+  `references/vivo-contrato.md`. Lo de antes (carriles por etapa) queda en «Carriles».
 - **Tablero web**: ya está abierto en el espacio «Flota» de cmux; su servidor corre dentro de herdr (`carril.py tablero --sesion flota`, puerto 8790; sobrevive a cerrar cmux;
   la URL queda en `~/.local/state/flota/tablero-url`). Junta todos los proyectos registrados: columnas de flujo, línea
   de tiempo de estados, entregas, puerta, bitácora y un panel por carril con su pantalla en vivo, brief y entrega;
