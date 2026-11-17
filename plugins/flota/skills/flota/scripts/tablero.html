@@ -229,6 +229,7 @@ svg text { font-family: inherit; }
     <dl class="meta" id="det-meta"></dl>
     <div class="pestanas" role="tablist" id="pestanas">
       <button role="tab" data-p="pantalla" aria-selected="true">Pantalla</button>
+      <button role="tab" data-p="historial" aria-selected="false" title="Trae el historial completo una vez (puede mover un instante la terminal del agente)">Historial</button>
       <button role="tab" data-p="brief" aria-selected="false">Brief</button>
       <button role="tab" data-p="handover" aria-selected="false">Entrega</button>
       <button role="tab" data-p="review" aria-selected="false">Revisión</button>
@@ -460,7 +461,7 @@ function pintarDetalleMeta() {
      ["proyecto", x.proyecto], ["rama", x.rama], ["head", x.head ? x.head + " (commit del coordinador)" : null], ["base", (x.base || "").slice(0, 9) + (x.nota_base ? " · " + x.nota_base : "")], ["worktree", x.worktree],
      ["pane", x.pane_actual || x.pane], ["etapa", COLS.find((c) => c[0] === x.columna)?.[1]], ["en este estado", hace(x.desde)]];
   filas.forEach(([k, v]) => meta.append(h("dt", {}, k), h("dd", {}, v || "—")));
-  document.querySelectorAll("#pestanas button").forEach((b) => { b.hidden = x.otro && b.dataset.p !== "pantalla"; });
+  document.querySelectorAll("#pestanas button").forEach((b) => { b.hidden = x.otro && !["pantalla", "historial"].includes(b.dataset.p); });
 }
 async function cargarPestana() {
   if (!sel) return;
@@ -468,9 +469,12 @@ async function cargarPestana() {
   try {
     if (pestana === "pantalla") {
       const abajo = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 40;
-      const r = await api(`/api/leer?nombre=${encodeURIComponent(sel)}&lineas=160`);
+      const r = await api(`/api/leer?nombre=${encodeURIComponent(sel)}`);
       pre.textContent = r.texto || "(pantalla vacía)";
       if (abajo) pre.scrollTop = pre.scrollHeight;
+    } else if (pestana === "historial") {
+      const r = await api(`/api/leer?nombre=${encodeURIComponent(sel)}&historial=1&lineas=300`);
+      pre.textContent = r.texto || "(sin historial)";
     } else {
       const r = await api(`/api/archivo?nombre=${encodeURIComponent(sel)}&cual=${pestana}`);
       pre.textContent = r.texto;

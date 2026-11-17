@@ -300,9 +300,15 @@ class Tablero(BaseHTTPRequestHandler):
             nombre = (q.get("nombre") or [""])[0]
             if not self._nombre_conocido(nombre):
                 return self._json(404, {"error": f"no hay agente {nombre}"})
-            lineas = min(400, max(20, int((q.get("lineas") or ["120"])[0] or 120)))
+            # Lo visible no mueve nada. El historial hace que herdr desplace la pantalla del agente para recogerlo
+            # (la terminal salta), así que solo se pide cuando la persona lo pide, nunca en la consulta periódica.
+            historial = (q.get("historial") or [""])[0] == "1"
+            lineas = min(400, max(20, int((q.get("lineas") or ["200"])[0] or 200)))
             try:
-                texto = pantalla(sesion, nombre, "recent-unwrapped", lineas)
+                if historial:
+                    texto = pantalla(sesion, nombre, "recent-unwrapped", lineas)
+                else:
+                    texto = pantalla(sesion, nombre, "visible")
             except HerdrError as e:
                 return self._json(409, {"error": str(e)})
             return self._json(200, {"texto": texto.rstrip()})
