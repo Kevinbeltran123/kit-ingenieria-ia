@@ -182,3 +182,24 @@ def test_boton_coordinador_solo_para_proyectos_registrados(servidor, tmp_path):
     codigo, cuerpo = pedir(f"{servidor}/api/coordinador", {"proyecto": "demo"}, json_tok)
     assert codigo == 200, cuerpo
     assert any(x[:3] == ["agent", "start", "coord-demo"] for x in llamadas(tmp_path))
+
+
+def test_resumir_macmon():
+    muestra = {"cpu_usage_pct": 0.42, "gpu_active_ratio": 0.11, "all_power": 18.46,
+               "memory": {"ram_usage": 13 * 1024**3, "ram_total": 18 * 1024**3, "swap_usage": 0, "pressure_percent": 30},
+               "temp": {"cpu_temp_avg": 51.6, "gpu_temp_avg": 44.2}}  # fmt: skip
+    assert tablero.resumir_macmon(muestra) == {
+        "cpu": 42, "gpu": 11, "ram": 13.0, "ram_total": 18, "swap": 0.0, "presion": 30, "w": 18.5,
+        "temp_cpu": 52, "temp_gpu": 44,
+    }  # fmt: skip
+    assert tablero.resumir_macmon({})["cpu"] == 0
+
+
+def test_token_fijo_y_pagina_de_inicio_son_privados(tmp_path, monkeypatch):
+    monkeypatch.setattr(tablero, "ESTADO_FLOTA", tmp_path)
+    token = tablero.token_fijo()
+    assert tablero.token_fijo() == token, "se reúsa"
+    assert oct((tmp_path / "token").stat().st_mode & 0o777) == "0o600"
+    pagina = tablero.pagina_inicio(f"http://127.0.0.1:8790/?t={token}")
+    assert oct(pagina.stat().st_mode & 0o777) == "0o600"
+    assert token in pagina.read_text()

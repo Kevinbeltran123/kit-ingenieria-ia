@@ -67,11 +67,14 @@ def cmux(*args: str) -> None:
         return
     ws = os.environ.get("CMUX_WORKSPACE_ID")
     extra = ["--workspace", ws] if ws else []
-    try:
-        r = subprocess.run([exe, *args, *extra], capture_output=True, text=True, timeout=5, check=False)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        error = str(e)
-    else:
+    error = ""
+    # Con el espacio de cmux donde nació el servidor; si ese espacio ya se cerró, sin él (cmux usa el actual).
+    for intento in ([*args, *extra], list(args)) if extra else (list(args),):
+        try:
+            r = subprocess.run([exe, *intento], capture_output=True, text=True, timeout=5, check=False)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            error = str(e)
+            continue
         if r.returncode == 0:
             return
         error = (r.stderr or r.stdout).strip()[:300]

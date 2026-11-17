@@ -24,6 +24,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -48,6 +49,8 @@ from comun import (
 )
 
 AQUI = Path(__file__).resolve().parent
+ESTADO_FLOTA = Path.home() / ".local" / "state" / "flota"
+PUERTO_FIJO = 8790
 COLUMNAS = ("trabajando", "espera", "quieto", "listo", "puerta", "enviado")
 _cache_git: dict[str, tuple[float, dict]] = {}
 
@@ -73,6 +76,49 @@ def info_git(repo: str | None) -> dict:
     }
     _cache_git[repo] = (ahora, datos)
     return datos
+
+
+def resumir_macmon(m: dict) -> dict:
+    """Lo que el tablero muestra en una línea: uso de CPU y GPU, memoria, potencia y temperatura."""
+    mem = m.get("memory") or {}
+    temp = m.get("temp") or {}
+    gib = 1024**3
+    return {
+        "cpu": round(100 * (m.get("cpu_usage_pct") or 0)),
+        "gpu": round(100 * (m.get("gpu_active_ratio") or 0)),
+        "ram": round((mem.get("ram_usage") or 0) / gib, 1),
+        "ram_total": round((mem.get("ram_total") or 0) / gib),
+        "swap": round((mem.get("swap_usage") or 0) / gib, 1),
+        "presion": mem.get("pressure_percent"),
+        "w": round(m.get("all_power") or 0, 1),
+        "temp_cpu": round(temp.get("cpu_temp_avg") or 0),
+        "temp_gpu": round(temp.get("gpu_temp_avg") or 0),
+    }
+
+
+class Monitor(threading.Thread):
+    """Lee `macmon pipe` en segundo plano y guarda la última muestra; sin macmon, el tablero no muestra la línea."""
+
+    def __init__(self) -> None:
+        super().__init__(daemon=True)
+        self.ultimo: dict | None = None
+
+    def run(self) -> None:
+        exe = shutil.which("macmon")
+        if not exe:
+            return
+        try:
+            proc = subprocess.Popen(
+                [exe, "pipe", "-i", "2000"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
+            )
+        except OSError:
+            return
+        for linea in proc.stdout or []:
+            with contextlib.suppress(ValueError, TypeError, AttributeError):
+                self.ultimo = {**resumir_macmon(json.loads(linea)), "t": time.time()}
+
+
+MONITOR: Monitor | None = None
 
 
 def columna(c: dict, vivo: str | None, *, listo: bool, en_puerta: bool) -> str:
@@ -164,6 +210,7 @@ def estado(proyectos: dict[str, dict], sesion: str) -> dict:
         "puerta": puertas,
         "bitacora": [f"{x[0]} {x[1]}" for x in lineas_bitacora[-40:]],
         "eventos": evs,
+        "sistema": MONITOR.ultimo if MONITOR else None,
     }
 
 
@@ -372,15 +419,44 @@ def abrir_en_cmux(url: str) -> bool:
     return r.returncode == 0
 
 
-def guardar_url(url: str) -> Path:
-    """La URL lleva el token: queda en un archivo que solo el dueño puede leer."""
-    ruta = Path.home() / ".local" / "state" / "flota" / "tablero-url"
+def escribir_privado(ruta: Path, texto: str) -> Path:
+    """Escribe un archivo que solo el dueño puede leer (lleva el token del tablero)."""
     ruta.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(ruta, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
-        f.write(url + "\n")
+        f.write(texto)
     ruta.chmod(0o600)
     return ruta
+
+
+def token_fijo() -> str:
+    """Token que se crea una vez y se reúsa, para que el panel de navegador de cmux tenga una dirección estable."""
+    ruta = ESTADO_FLOTA / "token"
+    with contextlib.suppress(OSError):
+        guardado = ruta.read_text(encoding="utf-8").strip()
+        if len(guardado) >= 20:
+            return guardado
+    nuevo = secrets.token_urlsafe(24)
+    escribir_privado(ruta, nuevo + "\n")
+    return nuevo
+
+
+PAGINA_INICIO = """<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Flota</title>
+<style>body{background:#0b0b0c;color:#9b9ba1;font:13px ui-monospace,Menlo,monospace;display:grid;place-items:center;
+height:100vh;margin:0}</style></head><body><p id="m">Esperando al tablero de la flota…</p><script>
+const url = "__URL__";
+async function probar() {
+  try { await fetch(url.split("?")[0] + "fuentes/IBMPlexMono-400.woff2", { mode: "no-cors" }); location.replace(url); }
+  catch (e) { setTimeout(probar, 1000); }
+}
+probar();
+</script></body></html>
+"""
+
+
+def pagina_inicio(url: str) -> Path:
+    """Página local (file://) que espera a que el servidor responda y abre el tablero: el panel de cmux la carga."""
+    return escribir_privado(ESTADO_FLOTA / "abrir.html", PAGINA_INICIO.replace("__URL__", url))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -392,6 +468,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--abrir", action="store_true")
     p.add_argument("--terminal", action="store_true")
     p.add_argument("--intervalo", type=float, default=5)
+    p.add_argument("--fijo", action="store_true", help=f"puerto {PUERTO_FIJO} y token guardado (para el panel de cmux)")
     a = p.parse_args(argv)
     fijos = None
     if a.run:
@@ -404,11 +481,21 @@ def main(argv: list[str] | None = None) -> int:
                 time.sleep(a.intervalo)
         except KeyboardInterrupt:
             return 0
+    global MONITOR
+    MONITOR = Monitor()
+    MONITOR.start()
     mimetypes.add_type("font/woff2", ".woff2")
-    Tablero.ctx = {"fijos": fijos, "sesion": a.sesion, "token": secrets.token_urlsafe(18)}
-    servidor = ThreadingHTTPServer(("127.0.0.1", a.puerto), Tablero)
-    url = f"http://127.0.0.1:{servidor.server_address[1]}/?t={Tablero.ctx['token']}"
-    ruta = guardar_url(url)
+    token = token_fijo() if a.fijo else secrets.token_urlsafe(18)
+    Tablero.ctx = {"fijos": fijos, "sesion": a.sesion, "token": token}
+    try:
+        servidor = ThreadingHTTPServer(("127.0.0.1", a.puerto or (PUERTO_FIJO if a.fijo else 0)), Tablero)
+    except OSError as e:
+        print(f"no se pudo abrir el puerto: {e} (¿ya hay otro tablero corriendo?)", file=sys.stderr)
+        return 1
+    url = f"http://127.0.0.1:{servidor.server_address[1]}/?t={token}"
+    ruta = escribir_privado(ESTADO_FLOTA / "tablero-url", url + "\n")
+    if a.fijo:
+        pagina_inicio(url)
     print(f"tablero de la flota en {url}  (Ctrl+C para pararlo; la URL queda en {ruta})", flush=True)
     if a.abrir and not abrir_en_cmux(url):
         print("no se pudo abrir en cmux: abre la URL de arriba en el navegador", flush=True)
