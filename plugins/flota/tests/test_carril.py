@@ -210,3 +210,4 @@ def test_modelo_del_coordinador_por_proyecto(tmp_path, repo):
     assert correr(CARRIL, "coordinador", "--sesion", "s", "--repo", str(repo), env=env).returncode == 0
     inicio = next(x for x in llamadas(tmp_path) if x[:2] == ["agent", "start"])
     assert inicio[inicio.index("--model") + 1] == "claude-fable-5-2"
+    assert inicio[inicio.index("--effort") + 1] == "high", "el coordinador razona en high por defecto"
