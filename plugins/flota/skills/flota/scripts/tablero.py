@@ -305,6 +305,13 @@ class Tablero(BaseHTTPRequestHandler):
             return self._enviar(200, (AQUI / "vivo.html").read_bytes(), "text/html; charset=utf-8")
         if url.path == "/api/vivo":
             return self._json(200, vivo.recolectar(vivo.contexto(sesion, self.proyectos())))
+        if url.path == "/api/vivo/carriles":
+            ctx = vivo.contexto(sesion, self.proyectos())
+            estados = {ag.get("name"): ag.get("agent_status") for ag in agentes(sesion) if ag.get("name")}
+            return self._json(200, vivo.agrupar(ctx, vivo.recolectar(ctx)["productos"], estados))
+        if url.path == "/api/vivo/imagenes":
+            ctx = vivo.contexto(sesion, self.proyectos())
+            return self._json(200, {"imagenes": vivo.imagenes_de((q.get("carpeta") or [""])[0], ctx)})
         if url.path == "/api/vivo/archivo":
             return self._archivo_vivo((q.get("ruta") or [""])[0])
         if url.path == "/api/estado":

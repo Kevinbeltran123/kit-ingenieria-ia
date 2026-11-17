@@ -7,274 +7,401 @@
 <style>
 @font-face { font-family: "Plex"; src: url("/fuentes/IBMPlexMono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Plex"; src: url("/fuentes/IBMPlexMono-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+/* Portada en rejilla de tarjetas (Vercel/Felt); detalle por tipo: página (Replit), imágenes (Midjourney), métricas (LangSmith) */
 :root {
   --fondo: #f6f6f4; --panel: #ffffff; --panel2: #efefec; --borde: #e2e2dd; --texto: #1d1d1b; --tenue: #55554f;
   --suave: #6c6c65; --sel: #e9e9e4;
-  --trabajando: #2f6fdf; --espera: #d33f3f; --quieto: #b7791f; --listo: #2f9e5b; --puerta: #8b5cf6; --enviado: #0f8f8a;
+  --trabajando: #2f6fdf; --espera: #d33f3f; --quieto: #b7791f; --listo: #2f9e5b; --puerta: #8b5cf6;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --fondo: #0b0b0c; --panel: #121214; --panel2: #18181b; --borde: #26262b; --texto: #e8e8e6; --tenue: #9b9ba1;
     --suave: #8d8d95; --sel: #1f1f24;
-    --trabajando: #5b93f5; --espera: #f06262; --quieto: #e0a33a; --listo: #45c07a; --puerta: #a78bfa; --enviado: #2fc2bc;
+    --trabajando: #5b93f5; --espera: #f06262; --quieto: #e0a33a; --listo: #45c07a; --puerta: #a78bfa; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --fondo: #0b0b0c; --panel: #121214; --panel2: #18181b; --borde: #26262b; --texto: #e8e8e6; --tenue: #9b9ba1;
   --suave: #8d8d95; --sel: #1f1f24;
-  --trabajando: #5b93f5; --espera: #f06262; --quieto: #e0a33a; --listo: #45c07a; --puerta: #a78bfa; --enviado: #2fc2bc;
+  --trabajando: #5b93f5; --espera: #f06262; --quieto: #e0a33a; --listo: #45c07a; --puerta: #a78bfa; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { background: var(--fondo); color: var(--texto); font: 13px/1.45 "Plex", ui-monospace, SFMono-Regular, Menlo, monospace; }
-button, input { font: inherit; color: inherit; }
-button { cursor: pointer; }
+button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--trabajando); outline-offset: 2px; border-radius: 6px; }
-.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--tenue); border: 1px solid var(--borde); border-radius: 6px; padding: 1px 7px; white-space: nowrap; background: none; }
-button.chip:hover { border-color: var(--suave); color: var(--texto); }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--tenue); border: 1px solid var(--borde); border-radius: 6px; padding: 2px 8px; background: none; white-space: nowrap; text-decoration: none; }
+button.chip:hover, a.chip:hover { color: var(--texto); border-color: var(--suave); }
 .chip[aria-pressed="true"] { color: var(--texto); border-color: var(--texto); }
 .chip.alerta { color: var(--espera); border-color: var(--espera); }
-.app { display: grid; grid-template-columns: minmax(0, 1fr); height: 100vh; }
-.app.con-detalle { grid-template-columns: minmax(340px, 42%) minmax(0, 1fr); }
-.barra { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 10px 16px; background: color-mix(in srgb, var(--fondo) 90%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--borde); }
-.barra h1 { font-size: 17px; margin: 0 6px 0 0; }
-.barra .vivo { width: 8px; height: 8px; border-radius: 50%; background: var(--listo); display: inline-block; margin-right: 6px; animation: latido 2s ease-in-out infinite; }
-.barra .vivo.pausa { background: var(--suave); animation: none; }
+.punto { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: var(--suave); }
+.punto.working { background: var(--trabajando); animation: latido 1.6s ease-in-out infinite; }
+.punto.blocked { background: var(--espera); }
+.punto.done, .punto.idle { background: var(--listo); }
 @keyframes latido { 50% { opacity: .35; } }
-@media (prefers-reduced-motion: reduce) { .barra .vivo { animation: none; } }
-.barra .der { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.filtros { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px 0; }
-.columna { overflow: auto; min-width: 0; }
-.feed { display: grid; gap: 10px; padding: 12px 16px 24px; }
-.grupo { font-size: 12px; color: var(--suave); margin: 8px 0 -2px; display: flex; gap: 8px; align-items: center; }
-.tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: grid; gap: 6px; min-width: 0; }
-.tarjeta:hover { border-color: var(--suave); }
-.tarjeta[aria-current="true"] { border-color: var(--texto); }
-.tarjeta .cab { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
-.tarjeta .tipo { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); }
-.tarjeta .titulo { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.tarjeta .meta { margin-left: auto; color: var(--suave); font-size: 12px; white-space: nowrap; }
-.tarjeta.nueva { animation: nueva 1.6s ease-out; }
-@keyframes nueva { from { box-shadow: 0 0 0 2px var(--listo); } to { box-shadow: 0 0 0 0 transparent; } }
-.vacio { color: var(--suave); padding: 30px 16px; text-align: center; }
-.detalle { border-left: 1px solid var(--borde); background: var(--panel); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-.detalle[hidden] { display: none; }
-.det-cab { display: flex; gap: 8px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--borde); }
-.det-cab h2 { margin: 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.det-cab .der { margin-left: auto; display: flex; gap: 6px; }
-.det-cuerpo { flex: 1; overflow: auto; padding: 12px 14px; min-height: 0; }
-pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font: inherit; font-size: 12px; }
-@media (max-width: 900px) {
-  .app.con-detalle { grid-template-columns: 1fr; }
-  .detalle { position: fixed; inset: 0; z-index: 5; }
+@media (prefers-reduced-motion: reduce) { .punto.working { animation: none; } }
+
+.barra { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 20px; background: color-mix(in srgb, var(--fondo) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--borde); }
+.barra h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 8px; }
+.barra .der { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.portada { padding: 18px 20px 40px; display: grid; gap: 28px; }
+.proyecto h2 { font-size: 12px; font-weight: 400; color: var(--suave); margin: 0 0 10px; }
+.rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.tarjeta { display: grid; gap: 8px; cursor: pointer; min-width: 0; text-align: left; background: none; border: 0; padding: 0; color: inherit; }
+.mini { aspect-ratio: 16 / 10; border-radius: 10px; overflow: hidden; background: var(--panel2); border: 1px solid var(--borde); position: relative; }
+.tarjeta:hover .mini { border-color: var(--suave); }
+.tarjeta .nombre { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.tarjeta .sub { color: var(--suave); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sin-nada { color: var(--suave); font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 12px 0 0; }
+.vacio { color: var(--suave); padding: 60px 20px; text-align: center; }
+
+/* miniaturas */
+.mini .doc { position: absolute; inset: 0; padding: 14px 16px; overflow: hidden; font-size: 10px; line-height: 1.45; color: var(--tenue); background: var(--panel); }
+.mini .doc b { display: block; color: var(--texto); font-size: 12px; margin-bottom: 6px; }
+.mini .doc span { white-space: pre-wrap; }
+.mini .doc::after { content: ""; position: absolute; inset: auto 0 0; height: 40%; background: linear-gradient(transparent, var(--panel)); }
+.mini .mosaico { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 2px; }
+.mini .mosaico img { width: 100%; height: 100%; object-fit: cover; display: block; background: var(--panel2); }
+.mini .web { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; transform-origin: 0 0; pointer-events: none; background: #fff; }
+.mini .metrica { position: absolute; inset: 0; padding: 12px 14px; display: grid; grid-template-rows: auto 1fr auto; gap: 6px; }
+.mini .metrica .valor { font-size: 22px; font-weight: 600; color: var(--texto); }
+.mini .metrica .valor small { font-size: 11px; font-weight: 400; color: var(--suave); margin-left: 6px; }
+.mini .metrica svg { width: 100%; height: 100%; }
+.barra-prog { height: 4px; background: var(--borde); border-radius: 2px; overflow: hidden; }
+.barra-prog i { display: block; height: 100%; background: var(--trabajando); }
+.mini .etiqueta { position: absolute; right: 8px; top: 8px; font-size: 11px; background: color-mix(in srgb, var(--panel) 85%, transparent); border: 1px solid var(--borde); border-radius: 5px; padding: 1px 6px; color: var(--tenue); z-index: 1; }
+
+/* detalle */
+.detalle { display: grid; grid-template-rows: auto 1fr; height: calc(100vh - 51px); }
+.det-cab { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 20px; border-bottom: 1px solid var(--borde); }
+.det-cab h2 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.pestanas { display: flex; gap: 4px; flex-wrap: wrap; margin-left: 8px; }
+.det-cuerpo { min-height: 0; overflow: auto; }
+.con-carril { display: grid; grid-template-columns: minmax(0, 1fr) 290px; height: 100%; }
+.carril-lat { border-left: 1px solid var(--borde); overflow: auto; padding: 12px 14px; display: grid; gap: 4px; align-content: start; background: var(--panel); }
+.carril-lat h3 { font-size: 12px; font-weight: 400; color: var(--suave); margin: 0 0 4px; }
+.archivo { display: grid; gap: 2px; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--borde); }
+.archivo .r { overflow-wrap: anywhere; }
+.archivo .m { color: var(--suave); }
+.mas { color: var(--listo); } .menos { color: var(--espera); }
+.marco-web { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+.marco-web .barra-url { display: flex; gap: 8px; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--borde); color: var(--suave); font-size: 12px; }
+.marco-web iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.galeria { padding: 14px 20px 30px; display: grid; gap: 10px; }
+.galeria h3 { font-size: 12px; font-weight: 400; color: var(--suave); margin: 6px 0 0; }
+.densa { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 3px; }
+.densa button { padding: 0; border: 0; aspect-ratio: 1; background: var(--panel2); }
+.densa img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.densa button:hover img { opacity: .85; }
+.caja-luz { position: fixed; inset: 0; z-index: 10; background: rgba(0,0,0,.86); display: grid; grid-template-rows: 1fr auto; place-items: center; padding: 20px; }
+.caja-luz img { max-width: 100%; max-height: 82vh; object-fit: contain; }
+.caja-luz .pie { color: #ddd; font-size: 12px; display: flex; gap: 14px; align-items: center; }
+.caja-luz button { background: none; border: 1px solid #666; color: #eee; border-radius: 6px; padding: 2px 10px; }
+.metricas { padding: 14px 20px 30px; display: grid; gap: 14px; }
+.graficas { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 14px; }
+.grafica { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; position: relative; min-width: 0; }
+.grafica .cab { display: flex; align-items: baseline; gap: 8px; }
+.grafica .cab b { font-size: 16px; margin-left: auto; }
+.grafica svg { width: 100%; height: 200px; overflow: visible; }
+.punta { position: absolute; pointer-events: none; background: var(--texto); color: var(--fondo); font-size: 11px; border-radius: 5px; padding: 2px 6px; transform: translate(-50%, -130%); white-space: nowrap; }
+.log { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 14px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+.log .error { color: var(--espera); }
+.documento { padding: 16px 24px 40px; }
+.sub { color: var(--suave); font-size: 12px; }
+@media (max-width: 860px) {
+  .con-carril { grid-template-columns: 1fr; grid-template-rows: minmax(60vh, 1fr) auto; }
+  .carril-lat { border-left: 0; border-top: 1px solid var(--borde); }
+  .graficas { grid-template-columns: 1fr; }
+  .barra, .portada, .det-cab { padding-left: 16px; padding-right: 16px; }
 }
 </style>
 </head>
 <body>
-<div class="app" id="app">
-  <div class="columna">
-    <div class="barra">
-      <h1><span class="vivo" id="latido" aria-hidden="true"></span>En vivo</h1>
-      <span class="chip" id="cuando">—</span>
-      <span id="atencion"></span>
-      <div class="der">
-        <span id="proyectos"></span>
-        <button class="chip" id="pausa" aria-pressed="false">Pausar</button>
-        <a class="chip" id="flujo" href="#">Carriles</a>
-      </div>
-    </div>
-    <div class="filtros" id="filtros" role="toolbar" aria-label="Filtrar por tipo"></div>
-    <div class="feed" id="feed" aria-live="polite"></div>
+<div class="barra">
+  <h1><span class="punto working" id="latido" aria-hidden="true"></span>En vivo</h1>
+  <span id="atencion"></span>
+  <div class="der">
+    <span id="filtros"></span>
+    <a class="chip" id="a-carriles" href="#">Carriles</a>
   </div>
-  <aside class="detalle" id="detalle" hidden aria-label="Detalle">
-    <div class="det-cab">
-      <span class="chip" id="det-tipo">—</span>
-      <h2 id="det-titulo">—</h2>
-      <div class="der"><button class="chip" id="det-cerrar">Esc</button></div>
-    </div>
-    <div class="det-cuerpo" id="det-cuerpo"></div>
-  </aside>
 </div>
+<main id="vista"></main>
 <script>
 "use strict";
 const TOKEN = new URLSearchParams(location.search).get("t") || "";
-const TIPOS = [["todo", "Todo"], ["imagenes", "Imágenes"], ["metricas", "Entrenamiento"], ["web", "Web"],
-  ["documento", "Documentos"], ["codigo", "Código"], ["comando", "Comandos"]];
-const ETIQUETA = Object.fromEntries(TIPOS);
-let estado = { productos: [], ahora: 0 }, filtroTipo = "todo", filtroProyecto = null, sel = null, pausado = false;
-const nodos = new Map();  // id -> { t, nodo }
-const vistos = new Set();
+const ETIQUETA = { web: "Página", metricas: "Entrenamiento", imagenes: "Imágenes", documento: "Documento" };
+const ESTADO = { working: "trabajando", blocked: "te espera", idle: "quieto", done: "terminó" };
+let datos = { carriles: [], proyecto: [], ahora: 0 }, proyectoSel = null, sel = null, pestana = null;
+const cacheTarjetas = new Map(), cacheTexto = new Map(), vistosWeb = new Map();
 
+const $ = (id) => document.getElementById(id);
 function h(tag, attrs, ...hijos) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
     if (v == null || v === false) continue;
     if (k === "class") el.className = v;
     else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
-    else if (k === "style") el.setAttribute("style", v);
     else el.setAttribute(k, v === true ? "" : v);
   }
   for (const c of hijos.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : String(c));
   return el;
 }
+const NS = "http://www.w3.org/2000/svg";
+function s(tag, attrs) { const el = document.createElementNS(NS, tag); for (const k in attrs) el.setAttribute(k, attrs[k]); return el; }
 function hace(t) {
   if (!t) return "";
-  const s = Math.max(0, Math.floor((estado.ahora || Date.now() / 1000) - t));
-  if (s < 60) return s + "s";
-  if (s < 3600) return Math.floor(s / 60) + "m";
-  return Math.floor(s / 3600) + "h" + String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const x = Math.max(0, Math.floor((datos.ahora || Date.now() / 1000) - t));
+  return x < 60 ? `hace ${x}s` : x < 3600 ? `hace ${Math.floor(x / 60)}m` : `hace ${Math.floor(x / 3600)}h`;
 }
+const archivo = (ruta, v) => `/api/vivo/archivo?ruta=${encodeURIComponent(ruta)}&t=${encodeURIComponent(TOKEN)}${v ? "&v=" + v : ""}`;
 async function api(ruta, cuerpo) {
   const opts = { headers: { "X-Flota-Token": TOKEN } };
   if (cuerpo) { opts.method = "POST"; opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(cuerpo); }
-  const r = await fetch(ruta, opts);
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || r.status);
-  return j;
+  const r = await fetch(ruta, opts); const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.status); return j;
 }
-const ctx = {
-  h, hace, api,
-  archivo: (ruta) => `/api/vivo/archivo?ruta=${encodeURIComponent(ruta)}&t=${encodeURIComponent(TOKEN)}`,
-};
+const nombreCorto = (ruta) => (ruta || "").split("/").filter(Boolean).slice(-2).join("/");
+function texto(ruta, t) {
+  const clave = ruta + "@" + t;
+  if (!cacheTexto.has(clave)) cacheTexto.set(clave, fetch(archivo(ruta, t)).then((r) => (r.ok ? r.text() : "")).catch(() => ""));
+  return cacheTexto.get(clave);
+}
+const origen = (p) => nombreCorto(p.datos.archivo || p.datos.carpeta || p.datos.url);
 
-/* registro de vistas: cada vivo-<tipo>.js llama a FlotaVivo.registrar */
-window.FlotaVivo = { vistas: {}, registrar(tipo, vista) { this.vistas[tipo] = vista; } };
-function vistaGenerica(p) {
-  return h("pre", {}, JSON.stringify(p.datos || {}, null, 2).slice(0, 4000));
+/* ---------- series de métricas ---------- */
+const EJES = ["epoch", "step", "fila", "época", "global_step"];
+function seriesUtiles(d) {
+  const nombres = Object.keys(d.series || {}).filter((n) => n !== d.x && !EJES.includes(n));
+  const peso = (n) => (/val/i.test(n) ? 0 : 10) + (/f1|acc|map|recall|precision|iou/i.test(n) ? 0 : /loss/i.test(n) ? 3 : 6);
+  return nombres.sort((a, b) => peso(a) - peso(b));
 }
-function resumen(p) {
-  const v = FlotaVivo.vistas[p.tipo];
-  try { return v && v.resumen ? v.resumen(p, ctx) : null; } catch (e) { return h("pre", {}, "error en la vista: " + e.message); }
+function puntos(d, col) {
+  const ys = d.series[col] || [], xs = d.x !== "fila" && d.series[d.x] ? d.series[d.x] : null, out = [];
+  ys.forEach((y, i) => { if (y != null && isFinite(y)) out.push([xs && xs[i] != null ? xs[i] : i, y]); });
+  return out;
 }
-function detalle(p, anterior) {
-  const v = FlotaVivo.vistas[p.tipo];
-  try { return v && v.detalle ? v.detalle(p, ctx, anterior) : (v && v.resumen ? v.resumen(p, ctx) : vistaGenerica(p)); }
-  catch (e) { return h("pre", {}, "error en la vista: " + e.message); }
-}
-
-function tarjeta(p) {
-  const cuerpo = resumen(p);
-  const nodo = h("article", { class: "tarjeta" + (vistos.has(p.id) ? "" : " nueva"), "aria-current": String(sel === p.id), tabindex: "0",
-    onclick: () => abrir(p.id), onkeydown: (ev) => { if (ev.key === "Enter") abrir(p.id); } },
-    h("div", { class: "cab" }, h("span", { class: "tipo" }, ETIQUETA[p.tipo] || p.tipo), h("span", { class: "titulo", title: p.titulo }, p.titulo),
-      h("span", { class: "meta" }, [p.agente || p.proyecto, hace(p.t)].filter(Boolean).join(" · "))),
-    cuerpo);
-  // La marca de «nueva» se ve una vez: si no, se repetiría cada vez que la tarjeta vuelve a entrar al feed.
-  nodo.addEventListener("animationend", () => nodo.classList.remove("nueva"), { once: true });
-  return nodo;
+function linea(pares, w, hgt, pad) {
+  const xs = pares.map((p) => p[0]), ys = pares.map((p) => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const fx = (x) => pad + (x1 === x0 ? 0.5 : (x - x0) / (x1 - x0)) * (w - 2 * pad);
+  const fy = (y) => hgt - pad - (y1 === y0 ? 0.5 : (y - y0) / (y1 - y0)) * (hgt - 2 * pad);
+  return { d: pares.map((p, i) => (i ? "L" : "M") + fx(p[0]).toFixed(1) + " " + fy(p[1]).toFixed(1)).join(" "), fx, fy, x0, x1, y0, y1 };
 }
 
-/* En «Todo» manda lo visual; lo verboso (documentos, código, comandos) se limita y lleva a su filtro. */
-const TOPE_TODO = { documento: 5, codigo: 6, comando: 5 };
-
-function visibles() {
-  return estado.productos.filter((p) => (filtroTipo === "todo" || p.tipo === filtroTipo) && (!filtroProyecto || p.proyecto === filtroProyecto));
+/* ---------- miniaturas (portada) ---------- */
+function miniDocumento(p) {
+  const cuerpo = h("span", {}, "…");
+  const caja = h("div", { class: "doc" }, h("b", {}, p.titulo.split(": ").slice(1).join(": ") || nombreCorto(p.datos.archivo)), cuerpo);
+  texto(p.datos.archivo, p.t).then((t) => {
+    const lineas = t.split("\n").filter((l) => l.trim() && !/^#\s/.test(l) && !/^<\/?\w/.test(l.trim())).slice(0, 18).map((l) => l.replace(/[#*`>|]/g, "").trim());
+    cuerpo.textContent = lineas.join("\n");
+  });
+  return caja;
 }
+function miniImagenes(p) {
+  return h("div", { class: "mosaico" }, (p.datos.recientes || []).slice(0, 6).map((r) => h("img", { src: archivo(r), alt: "", loading: "lazy" })));
+}
+function miniMetricas(p) {
+  const d = p.datos, cols = seriesUtiles(d), col = cols[0], caja = h("div", { class: "metrica" });
+  const ultimo = col ? d.ultima[col] : null;
+  caja.append(h("div", { class: "valor" }, ultimo != null ? Number(ultimo).toFixed(3) : "—", h("small", {}, col || (d.pueue ? "en cola" : ""))));
+  const svg = s("svg", { viewBox: "0 0 300 110", preserveAspectRatio: "none" });
+  cols.slice(0, 2).forEach((c, i) => {
+    const pp = puntos(d, c); if (pp.length < 2) return;
+    svg.append(s("path", { d: linea(pp, 300, 110, 4).d, fill: "none", stroke: i ? "var(--suave)" : "var(--trabajando)", "stroke-width": i ? 1.2 : 2, "vector-effect": "non-scaling-stroke" }));
+  });
+  caja.append(svg);
+  const prog = d.progreso;
+  caja.append(prog ? h("div", { class: "barra-prog" }, h("i", { style: `width:${Math.min(100, (100 * prog.actual) / prog.total)}%` })) : h("span", {}));
+  return caja;
+}
+function miniWeb(p) {
+  const marco = h("iframe", { class: "web", src: p.datos.url, sandbox: "allow-scripts allow-same-origin", tabindex: "-1", title: "Vista previa" });
+  const ajustar = () => { const w = marco.parentElement ? marco.parentElement.clientWidth : 300; marco.style.transform = `scale(${w / 1280})`; };
+  requestAnimationFrame(ajustar); window.addEventListener("resize", ajustar);
+  return marco;
+}
+const MINI = { documento: miniDocumento, imagenes: miniImagenes, metricas: miniMetricas, web: miniWeb };
 
-function pintarFeed() {
-  const feed = $("feed");
-  const lista = visibles();
-  if (!lista.length) {
-    feed.replaceChildren(h("div", { class: "vacio" }, estado.productos.length ? "Nada de este tipo en la última hora." :
-      "Todavía nada en vivo. Aquí aparecerá lo que produzcan los agentes: imágenes, entrenamientos, páginas, documentos y código."));
+const textoEstado = (c) => (c.clave ? "del proyecto" : ESTADO[c.estado] || "sin agente activo");
+function subtitulo(c, p) { return `${textoEstado(c)} · ${origen(p)} · ${hace(p.t)}`; }
+function tarjeta(c, p) {
+  const mini = h("div", { class: "mini" }, MINI[p.tipo](p), h("span", { class: "etiqueta" }, ETIQUETA[p.tipo]));
+  const estado = c.estado ? h("span", { class: "punto " + c.estado, title: ESTADO[c.estado] || c.estado }) : null;
+  return h("button", { class: "tarjeta", onclick: () => abrir(c.nombre, p.id) },
+    mini, h("div", { class: "nombre" }, estado, c.nombre), h("div", { class: "sub" }, subtitulo(c, p)));
+}
+function carrilDeProyecto(p) {
+  return { nombre: `${p.proyecto} · ${ETIQUETA[p.tipo].toLowerCase()}`, clave: p.id, proyecto: p.proyecto, estado: null, productos: [p], archivos: [], principal: p.id };
+}
+function pintarPortada() {
+  const vista = $("vista"), proyectos = new Map();
+  const grupo = (proy) => { if (!proyectos.has(proy)) proyectos.set(proy, { tarjetas: [], vacios: [] }); return proyectos.get(proy); };
+  const lista = [...datos.carriles, ...datos.proyecto.map(carrilDeProyecto)];
+  for (const c of lista) {
+    const proy = c.proyecto || "sin proyecto";
+    if (proyectoSel && proy !== proyectoSel) continue;
+    const p = c.productos.find((x) => x.id === c.principal);
+    if (!p) { grupo(proy).vacios.push(c); continue; }
+    const clave = c.clave || c.nombre, firma = `${p.id}@${p.tipo === "web" ? p.datos.url : p.t}@${c.estado}`;
+    let nodo = cacheTarjetas.get(clave);
+    if (!nodo || nodo.firma !== firma) { nodo = { firma, el: tarjeta(c, p) }; cacheTarjetas.set(clave, nodo); }
+    else nodo.el.querySelector(".sub").textContent = subtitulo(c, p);
+    grupo(proy).tarjetas.push(nodo.el);
+  }
+  if (!proyectos.size) {
+    const n = datos.activos || 0;
+    vista.replaceChildren(h("div", { class: "vacio" }, n ? `Nada visual en marcha ahora. ${n} carril${n === 1 ? "" : "es"} trabajando sin producir páginas, gráficas ni imágenes.` : "No hay carriles trabajando."));
     return;
   }
-  const hijos = [];
-  let grupo = null;
-  const usados = {}, sobran = {};
-  const recortada = filtroTipo !== "todo" ? lista : lista.filter((p) => {
-    const tope = TOPE_TODO[p.tipo];
-    usados[p.tipo] = (usados[p.tipo] || 0) + 1;
-    if (tope && usados[p.tipo] > tope) { sobran[p.tipo] = (sobran[p.tipo] || 0) + 1; return false; }
-    return true;
+  const secciones = [...proyectos.entries()].map(([proy, g]) => h("section", { class: "proyecto" }, h("h2", {}, proy),
+    g.tarjetas.length ? h("div", { class: "rejilla" }, g.tarjetas) : null,
+    g.vacios.length ? h("p", { class: "sin-nada" }, "Trabajando, sin nada visible todavía:",
+      g.vacios.map((c) => h("span", { class: "chip" }, c.estado ? h("span", { class: "punto " + c.estado }) : null, c.nombre))) : null));
+  let portada = vista.querySelector(".portada");
+  if (!portada) { portada = h("div", { class: "portada" }); vista.replaceChildren(portada); }
+  portada.replaceChildren(...secciones);
+}
+
+/* ---------- detalle ---------- */
+function carrilSel() {
+  const c = datos.carriles.find((x) => x.nombre === sel);
+  if (c) return c;
+  const p = datos.proyecto.find((x) => x.id === sel);
+  return p ? carrilDeProyecto(p) : null;
+}
+function abrir(nombre, id) {
+  const c = datos.carriles.find((x) => x.nombre === nombre);
+  sel = c ? nombre : id; pestana = id;
+  history.pushState({ sel, pestana }, "", location.search); pintar(true);
+}
+function volver() { sel = null; pestana = null; detalleFirma = null; history.pushState({}, "", location.search); $("vista").replaceChildren(); pintar(true); }
+window.addEventListener("popstate", (ev) => { sel = (ev.state && ev.state.sel) || null; pestana = (ev.state && ev.state.pestana) || null; $("vista").replaceChildren(); pintar(true); });
+
+function lateralArchivos(c) {
+  const lat = h("aside", { class: "carril-lat" }, h("h3", {}, "Archivos que cambió"));
+  if (!c.archivos.length) lat.append(h("span", { class: "archivo m" }, "Ninguno todavía."));
+  c.archivos.slice(0, 40).forEach((a) => lat.append(h("div", { class: "archivo" }, h("span", { class: "r" }, nombreCorto(a.archivo)),
+    h("span", { class: "m" }, h("span", { class: "mas" }, `+${a.mas || 0}`), " ", h("span", { class: "menos" }, `−${a.menos || 0}`), ` · ${hace(a.t)}`))));
+  return lat;
+}
+function detalleWeb(c, p) {
+  const marco = h("iframe", { src: p.datos.url, sandbox: "allow-scripts allow-same-origin allow-forms", title: "Página en vivo" });
+  vistosWeb.set(p.id, p.datos.ultimo_cambio);
+  return h("div", { class: "con-carril" }, h("div", { class: "marco-web" },
+    h("div", { class: "barra-url" }, h("span", {}, p.datos.url), h("span", { id: "recarga" }, "en vivo"),
+      h("a", { class: "chip", href: p.datos.url, target: "_blank", rel: "noopener" }, "abrir")), marco), lateralArchivos(c));
+}
+function detalleDocumento(c, p) {
+  const cuerpo = h("div", { class: "documento det-cuerpo" }), vista = FlotaVivo.vistas.documento;
+  if (vista && vista.detalle) cuerpo.append(vista.detalle(p, { h, hace, api, archivo: (r) => archivo(r) }, null));
+  else texto(p.datos.archivo, p.t).then((t) => cuerpo.append(h("pre", {}, t)));
+  return h("div", { class: "con-carril" }, cuerpo, lateralArchivos(c));
+}
+function detalleImagenes(c, p) {
+  const caja = h("div", { class: "galeria" }, h("h3", {}, `${p.datos.total} imágenes en ${nombreCorto(p.datos.carpeta)}`));
+  api(`/api/vivo/imagenes?carpeta=${encodeURIComponent(p.datos.carpeta)}`).then((r) => {
+    const grupos = new Map(), todas = r.imagenes;
+    todas.forEach((im) => { const k = new Date(im.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(im); });
+    for (const [k, ims] of grupos) caja.append(h("h3", {}, `${k} · ${ims.length}`), h("div", { class: "densa" },
+      ims.map((im) => h("button", { title: nombreCorto(im.ruta), onclick: () => cajaLuz(todas, todas.indexOf(im)) }, h("img", { src: archivo(im.ruta), alt: "", loading: "lazy" })))));
   });
-  for (const p of recortada) {
-    if (!filtroProyecto && p.proyecto !== grupo) { grupo = p.proyecto; hijos.push(h("div", { class: "grupo" }, grupo || "sin proyecto")); }
-    const guardado = nodos.get(p.id);
-    let nodo;
-    if (guardado && guardado.t === p.t) { nodo = guardado.nodo; nodo.setAttribute("aria-current", String(sel === p.id)); }
-    else { nodo = tarjeta(p); nodos.set(p.id, { t: p.t, nodo }); }
-    vistos.add(p.id);
-    hijos.push(nodo);
-  }
-  const mas = Object.entries(sobran);
-  if (mas.length) hijos.push(h("div", { class: "grupo" }, ...mas.map(([t, n]) => h("button", { class: "chip",
-    onclick: () => { filtroTipo = t; pintarFiltros(); pintarFeed(); } }, `+${n} ${(ETIQUETA[t] || t).toLowerCase()}`))));
-  feed.replaceChildren(...hijos);
+  return caja;
 }
+function cajaLuz(lista, i) {
+  const img = h("img", { alt: "" }), pie = h("span", {});
+  const mostrar = () => { img.src = archivo(lista[i].ruta); pie.textContent = `${nombreCorto(lista[i].ruta)} · ${i + 1}/${lista.length}`; };
+  const cerrar = () => { capa.remove(); document.removeEventListener("keydown", teclas); };
+  const mover = (d) => { i = (i + d + lista.length) % lista.length; mostrar(); };
+  const teclas = (ev) => { if (ev.key === "Escape") cerrar(); if (ev.key === "ArrowRight") mover(1); if (ev.key === "ArrowLeft") mover(-1); };
+  const capa = h("div", { class: "caja-luz", onclick: (ev) => { if (ev.target === capa) cerrar(); } }, img,
+    h("div", { class: "pie" }, h("button", { onclick: () => mover(-1) }, "←"), pie, h("button", { onclick: () => mover(1) }, "→"), h("button", { onclick: cerrar }, "Esc")));
+  document.addEventListener("keydown", teclas); document.body.append(capa); mostrar();
+}
+function grafica(d, col) {
+  const pp = puntos(d, col), W = 600, H = 200, pad = 26, caja = h("div", { class: "grafica" }), ult = d.ultima[col];
+  caja.append(h("div", { class: "cab" }, h("span", {}, col), h("b", {}, ult != null ? Number(ult).toFixed(4) : "—")));
+  const svg = s("svg", { viewBox: `0 0 ${W} ${H}` });
+  if (pp.length > 1) {
+    const L = linea(pp, W, H, pad);
+    for (let k = 0; k <= 3; k++) { const y = pad + (k * (H - 2 * pad)) / 3; svg.append(s("line", { x1: pad, x2: W - pad, y1: y, y2: y, stroke: "var(--borde)" })); }
+    const etq = (x, y, t, a) => { const e = s("text", { x, y, "font-size": 11, fill: "var(--suave)", "text-anchor": a || "start" }); e.textContent = t; svg.append(e); };
+    etq(2, pad - 8, L.y1.toFixed(3)); etq(2, H - pad + 14, L.y0.toFixed(3)); etq(W - pad, H - 4, `${L.x1} ${d.x}`, "end");
+    svg.append(s("path", { d: L.d, fill: "none", stroke: /loss/i.test(col) ? "var(--trabajando)" : "var(--listo)", "stroke-width": 2 }));
+    const guia = s("line", { y1: pad, y2: H - pad, stroke: "var(--suave)", "stroke-dasharray": "3 3", visibility: "hidden" });
+    const marca = s("circle", { r: 4, fill: "var(--texto)", visibility: "hidden" });
+    svg.append(guia, marca);
+    const punta = h("div", { class: "punta", hidden: true }); caja.append(punta);
+    svg.addEventListener("mousemove", (ev) => {
+      const r = svg.getBoundingClientRect(), x = ((ev.clientX - r.left) * W) / r.width;
+      let mejor = pp[0]; for (const q of pp) if (Math.abs(L.fx(q[0]) - x) < Math.abs(L.fx(mejor[0]) - x)) mejor = q;
+      const cx = L.fx(mejor[0]), cy = L.fy(mejor[1]);
+      for (const [el, a, v] of [[guia, "x1", cx], [guia, "x2", cx], [marca, "cx", cx], [marca, "cy", cy]]) el.setAttribute(a, v);
+      guia.setAttribute("visibility", "visible"); marca.setAttribute("visibility", "visible");
+      punta.hidden = false; punta.textContent = `${d.x} ${mejor[0]} · ${Number(mejor[1]).toFixed(4)}`;
+      punta.style.left = (cx / W) * r.width + 14 + "px"; punta.style.top = (cy / H) * r.height + 40 + "px";
+    });
+    svg.addEventListener("mouseleave", () => { guia.setAttribute("visibility", "hidden"); marca.setAttribute("visibility", "hidden"); punta.hidden = true; });
+  }
+  caja.append(svg);
+  return caja;
+}
+function detalleMetricas(c, p) {
+  const d = p.datos, caja = h("div", { class: "metricas" });
+  if (d.progreso) caja.append(h("div", {}, h("div", { class: "sub" }, `${d.progreso.actual} de ${d.progreso.total}`),
+    h("div", { class: "barra-prog" }, h("i", { style: `width:${Math.min(100, (100 * d.progreso.actual) / d.progreso.total)}%` }))));
+  const cols = seriesUtiles(d);
+  if (cols.length) caja.append(h("div", { class: "graficas" }, cols.map((col) => grafica(d, col))));
+  if ((d.log || []).length) caja.append(h("pre", { class: "log" }, d.log.map((l) => h("span", { class: /error|traceback|\bnan\b|\binf\b/i.test(l) ? "error" : null }, l + "\n"))));
+  return caja;
+}
+const DETALLE = { web: detalleWeb, documento: detalleDocumento, imagenes: detalleImagenes, metricas: detalleMetricas };
 
-let detalleT = null;
+let detalleFirma = null;
 function pintarDetalle(forzar) {
-  if (!sel) return;
-  const p = estado.productos.find((x) => x.id === sel);
-  if (!p) { $("det-titulo").textContent = "ya no está en la ventana de la última hora"; return; }
-  if (!forzar && detalleT === p.t) return;
-  detalleT = p.t;
-  $("det-tipo").textContent = ETIQUETA[p.tipo] || p.tipo;
-  $("det-titulo").textContent = p.titulo;
-  const cuerpo = $("det-cuerpo");
-  const abajo = cuerpo.scrollHeight - cuerpo.scrollTop - cuerpo.clientHeight < 40;
-  const arriba = cuerpo.scrollTop;
-  const anterior = cuerpo.firstChild;
-  const nuevo = detalle(p, anterior);
-  if (nuevo !== anterior) cuerpo.replaceChildren(nuevo);
-  requestAnimationFrame(() => { cuerpo.scrollTop = abajo && !forzar ? cuerpo.scrollHeight : arriba; });
-}
-function abrir(id) {
-  sel = id; detalleT = null;
-  $("detalle").hidden = false; $("app").classList.add("con-detalle");
-  $("det-cuerpo").replaceChildren(); pintarFeed(); pintarDetalle(true);
-}
-function cerrar() { sel = null; $("detalle").hidden = true; $("app").classList.remove("con-detalle"); pintarFeed(); }
-
-function pintarFiltros() {
-  const cont = $("filtros"); cont.replaceChildren();
-  const cuenta = (t) => t === "todo" ? estado.productos.length : estado.productos.filter((p) => p.tipo === t).length;
-  for (const [t, txt] of TIPOS) {
-    const n = cuenta(t);
-    if (t !== "todo" && !n) continue;
-    cont.append(h("button", { class: "chip", "aria-pressed": String(filtroTipo === t), onclick: () => { filtroTipo = t; pintarFiltros(); pintarFeed(); } }, `${txt} ${n}`));
+  const c = carrilSel();
+  if (!c) { volver(); return; }
+  const p = c.productos.find((x) => x.id === pestana) || c.productos[0];
+  if (!p) { volver(); return; }
+  const vista = $("vista");
+  if (p.tipo === "web" && !forzar && vista.querySelector(".marco-web")) {  // la página solo se recarga si cambiaron sus archivos
+    if (vistosWeb.get(p.id) !== p.datos.ultimo_cambio) {
+      vistosWeb.set(p.id, p.datos.ultimo_cambio);
+      vista.querySelector(".marco-web iframe").src = p.datos.url;
+      $("recarga").textContent = "recargada " + hace(p.datos.ultimo_cambio);
+    }
+    return;
   }
-}
-function pintarProyectos() {
-  const nombres = [...new Set(estado.productos.map((p) => p.proyecto).filter(Boolean))];
-  const cont = $("proyectos"); cont.replaceChildren();
-  if (nombres.length < 2) return;
-  for (const n of nombres) cont.append(h("button", { class: "chip", "aria-pressed": String(filtroProyecto === n),
-    onclick: () => { filtroProyecto = filtroProyecto === n ? null : n; pintarProyectos(); pintarFeed(); } }, n));
+  const firma = `${c.nombre}|${p.id}|${p.t}|${c.archivos.length}|${(c.archivos[0] || {}).t}`;
+  if (!forzar && firma === detalleFirma) return;
+  detalleFirma = firma;
+  const cab = h("div", { class: "det-cab" }, h("button", { class: "chip", onclick: volver }, "← Todos"),
+    h("h2", {}, c.estado ? h("span", { class: "punto " + c.estado }) : null, c.nombre),
+    h("span", { class: "chip" }, textoEstado(c)),
+    c.productos.length > 1 ? h("div", { class: "pestanas" }, c.productos.map((x) => h("button", { class: "chip", "aria-pressed": String(x.id === p.id),
+      onclick: () => { pestana = x.id; pintar(true); } }, `${ETIQUETA[x.tipo]} · ${origen(x)}`))) : null);
+  const viejo = vista.querySelector(".documento.det-cuerpo"), scroll = viejo ? viejo.scrollTop : 0;
+  vista.replaceChildren(h("div", { class: "detalle" }, cab, h("div", { class: "det-cuerpo" }, DETALLE[p.tipo](c, p))));
+  const nuevo = vista.querySelector(".documento.det-cuerpo");
+  if (nuevo && !forzar) requestAnimationFrame(() => { nuevo.scrollTop = scroll; });
 }
 
+function pintarCabecera() {
+  $("atencion").replaceChildren(...(datos.esperan || []).map((n) => h("button", { class: "chip alerta", title: "Enfocar en herdr",
+    onclick: () => api("/api/enfocar", { nombre: n }).catch(() => {}) }, `${n} te espera`)));
+  const proyectos = [...new Set([...datos.carriles.map((c) => c.proyecto), ...datos.proyecto.map((p) => p.proyecto)].filter(Boolean))];
+  $("filtros").replaceChildren(...(proyectos.length > 1 ? proyectos.map((n) => h("button", { class: "chip", "aria-pressed": String(proyectoSel === n),
+    onclick: () => { proyectoSel = proyectoSel === n ? null : n; pintar(true); } }, n)) : []));
+}
+function pintar(forzar) { pintarCabecera(); if (sel) pintarDetalle(forzar); else pintarPortada(); }
 async function refrescar() {
-  if (pausado) return;
-  try {
-    estado = await api("/api/vivo");
-    $("cuando").textContent = new Date(estado.ahora * 1000).toLocaleTimeString();
-    const errores = Object.keys(estado.errores || {});
-    $("cuando").title = errores.length ? "Detectores con error: " + errores.join(", ") : "";
-    pintarFiltros(); pintarProyectos(); pintarFeed(); pintarDetalle(false);
-  } catch (e) { $("cuando").textContent = "sin conexión"; }
+  try { datos = await api("/api/vivo/carriles"); $("latido").className = "punto working"; pintar(false); }
+  catch (e) { $("latido").className = "punto blocked"; }
 }
-async function refrescarAtencion() {
-  try {
-    const d = await api("/api/estado");
-    const esperan = [...d.carriles, ...d.otros].filter((x) => x.vivo === "blocked");
-    const cont = $("atencion"); cont.replaceChildren();
-    for (const x of esperan) cont.append(h("button", { class: "chip alerta", title: "Enfocar en herdr",
-      onclick: () => api("/api/enfocar", { nombre: x.nombre }).catch(() => {}) }, `${x.nombre} te espera`));
-  } catch (e) { /* sin herdr: no hay a quién atender */ }
-}
-const $ = (id) => document.getElementById(id);
-$("det-cerrar").addEventListener("click", cerrar);
-$("pausa").addEventListener("click", (ev) => { pausado = !pausado; ev.target.textContent = pausado ? "Reanudar" : "Pausar";
-  ev.target.setAttribute("aria-pressed", String(pausado)); $("latido").classList.toggle("pausa", pausado); if (!pausado) refrescar(); });
-$("flujo").href = "/?t=" + encodeURIComponent(TOKEN);
-document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && sel && !document.querySelector(".lightbox")) cerrar(); });
-window.addEventListener("load", () => { refrescar(); refrescarAtencion(); setInterval(refrescar, 2000); setInterval(refrescarAtencion, 5000); });
+$("a-carriles").href = "/?t=" + encodeURIComponent(TOKEN);
+window.FlotaVivo = { vistas: {}, registrar(tipo, vista) { this.vistas[tipo] = vista; } };
+window.addEventListener("load", () => { refrescar(); setInterval(refrescar, 3000); });
 </script>
-<script src="/vivo/vivo-imagenes.js"></script>
-<script src="/vivo/vivo-metricas.js"></script>
-<script src="/vivo/vivo-web.js"></script>
 <script src="/vivo/vivo-documentos.js"></script>
-<script src="/vivo/vivo-registro.js"></script>
 </body>
 </html>
