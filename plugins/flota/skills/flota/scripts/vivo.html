@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>En vivo</title>
+<style>
+@font-face { font-family: "Plex"; src: url("/fuentes/IBMPlexMono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Plex"; src: url("/fuentes/IBMPlexMono-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+:root {
+  --fondo: #f6f6f4; --panel: #ffffff; --panel2: #efefec; --borde: #e2e2dd; --texto: #1d1d1b; --tenue: #55554f;
+  --suave: #6c6c65; --sel: #e9e9e4;
+  --trabajando: #2f6fdf; --espera: #d33f3f; --quieto: #b7791f; --listo: #2f9e5b; --puerta: #8b5cf6; --enviado: #0f8f8a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fondo: #0b0b0c; --panel: #121214; --panel2: #18181b; --borde: #26262b; --texto: #e8e8e6; --tenue: #9b9ba1;
+    --suave: #8d8d95; --sel: #1f1f24;
+    --trabajando: #5b93f5; --espera: #f06262; --quieto: #e0a33a; --listo: #45c07a; --puerta: #a78bfa; --enviado: #2fc2bc;
+  }
+}
+:root[data-theme="dark"] {
+  --fondo: #0b0b0c; --panel: #121214; --panel2: #18181b; --borde: #26262b; --texto: #e8e8e6; --tenue: #9b9ba1;
+  --suave: #8d8d95; --sel: #1f1f24;
+  --trabajando: #5b93f5; --espera: #f06262; --quieto: #e0a33a; --listo: #45c07a; --puerta: #a78bfa; --enviado: #2fc2bc;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--fondo); color: var(--texto); font: 13px/1.45 "Plex", ui-monospace, SFMono-Regular, Menlo, monospace; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--trabajando); outline-offset: 2px; border-radius: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--tenue); border: 1px solid var(--borde); border-radius: 6px; padding: 1px 7px; white-space: nowrap; background: none; }
+button.chip:hover { border-color: var(--suave); color: var(--texto); }
+.chip[aria-pressed="true"] { color: var(--texto); border-color: var(--texto); }
+.chip.alerta { color: var(--espera); border-color: var(--espera); }
+.app { display: grid; grid-template-columns: minmax(0, 1fr); height: 100vh; }
+.app.con-detalle { grid-template-columns: minmax(340px, 42%) minmax(0, 1fr); }
+.barra { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 10px 16px; background: color-mix(in srgb, var(--fondo) 90%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--borde); }
+.barra h1 { font-size: 17px; margin: 0 6px 0 0; }
+.barra .vivo { width: 8px; height: 8px; border-radius: 50%; background: var(--listo); display: inline-block; margin-right: 6px; animation: latido 2s ease-in-out infinite; }
+.barra .vivo.pausa { background: var(--suave); animation: none; }
+@keyframes latido { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .barra .vivo { animation: none; } }
+.barra .der { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.filtros { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px 0; }
+.columna { overflow: auto; min-width: 0; }
+.feed { display: grid; gap: 10px; padding: 12px 16px 24px; }
+.grupo { font-size: 12px; color: var(--suave); margin: 8px 0 -2px; display: flex; gap: 8px; align-items: center; }
+.tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: grid; gap: 6px; min-width: 0; }
+.tarjeta:hover { border-color: var(--suave); }
+.tarjeta[aria-current="true"] { border-color: var(--texto); }
+.tarjeta .cab { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.tarjeta .tipo { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); }
+.tarjeta .titulo { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tarjeta .meta { margin-left: auto; color: var(--suave); font-size: 12px; white-space: nowrap; }
+.tarjeta.nueva { animation: nueva 1.6s ease-out; }
+@keyframes nueva { from { box-shadow: 0 0 0 2px var(--listo); } to { box-shadow: 0 0 0 0 transparent; } }
+.vacio { color: var(--suave); padding: 30px 16px; text-align: center; }
+.detalle { border-left: 1px solid var(--borde); background: var(--panel); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.detalle[hidden] { display: none; }
+.det-cab { display: flex; gap: 8px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--borde); }
+.det-cab h2 { margin: 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.det-cab .der { margin-left: auto; display: flex; gap: 6px; }
+.det-cuerpo { flex: 1; overflow: auto; padding: 12px 14px; min-height: 0; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font: inherit; font-size: 12px; }
+@media (max-width: 900px) {
+  .app.con-detalle { grid-template-columns: 1fr; }
+  .detalle { position: fixed; inset: 0; z-index: 5; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="columna">
+    <div class="barra">
+      <h1><span class="vivo" id="latido" aria-hidden="true"></span>En vivo</h1>
+      <span class="chip" id="cuando">—</span>
+      <span id="atencion"></span>
+      <div class="der">
+        <span id="proyectos"></span>
+        <button class="chip" id="pausa" aria-pressed="false">Pausar</button>
+        <a class="chip" id="flujo" href="#">Carriles</a>
+      </div>
+    </div>
+    <div class="filtros" id="filtros" role="toolbar" aria-label="Filtrar por tipo"></div>
+    <div class="feed" id="feed" aria-live="polite"></div>
+  </div>
+  <aside class="detalle" id="detalle" hidden aria-label="Detalle">
+    <div class="det-cab">
+      <span class="chip" id="det-tipo">—</span>
+      <h2 id="det-titulo">—</h2>
+      <div class="der"><button class="chip" id="det-cerrar">Esc</button></div>
+    </div>
+    <div class="det-cuerpo" id="det-cuerpo"></div>
+  </aside>
+</div>
+<script>
+"use strict";
+const TOKEN = new URLSearchParams(location.search).get("t") || "";
+const TIPOS = [["todo", "Todo"], ["imagenes", "Imágenes"], ["metricas", "Entrenamiento"], ["web", "Web"],
+  ["documento", "Documentos"], ["codigo", "Código"], ["comando", "Comandos"]];
+const ETIQUETA = Object.fromEntries(TIPOS);
+let estado = { productos: [], ahora: 0 }, filtroTipo = "todo", filtroProyecto = null, sel = null, pausado = false;
+const nodos = new Map();  // id -> { t, nodo }
+const vistos = new Set();
+
+function h(tag, attrs, ...hijos) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2), v);
+    else if (k === "style") el.setAttribute("style", v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of hijos.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : String(c));
+  return el;
+}
+function hace(t) {
+  if (!t) return "";
+  const s = Math.max(0, Math.floor((estado.ahora || Date.now() / 1000) - t));
+  if (s < 60) return s + "s";
+  if (s < 3600) return Math.floor(s / 60) + "m";
+  return Math.floor(s / 3600) + "h" + String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+}
+async function api(ruta, cuerpo) {
+  const opts = { headers: { "X-Flota-Token": TOKEN } };
+  if (cuerpo) { opts.method = "POST"; opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(cuerpo); }
+  const r = await fetch(ruta, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+const ctx = {
+  h, hace, api,
+  archivo: (ruta) => `/api/vivo/archivo?ruta=${encodeURIComponent(ruta)}&t=${encodeURIComponent(TOKEN)}`,
+};
+
+/* registro de vistas: cada vivo-<tipo>.js llama a FlotaVivo.registrar */
+window.FlotaVivo = { vistas: {}, registrar(tipo, vista) { this.vistas[tipo] = vista; } };
+function vistaGenerica(p) {
+  return h("pre", {}, JSON.stringify(p.datos || {}, null, 2).slice(0, 4000));
+}
+function resumen(p) {
+  const v = FlotaVivo.vistas[p.tipo];
+  try { return v && v.resumen ? v.resumen(p, ctx) : null; } catch (e) { return h("pre", {}, "error en la vista: " + e.message); }
+}
+function detalle(p, anterior) {
+  const v = FlotaVivo.vistas[p.tipo];
+  try { return v && v.detalle ? v.detalle(p, ctx, anterior) : (v && v.resumen ? v.resumen(p, ctx) : vistaGenerica(p)); }
+  catch (e) { return h("pre", {}, "error en la vista: " + e.message); }
+}
+
+function tarjeta(p) {
+  const cuerpo = resumen(p);
+  const nodo = h("article", { class: "tarjeta" + (vistos.has(p.id) ? "" : " nueva"), "aria-current": String(sel === p.id), tabindex: "0",
+    onclick: () => abrir(p.id), onkeydown: (ev) => { if (ev.key === "Enter") abrir(p.id); } },
+    h("div", { class: "cab" }, h("span", { class: "tipo" }, ETIQUETA[p.tipo] || p.tipo), h("span", { class: "titulo", title: p.titulo }, p.titulo),
+      h("span", { class: "meta" }, [p.agente || p.proyecto, hace(p.t)].filter(Boolean).join(" · "))),
+    cuerpo);
+  // La marca de «nueva» se ve una vez: si no, se repetiría cada vez que la tarjeta vuelve a entrar al feed.
+  nodo.addEventListener("animationend", () => nodo.classList.remove("nueva"), { once: true });
+  return nodo;
+}
+
+/* En «Todo» manda lo visual; lo verboso (documentos, código, comandos) se limita y lleva a su filtro. */
+const TOPE_TODO = { documento: 5, codigo: 6, comando: 5 };
+
+function visibles() {
+  return estado.productos.filter((p) => (filtroTipo === "todo" || p.tipo === filtroTipo) && (!filtroProyecto || p.proyecto === filtroProyecto));
+}
+
+function pintarFeed() {
+  const feed = $("feed");
+  const lista = visibles();
+  if (!lista.length) {
+    feed.replaceChildren(h("div", { class: "vacio" }, estado.productos.length ? "Nada de este tipo en la última hora." :
+      "Todavía nada en vivo. Aquí aparecerá lo que produzcan los agentes: imágenes, entrenamientos, páginas, documentos y código."));
+    return;
+  }
+  const hijos = [];
+  let grupo = null;
+  const usados = {}, sobran = {};
+  const recortada = filtroTipo !== "todo" ? lista : lista.filter((p) => {
+    const tope = TOPE_TODO[p.tipo];
+    usados[p.tipo] = (usados[p.tipo] || 0) + 1;
+    if (tope && usados[p.tipo] > tope) { sobran[p.tipo] = (sobran[p.tipo] || 0) + 1; return false; }
+    return true;
+  });
+  for (const p of recortada) {
+    if (!filtroProyecto && p.proyecto !== grupo) { grupo = p.proyecto; hijos.push(h("div", { class: "grupo" }, grupo || "sin proyecto")); }
+    const guardado = nodos.get(p.id);
+    let nodo;
+    if (guardado && guardado.t === p.t) { nodo = guardado.nodo; nodo.setAttribute("aria-current", String(sel === p.id)); }
+    else { nodo = tarjeta(p); nodos.set(p.id, { t: p.t, nodo }); }
+    vistos.add(p.id);
+    hijos.push(nodo);
+  }
+  const mas = Object.entries(sobran);
+  if (mas.length) hijos.push(h("div", { class: "grupo" }, ...mas.map(([t, n]) => h("button", { class: "chip",
+    onclick: () => { filtroTipo = t; pintarFiltros(); pintarFeed(); } }, `+${n} ${(ETIQUETA[t] || t).toLowerCase()}`))));
+  feed.replaceChildren(...hijos);
+}
+
+let detalleT = null;
+function pintarDetalle(forzar) {
+  if (!sel) return;
+  const p = estado.productos.find((x) => x.id === sel);
+  if (!p) { $("det-titulo").textContent = "ya no está en la ventana de la última hora"; return; }
+  if (!forzar && detalleT === p.t) return;
+  detalleT = p.t;
+  $("det-tipo").textContent = ETIQUETA[p.tipo] || p.tipo;
+  $("det-titulo").textContent = p.titulo;
+  const cuerpo = $("det-cuerpo");
+  const abajo = cuerpo.scrollHeight - cuerpo.scrollTop - cuerpo.clientHeight < 40;
+  const arriba = cuerpo.scrollTop;
+  const anterior = cuerpo.firstChild;
+  const nuevo = detalle(p, anterior);
+  if (nuevo !== anterior) cuerpo.replaceChildren(nuevo);
+  requestAnimationFrame(() => { cuerpo.scrollTop = abajo && !forzar ? cuerpo.scrollHeight : arriba; });
+}
+function abrir(id) {
+  sel = id; detalleT = null;
+  $("detalle").hidden = false; $("app").classList.add("con-detalle");
+  $("det-cuerpo").replaceChildren(); pintarFeed(); pintarDetalle(true);
+}
+function cerrar() { sel = null; $("detalle").hidden = true; $("app").classList.remove("con-detalle"); pintarFeed(); }
+
+function pintarFiltros() {
+  const cont = $("filtros"); cont.replaceChildren();
+  const cuenta = (t) => t === "todo" ? estado.productos.length : estado.productos.filter((p) => p.tipo === t).length;
+  for (const [t, txt] of TIPOS) {
+    const n = cuenta(t);
+    if (t !== "todo" && !n) continue;
+    cont.append(h("button", { class: "chip", "aria-pressed": String(filtroTipo === t), onclick: () => { filtroTipo = t; pintarFiltros(); pintarFeed(); } }, `${txt} ${n}`));
+  }
+}
+function pintarProyectos() {
+  const nombres = [...new Set(estado.productos.map((p) => p.proyecto).filter(Boolean))];
+  const cont = $("proyectos"); cont.replaceChildren();
+  if (nombres.length < 2) return;
+  for (const n of nombres) cont.append(h("button", { class: "chip", "aria-pressed": String(filtroProyecto === n),
+    onclick: () => { filtroProyecto = filtroProyecto === n ? null : n; pintarProyectos(); pintarFeed(); } }, n));
+}
+
+async function refrescar() {
+  if (pausado) return;
+  try {
+    estado = await api("/api/vivo");
+    $("cuando").textContent = new Date(estado.ahora * 1000).toLocaleTimeString();
+    const errores = Object.keys(estado.errores || {});
+    $("cuando").title = errores.length ? "Detectores con error: " + errores.join(", ") : "";
+    pintarFiltros(); pintarProyectos(); pintarFeed(); pintarDetalle(false);
+  } catch (e) { $("cuando").textContent = "sin conexión"; }
+}
+async function refrescarAtencion() {
+  try {
+    const d = await api("/api/estado");
+    const esperan = [...d.carriles, ...d.otros].filter((x) => x.vivo === "blocked");
+    const cont = $("atencion"); cont.replaceChildren();
+    for (const x of esperan) cont.append(h("button", { class: "chip alerta", title: "Enfocar en herdr",
+      onclick: () => api("/api/enfocar", { nombre: x.nombre }).catch(() => {}) }, `${x.nombre} te espera`));
+  } catch (e) { /* sin herdr: no hay a quién atender */ }
+}
+const $ = (id) => document.getElementById(id);
+$("det-cerrar").addEventListener("click", cerrar);
+$("pausa").addEventListener("click", (ev) => { pausado = !pausado; ev.target.textContent = pausado ? "Reanudar" : "Pausar";
+  ev.target.setAttribute("aria-pressed", String(pausado)); $("latido").classList.toggle("pausa", pausado); if (!pausado) refrescar(); });
+$("flujo").href = "/flujo?t=" + encodeURIComponent(TOKEN);
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && sel && !document.querySelector(".lightbox")) cerrar(); });
+window.addEventListener("load", () => { refrescar(); refrescarAtencion(); setInterval(refrescar, 2000); setInterval(refrescarAtencion, 5000); });
+</script>
+<script src="/vivo/vivo-imagenes.js"></script>
+<script src="/vivo/vivo-metricas.js"></script>
+<script src="/vivo/vivo-web.js"></script>
+<script src="/vivo/vivo-documentos.js"></script>
+<script src="/vivo/vivo-registro.js"></script>
+</body>
+</html>

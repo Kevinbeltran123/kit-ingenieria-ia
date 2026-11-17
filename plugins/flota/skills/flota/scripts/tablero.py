@@ -33,6 +33,7 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import vivo
 from comun import (
     TECLAS,
     HerdrError,
@@ -288,12 +289,24 @@ class Tablero(BaseHTTPRequestHandler):
             if ruta.suffix == ".woff2" and ruta.is_file():
                 return self._enviar(200, ruta.read_bytes(), "font/woff2")
             return self._json(404, {"error": "no existe"})
+        if url.path.startswith("/vivo/"):  # código de las vistas: público como las fuentes, sin datos
+            nombre = Path(url.path).name
+            ruta = AQUI / nombre
+            if re.fullmatch(r"vivo-[a-z]+\.js", nombre) and ruta.is_file():
+                return self._enviar(200, ruta.read_bytes(), "text/javascript; charset=utf-8")
+            return self._enviar(200, b"/* vista no instalada */", "text/javascript; charset=utf-8")
         if not self._token_valido(q):
             aviso = "Abre la URL completa que imprimió tablero.py (lleva ?t=...)."
             return self._enviar(403, aviso.encode(), "text/plain; charset=utf-8")
         sesion = self.ctx["sesion"]
         if url.path == "/":
+            return self._enviar(200, (AQUI / "vivo.html").read_bytes(), "text/html; charset=utf-8")
+        if url.path == "/flujo":
             return self._enviar(200, (AQUI / "tablero.html").read_bytes(), "text/html; charset=utf-8")
+        if url.path == "/api/vivo":
+            return self._json(200, vivo.recolectar(vivo.contexto(sesion, self.proyectos())))
+        if url.path == "/api/vivo/archivo":
+            return self._archivo_vivo((q.get("ruta") or [""])[0])
         if url.path == "/api/estado":
             return self._json(200, estado(self.proyectos(), sesion))
         if url.path == "/api/leer":
@@ -361,6 +374,26 @@ class Tablero(BaseHTTPRequestHandler):
         except HerdrError as e:
             return self._json(409, {"error": str(e)})
         return self._json(200, {"ok": True})
+
+    def _archivo_vivo(self, ruta: str) -> None:
+        """Un archivo bajo una raíz de la flota y con extensión permitida; el HTML se sirve sin scripts (sandbox)."""
+        ctx = vivo.contexto(self.ctx["sesion"], self.proyectos())
+        real = vivo.ruta_permitida(ruta, ctx)
+        if not real:
+            return self._json(404, {"error": "archivo no permitido o inexistente"})
+        if real.stat().st_size > 25 * 1024 * 1024:
+            return self._json(413, {"error": "archivo demasiado grande para la vista en vivo"})
+        cuerpo = real.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", vivo.EXTENSIONES[real.suffix.lower()])
+        self.send_header("Content-Length", str(len(cuerpo)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        if real.suffix.lower() == ".html":
+            self.send_header("Content-Security-Policy", "sandbox")
+        self.end_headers()
+        self.wfile.write(cuerpo)
+        return None
 
     def _coordinador(self, proyecto: str) -> None:
         """Arranca el coordinador de un proyecto registrado (carril.py coordinador); solo proyectos del registro."""
@@ -499,10 +532,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"no se pudo abrir el puerto: {e} (¿ya hay otro tablero corriendo?)", file=sys.stderr)
         return 1
     url = f"http://127.0.0.1:{servidor.server_address[1]}/?t={token}"
-    ruta = escribir_privado(ESTADO_FLOTA / "tablero-url", url + "\n")
-    if a.fijo:
+    if a.fijo:  # solo el tablero principal anota su URL; uno de prueba en otro puerto no la pisa
+        ruta = escribir_privado(ESTADO_FLOTA / "tablero-url", url + "\n")
         pagina_inicio(url)
-    print(f"tablero de la flota en {url}  (Ctrl+C para pararlo; la URL queda en {ruta})", flush=True)
+        print(f"tablero de la flota en {url}  (Ctrl+C para pararlo; la URL queda en {ruta})", flush=True)
+    else:
+        print(f"tablero de la flota en {url}  (Ctrl+C para pararlo)", flush=True)
     if a.abrir and not abrir_en_cmux(url):
         print("no se pudo abrir en cmux: abre la URL de arriba en el navegador", flush=True)
     with contextlib.suppress(KeyboardInterrupt):
