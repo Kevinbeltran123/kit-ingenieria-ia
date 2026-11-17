@@ -249,7 +249,11 @@ function pintarPortada() {
     else nodo.el.querySelector(".sub").textContent = subtitulo(c, p);
     grupo(proy).tarjetas.push(nodo.el);
   }
-  if (!proyectos.size) { vista.replaceChildren(h("div", { class: "vacio" }, "Ningún carril ha producido algo visible todavía. Aquí aparecerán sus páginas, gráficas, imágenes y documentos.")); return; }
+  if (!proyectos.size) {
+    const n = datos.activos || 0;
+    vista.replaceChildren(h("div", { class: "vacio" }, n ? `Nada visual en marcha ahora. ${n} carril${n === 1 ? "" : "es"} trabajando sin producir páginas, gráficas ni imágenes.` : "No hay carriles trabajando."));
+    return;
+  }
   const secciones = [...proyectos.entries()].map(([proy, g]) => h("section", { class: "proyecto" }, h("h2", {}, proy),
     g.tarjetas.length ? h("div", { class: "rejilla" }, g.tarjetas) : null,
     g.vacios.length ? h("p", { class: "sin-nada" }, "Trabajando, sin nada visible todavía:",
@@ -383,9 +387,8 @@ function pintarDetalle(forzar) {
 }
 
 function pintarCabecera() {
-  const esperan = datos.carriles.filter((c) => c.estado === "blocked");
-  $("atencion").replaceChildren(...esperan.map((c) => h("button", { class: "chip alerta", title: "Enfocar en herdr",
-    onclick: () => api("/api/enfocar", { nombre: c.nombre }).catch(() => {}) }, `${c.nombre} te espera`)));
+  $("atencion").replaceChildren(...(datos.esperan || []).map((n) => h("button", { class: "chip alerta", title: "Enfocar en herdr",
+    onclick: () => api("/api/enfocar", { nombre: n }).catch(() => {}) }, `${n} te espera`)));
   const proyectos = [...new Set([...datos.carriles.map((c) => c.proyecto), ...datos.proyecto.map((p) => p.proyecto)].filter(Boolean))];
   $("filtros").replaceChildren(...(proyectos.length > 1 ? proyectos.map((n) => h("button", { class: "chip", "aria-pressed": String(proyectoSel === n),
     onclick: () => { proyectoSel = proyectoSel === n ? null : n; pintar(true); } }, n)) : []));

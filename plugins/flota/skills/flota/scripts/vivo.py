@@ -110,7 +110,10 @@ def ruta_permitida(ruta: str, ctx: dict) -> Path | None:
 
 
 # --- Vista por carril (portada en tarjetas) -----------------------------------------------------------------------
-VISUALES = ("web", "metricas", "imagenes", "documento")
+VISUALES = ("web", "metricas", "imagenes")  # lo que se ve; los documentos de texto los lee el coordinador
+ACTIVOS = ("working", "blocked")
+RECIENTE = 900.0  # un producto de un carril activo cuenta si cambió en los últimos 15 min
+AHORA_MISMO = 180.0  # lo que no lanzó un agente (pueue, una página tuya) cuenta solo si cambia en estos 3 min
 IMAGEN = (".png", ".jpg", ".jpeg", ".webp", ".gif")
 
 
@@ -139,7 +142,9 @@ def ruido(producto: dict, raices: list[dict]) -> bool:
 def agrupar(ctx: dict, productos: list[dict], estados: dict[str, str]) -> dict:
     """Productos visibles agrupados por carril; fuera lo que ningún agente de la flota produjo.
 
-    - documento / imagenes: cuentan si están en el worktree de un agente o si el agente los escribió (su registro).
+    Solo carriles con agente activo (trabajando o esperando a la persona) y solo producto visual reciente: lo que no
+    está en marcha no aparece.
+    - imagenes: cuentan si están en el worktree de un agente o si el agente las escribió o nombró en un comando.
     - metricas: si están en un worktree, o si un comando del agente nombra su carpeta; las de pueue van al proyecto.
     - web: el servidor de un worktree va con su agente; uno del repo (lo levantó la persona) va al proyecto.
     - codigo: no es tarjeta; es la lista de archivos que tocó el carril. comando: no se muestra.
@@ -171,8 +176,6 @@ def agrupar(ctx: dict, productos: list[dict], estados: dict[str, str]) -> dict:
             continue
         if tipo not in VISUALES or ruido(p, ctx["raices"]):
             continue
-        if not agente and tipo == "documento":
-            agente = escritos.get(datos.get("archivo"))
         if not agente and tipo == "imagenes":
             carpeta = datos.get("carpeta", "")
             agente = next((a for f, a in escritos.items() if f and str(f).startswith(carpeta.rstrip("/") + "/")), None)
@@ -182,10 +185,14 @@ def agrupar(ctx: dict, productos: list[dict], estados: dict[str, str]) -> dict:
         if not agente and tipo == "metricas" and datos.get("archivo"):
             carpeta = str(Path(datos["archivo"]).parent)
             agente = next((a for a, c in comandos if _relativa_en(c, carpeta, ctx["raices"])), None)
+        edad = ctx["ahora"] - (p.get("t") or 0)
         if agente:
-            carril(agente)["productos"].append(p)
+            if estados.get(agente) in ACTIVOS and (tipo == "web" or edad <= RECIENTE):
+                carril(agente)["productos"].append(p)
         elif tipo in ("web", "metricas") and p.get("proyecto"):
-            proyecto_suelto.append(p)
+            cambio = datos.get("ultimo_cambio") if tipo == "web" else p.get("t")
+            if cambio and ctx["ahora"] - cambio <= AHORA_MISMO:
+                proyecto_suelto.append(p)
     for c in carriles.values():
         webs = [str(p["datos"].get("cwd") or "") for p in c["productos"] if p.get("tipo") == "web"]
         if webs:  # el HTML de una página que ya se ve en vivo no se repite como documento
@@ -202,12 +209,16 @@ def agrupar(ctx: dict, productos: list[dict], estados: dict[str, str]) -> dict:
         c["archivos"].sort(key=lambda a: a.get("t") or 0, reverse=True)
         c["principal"] = c["productos"][0]["id"] if c["productos"] else None
         c["t"] = max([p.get("t") or 0 for p in c["productos"]] + [a.get("t") or 0 for a in c["archivos"]] + [0])
-    for nombre in estados:  # agentes vivos sin nada todavía: que se sepa que existen
-        if nombre in proyecto_de and nombre not in carriles:
-            carril(nombre)["principal"] = None
-            carriles[nombre]["t"] = 0
-    orden = sorted(carriles.values(), key=lambda c: (c["principal"] is None, -(c["t"] or 0)))
-    return {"ahora": ctx["ahora"], "carriles": orden, "proyecto": proyecto_suelto}
+    visibles = [c for c in carriles.values() if c["principal"]]  # un carril sin nada visual en marcha no se muestra
+    activos = sum(1 for n, e in estados.items() if e in ACTIVOS and n in proyecto_de)
+    orden = sorted(visibles, key=lambda c: -(c["t"] or 0))
+    return {
+        "ahora": ctx["ahora"],
+        "carriles": orden,
+        "proyecto": proyecto_suelto,
+        "activos": activos,
+        "esperan": sorted(n for n, e in estados.items() if e == "blocked"),
+    }
 
 
 def imagenes_de(carpeta: str, ctx: dict, tope: int = 240) -> list[dict]:

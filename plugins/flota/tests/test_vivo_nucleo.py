@@ -131,33 +131,47 @@ def prod(tipo, agente=None, t=1.0, **datos):
             "datos": datos}  # fmt: skip
 
 
-def test_agrupar_solo_lo_que_produjo_un_agente(tmp_path):
+def test_agrupar_solo_lo_activo_y_visual(tmp_path):
+    ctx = ctx_de(tmp_path)
+    repo, wt = str(tmp_path / "repo"), str(tmp_path / "repo-flota" / "wt" / "api")
+    productos = [
+        prod("codigo", "api", 95, archivo=f"{repo}/src/x.py", mas=10, menos=0),
+        prod("documento", "api", 99, archivo=f"{wt}/diseno.md"),  # texto: no es En vivo
+        prod("comando", "api", 90, comando="just entrenar tabla runs/e004"),
+        prod("metricas", None, 98, archivo=f"{repo}/runs/e004/metrics.csv"),  # su carpeta sale en un comando de api
+        prod("imagenes", "api", -2000, carpeta=f"{wt}/viejas"),  # de hace más de 15 min: fuera
+        prod("imagenes", "otro", 97, carpeta=f"{repo}/x"),  # agente que no está activo: fuera
+        prod("metricas", None, -500, archivo=f"{repo}/runs/viejo/metrics.csv"),  # nadie la mira y no avanza: fuera
+        prod("web", None, 0, url="http://127.0.0.1:5173/", ultimo_cambio=-500),  # página de la persona quieta: fuera
+        prod("imagenes", "api", 96, carpeta=f"{repo}/.cache/thumbs"),  # carpeta de caché: ruido
+    ]
+    g = vivo.agrupar(ctx, productos, {"api": "working", "otro": "done"})
+    assert [c["nombre"] for c in g["carriles"]] == ["api"]
+    api = g["carriles"][0]
+    assert [p["tipo"] for p in api["productos"]] == ["metricas"]
+    assert [a["archivo"] for a in api["archivos"]] == [f"{repo}/src/x.py"]
+    assert g["proyecto"] == []
+    assert g["activos"] == 1
+
+
+def test_lo_que_no_lanzo_un_agente_sale_solo_si_cambia_ahora(tmp_path):
     ctx = ctx_de(tmp_path)
     repo = str(tmp_path / "repo")
-    productos = [
-        prod("codigo", "api", 5, archivo=f"{repo}/docs/diseno.md", mas=10, menos=0),
-        prod("documento", None, 5, archivo=f"{repo}/docs/diseno.md"),  # lo escribió api: cuenta
-        prod("documento", None, 6, archivo=f"{repo}/README.md"),  # nadie lo tocó: fuera
-        prod("comando", "api", 4, comando="just entrenar tabla runs/e004"),
-        prod("metricas", None, 7, archivo=f"{repo}/runs/e004/metrics.csv"),  # su carpeta sale en un comando: cuenta
-        prod("metricas", None, 3, archivo=f"{repo}/runs/viejo/metrics.csv"),  # nadie la lanzó: queda del proyecto
-        prod("web", None, 2, url="http://127.0.0.1:5173/"),  # servidor de la persona: del proyecto
-        prod("documento", "api", 8, archivo=f"{repo}/.explicaciones/x/index.html"),  # carpeta oculta: ruido
-    ]
-    g = vivo.agrupar(ctx, productos, {"api": "working", "otro": "idle"})
-    api = g["carriles"][0]
-    assert api["nombre"] == "api" and api["estado"] == "working"
-    assert [p["tipo"] for p in api["productos"]] == ["metricas", "documento"], "lo más reciente primero"
-    assert api["principal"] == api["productos"][0]["id"]
-    assert [a["archivo"] for a in api["archivos"]] == [f"{repo}/docs/diseno.md"]
+    productos = [prod("metricas", None, 95, archivo=f"{repo}/runs/cola/metrics.csv"),
+                 prod("web", None, 0, url="http://127.0.0.1:5173/", ultimo_cambio=60)]  # fmt: skip
+    g = vivo.agrupar(ctx, productos, {})
     assert {p["tipo"] for p in g["proyecto"]} == {"metricas", "web"}
-    assert all("README" not in str(p["datos"]) for c in g["carriles"] for p in c["productos"])
 
 
-def test_agentes_sin_productos_siguen_visibles(tmp_path):
+def test_un_carril_que_termino_desaparece(tmp_path):
     ctx = ctx_de(tmp_path)
-    g = vivo.agrupar(ctx, [], {"api": "working"})
-    assert [(c["nombre"], c["principal"]) for c in g["carriles"]] == [("api", None)]
+    wt = str(tmp_path / "repo-flota" / "wt" / "api")
+    imagenes = prod("imagenes", "api", 99, carpeta=f"{wt}/recortes")
+    assert vivo.agrupar(ctx, [imagenes], {"api": "working"})["carriles"]
+    assert vivo.agrupar(ctx, [imagenes], {"api": "done"})["carriles"] == []
+    assert vivo.agrupar(ctx, [imagenes], {})["carriles"] == [], "sin agente en herdr no se muestra"
+    g = vivo.agrupar(ctx, [], {"api": "blocked"})
+    assert g["carriles"] == [] and g["esperan"] == ["api"] and g["activos"] == 1
 
 
 def test_imagenes_de_solo_carpetas_permitidas(tmp_path):
