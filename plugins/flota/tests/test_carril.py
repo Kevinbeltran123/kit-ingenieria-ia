@@ -243,3 +243,17 @@ def test_tablero_no_duplica_si_el_puerto_ya_responde(tmp_path):
     assert r.returncode == 0
     assert "ya corre" in r.stdout
     assert not llamadas(tmp_path)
+
+
+def test_el_worktree_hereda_la_configuracion_local(tmp_path, repo):
+    import carril
+
+    (repo / ".claude").mkdir()
+    (repo / ".claude" / "settings.local.json").write_text('{"sandbox": {}}')
+    worktree = tmp_path / "wt" / "api"
+    worktree.mkdir(parents=True)
+    carril.heredar_configuracion_local(str(repo), worktree)
+    assert (worktree / ".claude" / "settings.local.json").read_text() == '{"sandbox": {}}'
+    (worktree / ".claude" / "settings.local.json").write_text("propio")
+    carril.heredar_configuracion_local(str(repo), worktree)
+    assert (worktree / ".claude" / "settings.local.json").read_text() == "propio", "no pisa uno que ya exista"
