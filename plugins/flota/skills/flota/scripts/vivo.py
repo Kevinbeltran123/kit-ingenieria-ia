@@ -7,6 +7,7 @@ falla o no existe, los demás siguen.
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 import time
 from pathlib import Path
@@ -106,3 +107,123 @@ def ruta_permitida(ruta: str, ctx: dict) -> Path | None:
         if real == base or base in real.parents:
             return real
     return None
+
+
+# --- Vista por carril (portada en tarjetas) -----------------------------------------------------------------------
+VISUALES = ("web", "metricas", "imagenes", "documento")
+IMAGEN = (".png", ".jpg", ".jpeg", ".webp", ".gif")
+
+
+def _relativa_en(texto: str, ruta: str, raices: list[dict]) -> bool:
+    """¿Algún comando del agente nombra esta carpeta (ruta absoluta o relativa a una raíz)?"""
+    if ruta in texto:
+        return True
+    for r in raices:
+        base = r["ruta"].rstrip("/") + "/"
+        if ruta.startswith(base) and ruta[len(base) :] in texto:
+            return True
+    return False
+
+
+def ruido(producto: dict, raices: list[dict]) -> bool:
+    """Archivos de carpetas ocultas o de caché (README de una caché, HTML de .explicaciones): no son un producto."""
+    datos = producto.get("datos") or {}
+    ruta = datos.get("archivo") or datos.get("carpeta")
+    if not ruta:
+        return False
+    base = next((r["ruta"] for r in raices if str(ruta).startswith(r["ruta"].rstrip("/") + "/")), None)
+    partes = Path(str(ruta)[len(base) + 1 :] if base else str(ruta)).parts[:-1]
+    return any(p.startswith(".") or "cache" in p.lower() for p in partes)
+
+
+def agrupar(ctx: dict, productos: list[dict], estados: dict[str, str]) -> dict:
+    """Productos visibles agrupados por carril; fuera lo que ningún agente de la flota produjo.
+
+    - documento / imagenes: cuentan si están en el worktree de un agente o si el agente los escribió (su registro).
+    - metricas: si están en un worktree, o si un comando del agente nombra su carpeta; las de pueue van al proyecto.
+    - web: el servidor de un worktree va con su agente; uno del repo (lo levantó la persona) va al proyecto.
+    - codigo: no es tarjeta; es la lista de archivos que tocó el carril. comando: no se muestra.
+    """
+    escritos = {
+        p["datos"].get("archivo"): p["agente"] for p in productos if p.get("tipo") == "codigo" and p.get("agente")
+    }
+    comandos = [
+        (p["agente"], p["datos"].get("comando", ""))
+        for p in productos
+        if p.get("tipo") == "comando" and p.get("agente")
+    ]
+    proyecto_de = {a["nombre"]: a.get("proyecto") for a in ctx.get("agentes", [])}
+    carriles: dict[str, dict] = {}
+    proyecto_suelto: list[dict] = []
+
+    def carril(nombre: str) -> dict:
+        if nombre not in carriles:
+            carriles[nombre] = {"nombre": nombre, "proyecto": proyecto_de.get(nombre), "estado": estados.get(nombre),
+                                "productos": [], "archivos": []}  # fmt: skip
+        return carriles[nombre]
+
+    for p in productos:
+        tipo, datos = p.get("tipo"), p.get("datos") or {}
+        agente = p.get("agente")
+        if tipo == "codigo" and agente:
+            carril(agente)["archivos"].append({"archivo": datos.get("archivo"), "mas": datos.get("mas"),
+                                               "menos": datos.get("menos"), "t": p.get("t")})  # fmt: skip
+            continue
+        if tipo not in VISUALES or ruido(p, ctx["raices"]):
+            continue
+        if not agente and tipo == "documento":
+            agente = escritos.get(datos.get("archivo"))
+        if not agente and tipo == "imagenes":
+            carpeta = datos.get("carpeta", "")
+            agente = next((a for f, a in escritos.items() if f and str(f).startswith(carpeta.rstrip("/") + "/")), None)
+            agente = agente or next(
+                (a for a, c in comandos if carpeta and _relativa_en(c, carpeta, ctx["raices"])), None
+            )
+        if not agente and tipo == "metricas" and datos.get("archivo"):
+            carpeta = str(Path(datos["archivo"]).parent)
+            agente = next((a for a, c in comandos if _relativa_en(c, carpeta, ctx["raices"])), None)
+        if agente:
+            carril(agente)["productos"].append(p)
+        elif tipo in ("web", "metricas") and p.get("proyecto"):
+            proyecto_suelto.append(p)
+    for c in carriles.values():
+        webs = [str(p["datos"].get("cwd") or "") for p in c["productos"] if p.get("tipo") == "web"]
+        if webs:  # el HTML de una página que ya se ve en vivo no se repite como documento
+            c["productos"] = [
+                p
+                for p in c["productos"]
+                if not (
+                    p.get("tipo") == "documento"
+                    and str(p["datos"].get("archivo", "")).endswith(".html")
+                    and any(w and str(p["datos"]["archivo"]).startswith(w) for w in webs)
+                )
+            ]
+        c["productos"].sort(key=lambda p: p.get("t") or 0, reverse=True)
+        c["archivos"].sort(key=lambda a: a.get("t") or 0, reverse=True)
+        c["principal"] = c["productos"][0]["id"] if c["productos"] else None
+        c["t"] = max([p.get("t") or 0 for p in c["productos"]] + [a.get("t") or 0 for a in c["archivos"]] + [0])
+    for nombre in estados:  # agentes vivos sin nada todavía: que se sepa que existen
+        if nombre in proyecto_de and nombre not in carriles:
+            carril(nombre)["principal"] = None
+            carriles[nombre]["t"] = 0
+    orden = sorted(carriles.values(), key=lambda c: (c["principal"] is None, -(c["t"] or 0)))
+    return {"ahora": ctx["ahora"], "carriles": orden, "proyecto": proyecto_suelto}
+
+
+def imagenes_de(carpeta: str, ctx: dict, tope: int = 240) -> list[dict]:
+    """Las imágenes más recientes de una carpeta permitida, con su hora, para la rejilla grande."""
+    base = Path(carpeta).expanduser()
+    try:
+        real = base.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return []
+    if not any(real == Path(r["ruta"]) or Path(r["ruta"]) in real.parents for r in ctx.get("raices", [])):
+        return []
+    try:
+        with os.scandir(real) as it:
+            salida = [{"ruta": str(real / e.name), "t": e.stat().st_mtime} for e in it
+                      if e.is_file() and e.name.lower().endswith(IMAGEN)]  # fmt: skip
+    except OSError:
+        return []
+    salida.sort(key=lambda x: x["t"], reverse=True)
+    return salida[:tope]

@@ -117,3 +117,65 @@ def test_api_vivo_y_archivos(servidor):
     fuera = urllib.request.quote(str(Path.home() / ".zshrc"))
     assert pedir(f"{base}/api/vivo/archivo?ruta={fuera}&t=secreto")[0] == 404
     assert pedir(f"{base}/api/vivo/archivo?ruta={ruta}")[0] == 403
+
+
+def ctx_de(tmp_path):
+    repo, wt = tmp_path / "repo", tmp_path / "repo-flota" / "wt" / "api"
+    return {"ahora": 100.0, "agentes": [{"nombre": "api", "proyecto": "demo"}],
+            "raices": [{"ruta": str(wt), "proyecto": "demo", "agente": "api"},
+                       {"ruta": str(repo), "proyecto": "demo", "agente": None}]}  # fmt: skip
+
+
+def prod(tipo, agente=None, t=1.0, **datos):
+    return {"id": f"{tipo}:{datos}", "tipo": tipo, "agente": agente, "proyecto": "demo", "t": t, "titulo": tipo,
+            "datos": datos}  # fmt: skip
+
+
+def test_agrupar_solo_lo_que_produjo_un_agente(tmp_path):
+    ctx = ctx_de(tmp_path)
+    repo = str(tmp_path / "repo")
+    productos = [
+        prod("codigo", "api", 5, archivo=f"{repo}/docs/diseno.md", mas=10, menos=0),
+        prod("documento", None, 5, archivo=f"{repo}/docs/diseno.md"),  # lo escribió api: cuenta
+        prod("documento", None, 6, archivo=f"{repo}/README.md"),  # nadie lo tocó: fuera
+        prod("comando", "api", 4, comando="just entrenar tabla runs/e004"),
+        prod("metricas", None, 7, archivo=f"{repo}/runs/e004/metrics.csv"),  # su carpeta sale en un comando: cuenta
+        prod("metricas", None, 3, archivo=f"{repo}/runs/viejo/metrics.csv"),  # nadie la lanzó: queda del proyecto
+        prod("web", None, 2, url="http://127.0.0.1:5173/"),  # servidor de la persona: del proyecto
+        prod("documento", "api", 8, archivo=f"{repo}/.explicaciones/x/index.html"),  # carpeta oculta: ruido
+    ]
+    g = vivo.agrupar(ctx, productos, {"api": "working", "otro": "idle"})
+    api = g["carriles"][0]
+    assert api["nombre"] == "api" and api["estado"] == "working"
+    assert [p["tipo"] for p in api["productos"]] == ["metricas", "documento"], "lo más reciente primero"
+    assert api["principal"] == api["productos"][0]["id"]
+    assert [a["archivo"] for a in api["archivos"]] == [f"{repo}/docs/diseno.md"]
+    assert {p["tipo"] for p in g["proyecto"]} == {"metricas", "web"}
+    assert all("README" not in str(p["datos"]) for c in g["carriles"] for p in c["productos"])
+
+
+def test_agentes_sin_productos_siguen_visibles(tmp_path):
+    ctx = ctx_de(tmp_path)
+    g = vivo.agrupar(ctx, [], {"api": "working"})
+    assert [(c["nombre"], c["principal"]) for c in g["carriles"]] == [("api", None)]
+
+
+def test_imagenes_de_solo_carpetas_permitidas(tmp_path):
+    carpeta = tmp_path / "repo" / "runs" / "e1" / "recortes"
+    carpeta.mkdir(parents=True)
+    for i in range(3):
+        (carpeta / f"p{i}.png").write_bytes(b"x")
+    (carpeta / "nota.txt").write_text("x")
+    ctx = ctx_de(tmp_path)
+    assert len(vivo.imagenes_de(str(carpeta), ctx)) == 3
+    afuera = tmp_path / "afuera"
+    afuera.mkdir()
+    assert vivo.imagenes_de(str(afuera), ctx) == []
+
+
+def test_ruta_carriles(servidor):
+    base, _repo = servidor
+    codigo, _, cuerpo = pedir(f"{base}/api/vivo/carriles?t=secreto")
+    assert codigo == 200
+    assert set(json.loads(cuerpo)) >= {"carriles", "proyecto", "ahora"}
+    assert pedir(f"{base}/api/vivo/carriles")[0] == 403
