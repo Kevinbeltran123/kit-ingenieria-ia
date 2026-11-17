@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -188,6 +189,16 @@ def resolver_base(repo: str, base: str | None) -> tuple[str, str]:
         return git(repo, "rev-parse", "HEAD"), "HEAD local (frescura sin verificar: el fetch falló)"
 
 
+def heredar_configuracion_local(repo: str, worktree: Path) -> None:
+    """Copia .claude/settings.local.json del repo al worktree: no está en git, y sin él el carril pierde los permisos
+    locales (por ejemplo, escribir su entrega en el directorio de la corrida desde el sandbox)."""
+    origen = Path(repo) / ".claude" / "settings.local.json"
+    destino = worktree / ".claude" / "settings.local.json"
+    if origen.is_file() and not destino.exists():
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(origen, destino)
+
+
 def mensaje_inicio(run: Path, nombre: str, tipo: str, permisos: str, brief: str) -> str:
     entrega = run / f"handover-{nombre}.md"
     partes = [
@@ -301,6 +312,7 @@ def cmd_iniciar(a: argparse.Namespace) -> int:
                 a.nombre,
             )
             registro.update(worktree=str(ruta), rama=rama, base=base, nota_base=nota)
+            heredar_configuracion_local(repo, ruta)
         res = r.get("result", {})
         registro["pane"] = res.get("root_pane", {}).get("pane_id")
         registro["workspace"] = res.get("workspace", {}).get("workspace_id")
