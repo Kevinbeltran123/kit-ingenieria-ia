@@ -107,13 +107,19 @@ def test_host_ajeno_se_rechaza(servidor):
     assert pedir(f"{servidor}/api/estado?t=secreto", cabeceras={"Host": f"malo.example:{puerto}"})[0] == 403
 
 
-def test_estado_y_lectura_de_pantalla(servidor):
+def test_estado_y_lectura_de_pantalla(servidor, tmp_path):
     codigo, cuerpo = pedir(f"{servidor}/api/estado", cabeceras={"X-Flota-Token": "secreto"})
     assert codigo == 200
     assert {c["nombre"] for c in json.loads(cuerpo)["carriles"]} == {"api", "ui", "docs"}
     codigo, cuerpo = pedir(f"{servidor}/api/leer?nombre=api&t=secreto")
     assert codigo == 200
     assert json.loads(cuerpo)["texto"] == "¿Continuar? (y/n)"
+    lecturas = [x for x in llamadas(tmp_path) if x[:2] == ["agent", "read"]]
+    assert lecturas[-1][-2:] == ["--source", "visible"], (
+        "la consulta periódica no pide historial (haría saltar la terminal)"
+    )
+    pedir(f"{servidor}/api/leer?nombre=api&historial=1&t=secreto")
+    assert "recent-unwrapped" in [x for x in llamadas(tmp_path) if x[:2] == ["agent", "read"]][-1]
     assert pedir(f"{servidor}/api/leer?nombre=nadie&t=secreto")[0] == 404
 
 
