@@ -33,8 +33,8 @@ body { background: var(--fondo); color: var(--texto); font: 13px/1.45 "Plex", ui
 button, input, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--trabajando); outline-offset: 2px; border-radius: 6px; }
-.app { display: grid; grid-template-columns: 290px minmax(0, 1fr); height: 100vh; }
-.app.con-detalle { grid-template-columns: 290px minmax(0, 1fr) minmax(360px, 34vw); }
+.app { display: grid; grid-template-columns: 330px minmax(0, 1fr); height: 100vh; }
+.app.con-detalle { grid-template-columns: 330px minmax(0, 1fr) minmax(360px, 34vw); }
 
 /* barra lateral */
 .lateral { border-right: 1px solid var(--borde); display: flex; flex-direction: column; min-height: 0; background: var(--fondo); }
@@ -47,7 +47,7 @@ button { cursor: pointer; }
 .grupo { padding: 6px 8px 4px 14px; font-size: 12px; color: var(--suave); display: flex; align-items: center; gap: 6px; text-transform: none; }
 .grupo .n { border: 1px solid var(--borde); border-radius: 5px; padding: 0 5px; }
 .arbol { overflow: auto; flex: 1; padding: 0 8px 10px; }
-.fila { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 8px; width: 100%; border: 0; background: none; text-align: left; padding: 6px 8px; border-radius: 8px; color: var(--texto); }
+.fila { display: grid; grid-template-columns: 12px minmax(0, max-content) minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; border: 0; background: none; text-align: left; padding: 5px 8px; border-radius: 8px; color: var(--texto); }
 .fila:hover { background: var(--sel); }
 .fila[aria-current="true"] { background: var(--sel); box-shadow: inset 2px 0 0 var(--texto); }
 .fila .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -58,7 +58,11 @@ button { cursor: pointer; }
 .punto.giro { border: 2px solid currentColor; border-right-color: transparent; background: none !important; width: 11px; height: 11px; animation: giro 1s linear infinite; }
 @keyframes giro { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .punto.giro { animation: none; } }
-.proyecto { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 8px; padding: 10px 8px 4px; }
+.proyecto { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 10px 8px 2px; }
+button.chip { background: none; display: inline-flex; align-items: center; gap: 5px; }
+.contadores { display: none; gap: 6px; flex-wrap: wrap; }
+.contador { display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--borde); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--tenue); }
+.contador[aria-pressed="true"] { color: var(--texto); border-color: var(--texto); }
 .proyecto .nom { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .proyecto .sub { color: var(--suave); font-size: 12px; }
 .fila.sangria { padding-left: 22px; }
@@ -134,6 +138,7 @@ svg text { font-family: inherit; }
 .acciones textarea { width: 100%; min-height: 64px; resize: vertical; background: var(--fondo); border: 1px solid var(--borde); border-radius: 9px; padding: 8px; }
 .botones { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .btn { border: 1px solid var(--borde); background: var(--panel2); border-radius: 7px; padding: 3px 9px; font-size: 12px; }
+a.btn { color: var(--texto); text-decoration: none; }
 .btn:hover { border-color: var(--suave); }
 .btn.principal { background: var(--texto); color: var(--panel); border-color: var(--texto); }
 .estado-envio { font-size: 12px; color: var(--tenue); }
@@ -155,8 +160,15 @@ svg text { font-family: inherit; }
 .pal-pie { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 16px; border-top: 1px solid var(--borde); color: var(--tenue); font-size: 12px; }
 
 @media (max-width: 1100px) {
-  .app, .app.con-detalle { grid-template-columns: 1fr; height: auto; }
-  .lateral { border-right: 0; border-bottom: 1px solid var(--borde); max-height: 50vh; }
+  .app, .app.con-detalle { display: flex; flex-direction: column; height: auto; }
+  .principal { display: contents; }
+  .barra, .aviso { order: -1; }
+  .detalle { order: 1; }
+  .seccion, .rejilla { order: 2; }
+  .barra h1, #actualizado, .barra .tecla, .lat-cab, #sec-flujo { display: none; }
+  .contadores { display: flex; }
+  .lateral { border-right: 0; border-bottom: 1px solid var(--borde); }
+  .arbol { overflow: visible; }
   .detalle { border-left: 0; border-top: 1px solid var(--borde); min-height: 70vh; }
   .rejilla { grid-template-columns: 1fr; }
   .lat-pie, .flecha { display: none; }
@@ -189,7 +201,8 @@ svg text { font-family: inherit; }
     <div class="barra">
       <h1>Flujo de la flota</h1>
       <span class="ruta" id="ruta"></span>
-      <div class="sistema" id="sistema" aria-label="Uso del Mac"></div>
+      <div class="contadores" id="contadores" aria-label="Carriles por etapa (clic para filtrar)"></div>
+      <div class="sistema" id="sistema" aria-label="Uso del Mac (solo lo que está alto)"></div>
       <div class="der">
         <span id="actualizado">—</span>
         <a class="btn" id="btn-vivo" href="#">En vivo (beta)</a>
@@ -199,7 +212,7 @@ svg text { font-family: inherit; }
     </div>
     <div class="aviso" id="aviso" role="status"></div>
 
-    <section class="seccion" aria-labelledby="t-flujo">
+    <section class="seccion" id="sec-flujo" aria-labelledby="t-flujo">
       <h2 id="t-flujo">Carriles por etapa <span class="flecha">trabajando → te espera → quieto → listo → puerta → enviado</span></h2>
       <div class="columnas" id="columnas"></div>
     </section>
@@ -329,23 +342,32 @@ function pintarSistema() {
     chip("RAM", `${m.ram}/${m.ram_total} GB`, m.ram_total && m.ram / m.ram_total > 0.9),
     m.swap ? chip("swap", m.swap + " GB", m.swap > 4) : null, chip("", m.w + " W", false),
     m.temp_cpu ? chip("", m.temp_cpu + "°C", m.temp_cpu > 90) : null];
-  cont.append(...chips.filter(Boolean));
+  cont.append(...chips.filter((c) => c && c.className === "alto"));  // solo lo que preocupa
 }
+const ETAPA_TXT = { espera: "te espera", quieto: "quieto", listo: "listo", puerta: "puerta", enviado: "enviado" };
+const modeloCorto = (m) => (/^claude-([a-z]+)/.exec(m || "") || [])[1] || m || "";
+const esCoord = (o, p) => o.nombre === "coord-" + p;
 function filaArbol(x, sangria) {
-  const vivo = x.vivo;
-  const sub = x.otro ? (x.agente || "") + (x.cwd ? " · " + x.cwd.split("/").slice(-1)[0] : "") : `${x.tipo} · ${x.rama || ""}`;
-  return h("button", { class: "fila" + (sangria ? " sangria" : ""), "aria-current": String(sel === x.nombre), onclick: () => abrir(x.nombre) },
-    avatar(x.nombre),
-    h("div", { style: "min-width:0" }, h("div", { class: "nom" }, x.nombre), h("div", { class: "sub" }, sub)),
-    h("span", { class: "t" }, hace(x.desde || 0), punto(vivo)));
+  const meta = x.otro ? (x.agente || "") : [modeloCorto(x.modelo), x.esfuerzo].filter(Boolean).join(" · ");
+  const etapa = !x.otro && ETAPA_TXT[x.columna];
+  return h("button", { class: "fila" + (sangria ? " sangria" : ""), "aria-current": String(sel === x.nombre), title: x.otro ? x.cwd || "" : `${x.tipo} · ${x.modelo || "modelo por defecto"} · ${x.rama || ""}`, onclick: () => abrir(x.nombre) },
+    x.otro || x.vivo === "working" ? punto(x.vivo) : h("span", { class: "punto", style: `background:${color(x.columna)}` }), h("span", { class: "nom" }, x.nombre), h("span", { class: "sub" }, meta),
+    h("span", { class: "t" }, etapa ? h("span", { style: `color:${color(x.columna)}` }, etapa) : null, hace(x.desde || 0)));
 }
 function cabezaProyecto(p) {
-  const r = p.resumen || {};
-  const total = Object.values(r).reduce((a, b) => a + b, 0);
-  const boton = p.coordinador ? h("span", { class: "chip", title: "coordinador: " + (ESTADO_TXT[p.coordinador] || p.coordinador) }, punto(p.coordinador), " coord")
-    : h("button", { class: "btn mini", title: `Arrancar el coordinador de ${p.nombre} (Claude Opus con la skill flota)`, onclick: (ev) => { ev.stopPropagation(); arrancarCoordinador(p.nombre, ev.target); } }, "▶ coordinador");
-  return h("div", { class: "proyecto" }, avatar(p.nombre), h("div", { style: "min-width:0" }, h("div", { class: "nom" }, p.nombre),
-    h("div", { class: "sub" }, `${total} carriles · ${(p.git || {}).rama || ""}`)), boton);
+  const coord = datos.otros.find((o) => esCoord(o, p.nombre));
+  const boton = p.coordinador ? h("button", { class: "chip", title: `coordinador: ${ESTADO_TXT[p.coordinador] || p.coordinador} (clic para abrirlo)`, onclick: () => coord && abrir(coord.nombre) }, punto(p.coordinador), "coord")
+    : h("button", { class: "btn mini", title: `Arrancar el coordinador de ${p.nombre} (Claude con la skill flota)`, onclick: (ev) => { ev.stopPropagation(); arrancarCoordinador(p.nombre, ev.target); } }, "▶ coordinador");
+  return h("div", { class: "proyecto", title: (p.git || {}).rama ? "rama " + p.git.rama : null }, h("div", { class: "nom" }, p.nombre), boton);
+}
+function pintarContadores() {
+  const cont = $("contadores"); cont.replaceChildren();
+  for (const [k, txt] of COLS) {
+    const n = datos.carriles.filter((c) => c.columna === k).length;
+    if (!n && !["trabajando", "espera"].includes(k) && filtro !== k) continue;
+    cont.append(h("button", { class: "contador", "aria-pressed": String(filtro === k), onclick: () => { filtro = filtro === k ? null : k; pintar(); } },
+      h("span", { class: "punto", style: `background:${color(k)}` }), `${n} ${txt.toLowerCase()}`));
+  }
 }
 function pintarArbol() {
   const cont = $("arbol"); cont.replaceChildren();
@@ -353,11 +375,11 @@ function pintarArbol() {
   if (!datos.proyectos.length) cont.append(h("div", { class: "vacio-col", style: "padding:6px 14px" }, "Sin proyectos registrados: carril.py preparar --repo <repo>"));
   for (const p of datos.proyectos) {
     cont.append(cabezaProyecto(p));
-    const otros = filtro ? [] : datos.otros.filter((o) => o.proyecto === p.nombre);
+    const otros = filtro ? [] : datos.otros.filter((o) => o.proyecto === p.nombre && !esCoord(o, p.nombre));
     const carriles = visibles(datos.carriles.filter((c) => c.proyecto === p.nombre));
     otros.forEach((o) => cont.append(filaArbol({ ...o, otro: true }, true)));
     carriles.forEach((c) => cont.append(filaArbol(c, true)));
-    if (!otros.length && !carriles.length) cont.append(h("div", { class: "vacio-col sangria" }, filtro ? "Nada en esta etapa." : "Sin agentes todavía."));
+    if (filtro && !otros.length && !carriles.length) cont.append(h("div", { class: "vacio-col sangria" }, "Nada en esta etapa."));
   }
   const sueltos = filtro ? [] : datos.otros.filter((o) => !o.proyecto);
   if (sueltos.length) {
@@ -386,8 +408,7 @@ function pintarColumnas() {
     for (const c of items) {
       cuerpo.append(h("button", { class: "tarjeta", "aria-current": String(sel === c.nombre), onclick: () => abrir(c.nombre) },
         h("div", { class: "l1" }, punto(c.vivo), c.nombre, h("span", { class: "t" }, hace(c.desde))),
-        h("div", { class: "l2" }, datos.proyectos.length > 1 ? h("span", { class: "chip" }, c.proyecto) : null, h("span", { class: "chip" }, c.tipo), h("span", { class: "chip" }, c.modelo || "modelo por defecto"), c.esfuerzo ? h("span", { class: "chip" }, c.esfuerzo) : null),
-        h("div", { class: "l2" }, c.rama || ""),
+        h("div", { class: "l2", title: `${c.tipo} · ${c.modelo || "modelo por defecto"} · ${c.rama || ""}` }, [datos.proyectos.length > 1 ? c.proyecto : null, modeloCorto(c.modelo), c.esfuerzo].filter(Boolean).join(" · ")),
         c.listo ? h("div", { class: "listo", title: c.listo.resto }, "READY " + c.listo.resto) : null,
         c.head ? h("div", { class: "l2" }, "commit del coordinador " + c.head) : null));
     }
@@ -498,7 +519,7 @@ function pintar() {
   const av = $("aviso");
   av.style.display = datos.servidor_herdr ? "none" : "block";
   av.textContent = datos.servidor_herdr ? "" : `La sesión de herdr «${datos.sesion}» no está corriendo. Ábrela con: herdr --session ${datos.sesion}`;
-  pintarSistema(); pintarArbol(); pintarPie(); pintarColumnas(); pintarTiempo(); pintarCajas(); pintarDetalleMeta();
+  pintarSistema(); pintarContadores(); pintarArbol(); pintarPie(); pintarColumnas(); pintarTiempo(); pintarCajas(); pintarDetalleMeta();
 }
 async function refrescar() {
   if (pausado) return;
