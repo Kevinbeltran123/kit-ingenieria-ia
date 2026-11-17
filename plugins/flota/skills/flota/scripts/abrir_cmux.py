@@ -2,7 +2,8 @@
 
 Uso (dentro de una terminal de cmux): python3 -I abrir_cmux.py [--nombre Flota]
 Lee el comando con ese nombre del cmux.json de usuario (~/.config/cmux/cmux.json, o FLOTA_CMUX_JSON) y crea el
-espacio con `cmux new-workspace --layout`, así el diseño vive en un solo sitio.
+espacio con `cmux new-workspace --layout`, así el diseño vive en un solo sitio. Después cierra los espacios viejos
+con el mismo nombre (por ejemplo, la copia sin procesos que cmux restaura al reabrir la app).
 """
 
 from __future__ import annotations
@@ -23,6 +24,28 @@ def leer_comando(ruta: Path, nombre: str) -> dict | None:
         if comando.get("name") == nombre:
             return comando
     return None
+
+
+def espacios_con_nombre(nombre: str) -> list[str]:
+    """Referencias de los espacios de cmux que se llaman `nombre` (JSON si cmux lo da; si no, el texto de la lista)."""
+    r = subprocess.run(["cmux", "workspace", "list", "--json"], capture_output=True, text=True, timeout=15, check=False)
+    if r.returncode == 0:
+        try:
+            datos = json.loads(r.stdout)
+        except ValueError:
+            datos = None
+        if datos is not None:
+            filas = datos.get("workspaces", datos) if isinstance(datos, dict) else datos
+            return [str(w.get("ref") or w.get("id")) for w in filas if isinstance(w, dict) and
+                    nombre in (w.get("title"), w.get("name"))]  # fmt: skip
+    r = subprocess.run(["cmux", "workspace", "list"], capture_output=True, text=True, timeout=15, check=False)
+    patron = re.compile(r"(workspace:\d+)\s+(.*)$")
+    refs = []
+    for linea in r.stdout.splitlines():
+        m = patron.search(linea.strip().lstrip("*").strip())
+        if m and re.sub(r"\s*\[.*\]\s*$", "", m.group(2)).strip() == nombre:
+            refs.append(m.group(1))
+    return refs
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -54,6 +77,7 @@ def main(argv: list[str] | None = None) -> int:
         json.dumps(espacio["layout"]),
     ]
     try:
+        viejos = espacios_con_nombre(nombre)
         r = subprocess.run(orden, capture_output=True, text=True, timeout=30, check=False)
     except FileNotFoundError:
         print("no se encontró cmux en PATH", file=sys.stderr)
@@ -64,6 +88,12 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)  # fmt: skip
         return 1
     print(r.stdout.strip() or f"espacio «{a.nombre}» abierto")
+    propio = os.environ.get("CMUX_WORKSPACE_ID", "")
+    # El espacio desde donde se corre va al final: al cerrarlo, se cierra también esta terminal.
+    for ref in sorted(viejos, key=lambda x: x == propio):
+        subprocess.run(["cmux", "workspace", "close", ref], capture_output=True, timeout=15, check=False)
+    if viejos:
+        print(f"cerré {len(viejos)} espacio(s) «{nombre}» anteriores")
     return 0
 
 
