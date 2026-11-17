@@ -44,11 +44,6 @@ button { cursor: pointer; }
 .icono-btn { margin-left: auto; display: flex; gap: 4px; }
 .icono-btn button { background: none; border: 1px solid transparent; border-radius: 7px; padding: 4px 6px; color: var(--tenue); }
 .icono-btn button:hover { border-color: var(--borde); color: var(--texto); }
-.resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 4px 14px 12px; }
-.pastilla { border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; background: var(--panel); text-align: left; }
-.pastilla b { display: block; font-size: 20px; font-weight: 600; }
-.pastilla span { font-size: 12px; color: var(--tenue); display: flex; align-items: center; gap: 5px; }
-.pastilla[aria-pressed="true"] { border-color: var(--texto); }
 .grupo { padding: 6px 8px 4px 14px; font-size: 12px; color: var(--suave); display: flex; align-items: center; gap: 6px; text-transform: none; }
 .grupo .n { border: 1px solid var(--borde); border-radius: 5px; padding: 0 5px; }
 .arbol { overflow: auto; flex: 1; padding: 0 8px 10px; }
@@ -75,16 +70,24 @@ button { cursor: pointer; }
 
 /* principal */
 .principal { overflow: auto; min-width: 0; }
-.barra { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 12px 18px; background: color-mix(in srgb, var(--fondo) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--borde); }
+.barra { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 18px; background: color-mix(in srgb, var(--fondo) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--borde); }
 .barra h1 { font-size: 17px; margin: 0; font-weight: 600; }
 .barra .ruta { color: var(--suave); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .barra .der { margin-left: auto; display: flex; gap: 8px; align-items: center; color: var(--tenue); font-size: 12px; }
 .tecla { border: 1px solid var(--borde); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; font-size: 12px; color: var(--tenue); background: var(--panel); }
 .aviso { margin: 14px 18px 0; padding: 10px 12px; border: 1px solid var(--espera); color: var(--espera); border-radius: 10px; display: none; }
-.seccion { padding: 16px 18px 4px; }
+.seccion { padding: 12px 18px 2px; }
 .seccion > h2 { font-size: 12px; color: var(--suave); font-weight: 400; margin: 0 0 10px; display: flex; gap: 8px; align-items: center; }
 .columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; padding-bottom: 6px; }
-.col { background: var(--panel2); border: 1px solid var(--borde); border-radius: 12px; min-height: 120px; display: flex; flex-direction: column; }
+.col { background: var(--panel2); border: 1px solid var(--borde); border-radius: 10px; display: flex; flex-direction: column; }
+.col.vacia { opacity: .7; }
+.col.vacia .col-cuerpo { display: none; }
+.col-cab { cursor: pointer; }
+.col[aria-pressed="true"] { outline: 2px solid var(--texto); }
+.sistema { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--tenue); }
+.sistema span { border: 1px solid var(--borde); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+.sistema b { color: var(--texto); font-weight: 600; }
+.sistema .alto b { color: var(--espera); }
 .col-cab { display: flex; align-items: center; gap: 7px; padding: 9px 10px; font-size: 12px; }
 .col-cab .n { margin-left: auto; color: var(--suave); }
 .col-cuerpo { padding: 0 8px 8px; display: grid; gap: 6px; align-content: start; }
@@ -156,6 +159,7 @@ svg text { font-family: inherit; }
   .lateral { border-right: 0; border-bottom: 1px solid var(--borde); max-height: 50vh; }
   .detalle { border-left: 0; border-top: 1px solid var(--borde); min-height: 70vh; }
   .rejilla { grid-template-columns: 1fr; }
+  .lat-pie, .flecha { display: none; }
 }
 @media (max-width: 520px) {
   .barra, .seccion, .rejilla { padding-left: 16px; padding-right: 16px; }
@@ -177,7 +181,6 @@ svg text { font-family: inherit; }
         <button id="btn-tema" title="Cambiar tema" aria-label="Cambiar tema">◐</button>
       </div>
     </div>
-    <div class="resumen" id="resumen"></div>
     <div class="arbol" id="arbol"></div>
     <div class="lat-pie" id="pie"></div>
   </aside>
@@ -186,6 +189,7 @@ svg text { font-family: inherit; }
     <div class="barra">
       <h1>Flujo de la flota</h1>
       <span class="ruta" id="ruta"></span>
+      <div class="sistema" id="sistema" aria-label="Uso del Mac"></div>
       <div class="der">
         <span id="actualizado">—</span>
         <button class="btn" id="btn-pausa" aria-pressed="false">Pausar</button>
@@ -314,13 +318,16 @@ async function api(ruta, cuerpo) {
 const todos = () => datos ? [...datos.carriles, ...datos.otros.map((o) => ({ ...o, otro: true }))] : [];
 const buscar = (nombre) => todos().find((x) => x.nombre === nombre);
 
-function pintarResumen() {
-  const cont = $("resumen"); cont.replaceChildren();
-  for (const [k, txt] of COLS) {
-    cont.append(h("button", { class: "pastilla", "aria-pressed": String(filtro === k), title: `Filtrar: ${txt}`,
-      onclick: () => { filtro = filtro === k ? null : k; pintar(); } },
-      h("b", {}, datos.resumen[k] || 0), h("span", {}, h("span", { class: "punto", style: `background:${color(k)}` }), txt)));
-  }
+function pintarSistema() {
+  const cont = $("sistema"); cont.replaceChildren();
+  const m = datos.sistema;
+  if (!m) return;
+  const chip = (txt, valor, alto) => h("span", { class: alto ? "alto" : null }, txt + " ", h("b", {}, valor));
+  const chips = [chip("CPU", m.cpu + "%", m.cpu > 85), chip("GPU", m.gpu + "%", m.gpu > 85),
+    chip("RAM", `${m.ram}/${m.ram_total} GB`, m.ram_total && m.ram / m.ram_total > 0.9),
+    m.swap ? chip("swap", m.swap + " GB", m.swap > 4) : null, chip("", m.w + " W", false),
+    m.temp_cpu ? chip("", m.temp_cpu + "°C", m.temp_cpu > 90) : null];
+  cont.append(...chips.filter(Boolean));
 }
 function filaArbol(x, sangria) {
   const vivo = x.vivo;
@@ -374,7 +381,6 @@ function pintarColumnas() {
   for (const [k, txt] of COLS) {
     const items = datos.carriles.filter((c) => c.columna === k);
     const cuerpo = h("div", { class: "col-cuerpo" });
-    if (!items.length) cuerpo.append(h("div", { class: "vacio-col" }, "—"));
     for (const c of items) {
       cuerpo.append(h("button", { class: "tarjeta", "aria-current": String(sel === c.nombre), onclick: () => abrir(c.nombre) },
         h("div", { class: "l1" }, punto(c.vivo), c.nombre, h("span", { class: "t" }, hace(c.desde))),
@@ -383,8 +389,9 @@ function pintarColumnas() {
         c.listo ? h("div", { class: "listo", title: c.listo.resto }, "READY " + c.listo.resto) : null,
         c.head ? h("div", { class: "l2" }, "commit del coordinador " + c.head) : null));
     }
-    cont.append(h("div", { class: "col", style: `border-top:3px solid ${color(k)}` },
-      h("div", { class: "col-cab" }, h("span", { class: "punto", style: `background:${color(k)}` }), txt, h("span", { class: "n" }, items.length)), cuerpo));
+    cont.append(h("div", { class: "col" + (items.length ? "" : " vacia"), "aria-pressed": String(filtro === k), style: `border-top:3px solid ${color(k)}` },
+      h("div", { class: "col-cab", title: `Filtrar la barra lateral: ${txt}`, onclick: () => { filtro = filtro === k ? null : k; pintar(); } },
+        h("span", { class: "punto", style: `background:${color(k)}` }), txt, h("span", { class: "n" }, items.length)), cuerpo));
   }
 }
 function pintarTiempo() {
@@ -404,7 +411,7 @@ function pintarTiempo() {
     svg.append(s("line", { x1: xx, x2: xx, y1: top - 4, y2: H, stroke: "var(--borde)" }));
     svg.append(s("text", { x: xx, y: 11, "text-anchor": m === 0 ? "end" : "middle", "font-size": 11, fill: "var(--suave)" }, m === 0 ? "ahora" : `-${m >= 60 ? (m / 60) + "h" : m + "m"}`));
   }
-  if (!nombres.length) svg.append(s("text", { x: izq, y: top + 14, "font-size": 11, fill: "var(--suave)" }, "Sin eventos todavía: aparecen cuando el puente de herdr registra cambios de estado."));
+  if (!nombres.length) svg.append(s("text", { x: izq, y: top + 14, "font-size": 11, fill: "var(--suave)" }, "Sin eventos todavía."));
   nombres.forEach((n, i) => {
     const y = top + i * alto;
     svg.append(s("text", { x: 0, y: y + 14, "font-size": 11, fill: sel === n ? "var(--texto)" : "var(--tenue)" }, n.length > 16 ? n.slice(0, 15) + "…" : n));
@@ -486,7 +493,7 @@ function pintar() {
   const av = $("aviso");
   av.style.display = datos.servidor_herdr ? "none" : "block";
   av.textContent = datos.servidor_herdr ? "" : `La sesión de herdr «${datos.sesion}» no está corriendo. Ábrela con: herdr --session ${datos.sesion}`;
-  pintarResumen(); pintarArbol(); pintarPie(); pintarColumnas(); pintarTiempo(); pintarCajas(); pintarDetalleMeta();
+  pintarSistema(); pintarArbol(); pintarPie(); pintarColumnas(); pintarTiempo(); pintarCajas(); pintarDetalleMeta();
 }
 async function refrescar() {
   if (pausado) return;

@@ -91,3 +91,14 @@ def test_errores_de_cmux_quedan_registrados(tmp_path):
     assert disparar(tmp_path, env, evento("w9:p1", "working")).returncode == 0
     errores = (tmp_path / "eventos" / "s" / "cmux-errores.log").read_text()
     assert "cmux set-status: Acceso denegado" in errores
+
+
+def test_si_el_espacio_de_cmux_ya_no_existe_reintenta_sin_el(tmp_path):
+    env = preparar_falsos(tmp_path, {"agentes": {}})
+    falso = '#!/bin/sh\nprintf "%s\\n" "$*" >> "$FALSO_CMUX"\ncase "$*" in *--workspace*) exit 1;; esac\n'
+    (tmp_path / "bin" / "cmux").write_text(falso)
+    disparar(tmp_path, env, evento("w9:p1", "working"), CMUX_WORKSPACE_ID="workspace:viejo")
+    log = cmux_log(tmp_path)
+    assert any("--workspace workspace:viejo" in x for x in log)
+    assert any(x.startswith("set-status") and "--workspace" not in x for x in log)
+    assert not (tmp_path / "eventos" / "s" / "cmux-errores.log").exists()
