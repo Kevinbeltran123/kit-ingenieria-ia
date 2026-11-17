@@ -207,12 +207,14 @@ def run_por_defecto(repo: str) -> Path:
 def cmd_preparar(a: argparse.Namespace) -> int:
     repo = str(Path(a.repo).expanduser().resolve())
     run = Path(a.run).expanduser().resolve() if a.run else run_por_defecto(repo)
-    preparar(run, repo, a.proyecto or nombre_proyecto(repo), a.modelo_coordinador)
+    preparar(run, repo, a.proyecto or nombre_proyecto(repo), a.modelo_coordinador, a.esfuerzo_coordinador)
     print(f"corrida lista en {run}")
     return 0
 
 
-def preparar(run: Path, repo: str, proyecto: str, modelo_coordinador: str | None = None) -> None:
+def preparar(
+    run: Path, repo: str, proyecto: str, modelo_coordinador: str | None = None, esfuerzo_coordinador: str | None = None
+) -> None:
     """Crea el directorio de la corrida (sin pisar lo que ya hay) y registra el proyecto para el tablero."""
     scripts = Path(__file__).resolve().parent
     (run / "gate").mkdir(parents=True, exist_ok=True)
@@ -228,7 +230,7 @@ def preparar(run: Path, repo: str, proyecto: str, modelo_coordinador: str | None
             ruta.write_text(texto, encoding="utf-8")
     if not (run / "carriles.json").exists():
         guardar_carriles(run, {})
-    registrar_corrida(proyecto, repo, str(run), modelo_coordinador)
+    registrar_corrida(proyecto, repo, str(run), modelo_coordinador, esfuerzo_coordinador)
 
 
 def cmd_iniciar(a: argparse.Namespace) -> int:
@@ -514,7 +516,9 @@ def cmd_coordinador(a: argparse.Namespace) -> int:
     proyecto = a.proyecto or nombre_proyecto(repo)
     run = Path(a.run).expanduser().resolve() if a.run else run_por_defecto(repo)
     nombre = f"coord-{proyecto}"[:32]
-    modelo = a.modelo or corridas().get(proyecto, {}).get("modelo_coordinador") or "claude-opus-5-5"
+    registro = corridas().get(proyecto, {})
+    modelo = a.modelo or registro.get("modelo_coordinador") or "claude-opus-5-5"
+    esfuerzo = a.esfuerzo or registro.get("esfuerzo_coordinador") or "high"
     if not esperar_servidor(a.sesion, a.espera):
         print(f"el servidor de herdr de la sesión {a.sesion} no respondió en {a.espera:.0f} s", file=sys.stderr)
         return 1
@@ -525,7 +529,7 @@ def cmd_coordinador(a: argparse.Namespace) -> int:
     espacio = asegurar_espacio(a.sesion, repo, proyecto)
     r = herdr(a.sesion, "tab", "create", "--workspace", espacio, "--cwd", repo, "--label", "coordinador", "--focus")
     pane = r.get("result", {}).get("root_pane", {}).get("pane_id")
-    nativos = ["--model", modelo, "--plugin-dir", str(PLUGIN)]
+    nativos = ["--model", modelo, "--effort", esfuerzo, "--plugin-dir", str(PLUGIN)]
     if a.permisos == "auto":
         nativos += ["--permission-mode", "auto"]
     try:
@@ -555,6 +559,11 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--repo", required=True)
     s.add_argument("--proyecto", help="nombre en el tablero; por defecto, la carpeta del repo")
     s.add_argument("--modelo-coordinador", help="modelo del coordinador de este proyecto (p. ej. claude-fable-5-2)")
+    s.add_argument(
+        "--esfuerzo-coordinador",
+        choices=("low", "medium", "high", "xhigh", "max"),
+        help="esfuerzo del coordinador de este proyecto (por defecto high)",
+    )
 
     s = sub.add_parser("iniciar")
     s.add_argument("--run", required=True)
@@ -611,6 +620,11 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--repo", required=True)
     s.add_argument("--proyecto")
     s.add_argument("--modelo", help="por defecto, el del registro del proyecto o claude-opus-5-5")
+    s.add_argument(
+        "--esfuerzo",
+        choices=("low", "medium", "high", "xhigh", "max"),
+        help="por defecto, el del registro del proyecto o high",
+    )
     s.add_argument("--permisos", default="auto", choices=("auto", "preguntar"))
     s.add_argument("--espera", type=float, default=20)
 

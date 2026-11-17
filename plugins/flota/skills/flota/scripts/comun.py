@@ -187,16 +187,19 @@ def corridas() -> dict[str, dict]:
     return datos if isinstance(datos, dict) else {}
 
 
-def registrar_corrida(proyecto: str, repo: str, run: str, modelo_coordinador: str | None = None) -> None:
-    """Registra (o actualiza) un proyecto; conserva el modelo de coordinador ya elegido si no se pasa otro."""
+def registrar_corrida(
+    proyecto: str, repo: str, run: str, modelo_coordinador: str | None = None, esfuerzo_coordinador: str | None = None
+) -> None:
+    """Registra (o actualiza) un proyecto; conserva el modelo y el esfuerzo del coordinador si no se pasan otros."""
     ruta = archivo_registro()
     ruta.parent.mkdir(parents=True, exist_ok=True)
     datos = corridas()
     previo = datos.get(proyecto, {})
     datos[proyecto] = {"repo": repo, "run": run}
-    modelo = modelo_coordinador or previo.get("modelo_coordinador")
-    if modelo:
-        datos[proyecto]["modelo_coordinador"] = modelo
+    for clave, valor in (("modelo_coordinador", modelo_coordinador), ("esfuerzo_coordinador", esfuerzo_coordinador)):
+        elegido = valor or previo.get(clave)
+        if elegido:
+            datos[proyecto][clave] = elegido
     fd, tmp = tempfile.mkstemp(dir=str(ruta.parent), prefix=".corridas-", suffix=".json")
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=2)
