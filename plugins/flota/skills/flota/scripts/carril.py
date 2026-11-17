@@ -207,12 +207,12 @@ def run_por_defecto(repo: str) -> Path:
 def cmd_preparar(a: argparse.Namespace) -> int:
     repo = str(Path(a.repo).expanduser().resolve())
     run = Path(a.run).expanduser().resolve() if a.run else run_por_defecto(repo)
-    preparar(run, repo, a.proyecto or nombre_proyecto(repo))
+    preparar(run, repo, a.proyecto or nombre_proyecto(repo), a.modelo_coordinador)
     print(f"corrida lista en {run}")
     return 0
 
 
-def preparar(run: Path, repo: str, proyecto: str) -> None:
+def preparar(run: Path, repo: str, proyecto: str, modelo_coordinador: str | None = None) -> None:
     """Crea el directorio de la corrida (sin pisar lo que ya hay) y registra el proyecto para el tablero."""
     scripts = Path(__file__).resolve().parent
     (run / "gate").mkdir(parents=True, exist_ok=True)
@@ -228,7 +228,7 @@ def preparar(run: Path, repo: str, proyecto: str) -> None:
             ruta.write_text(texto, encoding="utf-8")
     if not (run / "carriles.json").exists():
         guardar_carriles(run, {})
-    registrar_corrida(proyecto, repo, str(run))
+    registrar_corrida(proyecto, repo, str(run), modelo_coordinador)
 
 
 def cmd_iniciar(a: argparse.Namespace) -> int:
@@ -514,6 +514,7 @@ def cmd_coordinador(a: argparse.Namespace) -> int:
     proyecto = a.proyecto or nombre_proyecto(repo)
     run = Path(a.run).expanduser().resolve() if a.run else run_por_defecto(repo)
     nombre = f"coord-{proyecto}"[:32]
+    modelo = a.modelo or corridas().get(proyecto, {}).get("modelo_coordinador") or "claude-opus-5-5"
     if not esperar_servidor(a.sesion, a.espera):
         print(f"el servidor de herdr de la sesión {a.sesion} no respondió en {a.espera:.0f} s", file=sys.stderr)
         return 1
@@ -524,7 +525,7 @@ def cmd_coordinador(a: argparse.Namespace) -> int:
     espacio = asegurar_espacio(a.sesion, repo, proyecto)
     r = herdr(a.sesion, "tab", "create", "--workspace", espacio, "--cwd", repo, "--label", "coordinador", "--focus")
     pane = r.get("result", {}).get("root_pane", {}).get("pane_id")
-    nativos = ["--model", a.modelo, "--plugin-dir", str(PLUGIN)]
+    nativos = ["--model", modelo, "--plugin-dir", str(PLUGIN)]
     if a.permisos == "auto":
         nativos += ["--permission-mode", "auto"]
     try:
@@ -539,7 +540,8 @@ def cmd_coordinador(a: argparse.Namespace) -> int:
     anotar(run, f"{nombre} iniciado en la sesión {a.sesion}")
     if estado == "listo":
         texto = (f"Eres el coordinador del proyecto {proyecto} en la sesión de herdr {a.sesion}; la corrida está en "
-                 f"{run}. Usa la skill flota. Espera a que la persona te diga la meta.")  # fmt: skip
+                 f"{run}. Usa la skill flota y respeta la sección «## Modelos» de {run}/STATE.md si existe. "
+                 "Espera a que la persona te diga la meta.")  # fmt: skip
         herdr(a.sesion, "agent", "prompt", nombre, texto, timeout=20)
     return 0 if estado == "listo" else 3
 
@@ -552,6 +554,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--run", help="por defecto, <repo>-flota junto al repo")
     s.add_argument("--repo", required=True)
     s.add_argument("--proyecto", help="nombre en el tablero; por defecto, la carpeta del repo")
+    s.add_argument("--modelo-coordinador", help="modelo del coordinador de este proyecto (p. ej. claude-fable-5-2)")
 
     s = sub.add_parser("iniciar")
     s.add_argument("--run", required=True)
@@ -607,7 +610,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--sesion", required=True)
     s.add_argument("--repo", required=True)
     s.add_argument("--proyecto")
-    s.add_argument("--modelo", default="claude-opus-5-5")
+    s.add_argument("--modelo", help="por defecto, el del registro del proyecto o claude-opus-5-5")
     s.add_argument("--permisos", default="auto", choices=("auto", "preguntar"))
     s.add_argument("--espera", type=float, default=20)
 

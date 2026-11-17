@@ -18,6 +18,7 @@ Se instala **por repo**, nunca global.
 | `ml-vision` | División sin fuga (con verificador), receta de entrenamiento, carga segura, licencias, fichas, despliegue en AWS; hooks de evaluador bloqueado y licencias | ml |
 | `explicador` | Explica cada cambio línea por línea en un HTML local (código y terminal lado a lado); el hook lo exige antes de `gh pr create` | base |
 | `flota` | Coordinador de varios trabajadores Claude y Codex en carriles de herdr: briefs, entregas READY, puerta por tandas, tablero interactivo y avisos en cmux | opcional |
+| `afinar` | `/afinar <pedido>` lo convierte en meta, comprobación ejecutable, límites, contexto, entrega, tamaño (con la política de modelos del proyecto) y riesgos; revisa pedidos y analiza fallos. Hook que avisa cuando un pedido de trabajo no dice cómo se comprueba | base |
 
 ### Terceros (fijados por SHA, auditados en `terceros/AUDITORIA.md`)
 aws-core, pr-review-toolkit, commit-commands, security-guidance, skill-creator, pyright-lsp,

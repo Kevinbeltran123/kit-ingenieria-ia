@@ -200,3 +200,13 @@ def test_coordinador_en_una_pestana_del_proyecto(tmp_path, repo):
     assert (repo.resolve().parent / "repo-flota" / "STATE.md").exists(), "prepara la corrida si no existe"
     r = correr(CARRIL, "coordinador", "--sesion", "s", "--repo", str(repo), env=env)
     assert "ya está corriendo" in r.stdout
+
+
+def test_modelo_del_coordinador_por_proyecto(tmp_path, repo):
+    env = preparar_falsos(tmp_path)
+    correr(CARRIL, "preparar", "--repo", str(repo), "--modelo-coordinador", "claude-fable-5-2", env=env)
+    correr(CARRIL, "preparar", "--repo", str(repo), env=env)  # volver a preparar no lo pierde
+    assert json.loads((tmp_path / "corridas.json").read_text())["repo"]["modelo_coordinador"] == "claude-fable-5-2"
+    assert correr(CARRIL, "coordinador", "--sesion", "s", "--repo", str(repo), env=env).returncode == 0
+    inicio = next(x for x in llamadas(tmp_path) if x[:2] == ["agent", "start"])
+    assert inicio[inicio.index("--model") + 1] == "claude-fable-5-2"
